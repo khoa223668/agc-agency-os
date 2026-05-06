@@ -890,88 +890,14 @@ const KNK = {
 }
 
 // ── BRAND COLORS (reuse từ App) ──────────────────────────
-const B = {
-  primary: '#1A56DB', primaryGlow: 'rgba(26,86,219,0.15)',
-  accent: '#06B6D4', navy: '#0F172A',
-  gradPrimary: 'linear-gradient(135deg, #1A56DB 0%, #06B6D4 100%)',
-  gradSoft: 'linear-gradient(135deg, rgba(26,86,219,0.08) 0%, rgba(6,182,212,0.08) 100%)',
-  bg: '#F0F4FF', white: '#FFFFFF',
-  border: 'rgba(26,86,219,0.1)', borderStrong: 'rgba(26,86,219,0.2)',
-  text: '#0F172A', textSec: '#475569', textTer: '#94A3B8',
-  success: '#059669', warning: '#D97706', danger: '#DC2626',
-  infoBg: 'rgba(26,86,219,0.08)',
-}
 
 const STATUS_COLOR = {
   Draft:'#94A3B8', Sent:'#1A56DB', Signed:'#059669',
   Completed:'#059669', Cancelled:'#DC2626', Pending:'#D97706'
 }
 
-function fmt(n){return Number(n||0).toLocaleString('vi-VN')}
-function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
-function numToWords(n){
-  const units=['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín']
-  const teens=['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín']
-  const tens=['','mười','hai mươi','ba mươi','bốn mươi','năm mươi','sáu mươi','bảy mươi','tám mươi','chín mươi']
-  if(!n||n===0)return'không đồng'
-  if(n>=1e9){const b=Math.floor(n/1e9);return units[b]+' tỷ '+(n%1e9?numToWords(n%1e9):'')}
-  if(n>=1e6){const m=Math.floor(n/1e6);return(m<20?teens[m-10]||tens[Math.floor(m/10)]+' '+units[m%10]:tens[Math.floor(m/10)]+' '+units[m%10])+' triệu '+(n%1e6?numToWords(n%1e6):'')}
-  if(n>=1e3){const k=Math.floor(n/1e3);return numToWords(k)+' nghìn '+(n%1e3?numToWords(n%1e3):'')}
-  if(n>=100){const h=Math.floor(n/100);return units[h]+' trăm '+(n%100?numToWords(n%100):'')}
-  if(n>=20)return tens[Math.floor(n/10)]+(n%10?' '+units[n%10]:'')
-  if(n>=10)return teens[n-10]
-  return units[n]
-}
 function toWords(n){const w=numToWords(Math.round(n));return w.trim().charAt(0).toUpperCase()+w.trim().slice(1)+' đồng./.'  }
 
-const INP={style:{width:'100%',padding:'8px 11px',border:`1.5px solid ${B.border}`,borderRadius:8,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:B.white,color:B.text,outline:'none',boxSizing:'border-box'}}
-function FG({label,children,required}){return <div style={{marginBottom:13}}><label style={{fontSize:11,fontWeight:700,color:B.textSec,marginBottom:5,display:'block',letterSpacing:'0.04em',textTransform:'uppercase'}}>{label}{required&&<span style={{color:B.danger,marginLeft:3}}>*</span>}</label>{children}</div>}
-function Row2({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
-function Row3({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>{children}</div>}
-function Sec({title,children}){return <div style={{marginBottom:20}}><div style={{fontSize:12,fontWeight:800,color:B.navy,marginBottom:10,paddingBottom:6,borderBottom:`2px solid ${B.border}`,textTransform:'uppercase',letterSpacing:'0.06em'}}>{title}</div>{children}</div>}
-function Badge({text}){const c=STATUS_COLOR[text]||B.textTer;return <span style={{background:c+'18',color:c,padding:'3px 10px',borderRadius:99,fontSize:10,fontWeight:700,border:`1px solid ${c}25`}}>{text}</span>}
-function Card({title,children,action,glow}){return <div style={{background:'rgba(255,255,255,0.95)',backdropFilter:'blur(20px)',border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 22px',marginBottom:16,boxShadow:glow?`0 4px 24px ${B.primaryGlow}`:'0 1px 4px rgba(0,0,0,0.04)',position:'relative',overflow:'hidden'}}>{glow&&<div style={{position:'absolute',top:0,left:0,right:0,height:2,background:B.gradPrimary,borderRadius:'16px 16px 0 0'}}/>}<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:13}}><span style={{fontSize:12.5,fontWeight:700,color:B.text}}>{title}</span>{action}</div>{children}</div>}
-function Btn({children,onClick,primary,sm,danger,type,style:s}){
-  if(primary)return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'none',background:B.gradPrimary,color:'#fff',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:`0 3px 12px ${B.primaryGlow}`,...s}}>{children}</button>
-  if(danger)return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:`1.5px solid ${B.danger}30`,background:B.danger+'15',color:B.danger,cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",...s}}>{children}</button>
-  return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:`1.5px solid ${B.border}`,background:'rgba(255,255,255,0.7)',color:B.textSec,cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",...s}}>{children}</button>
-}
-function Modal({title,children,onClose,wide}){return <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}><div style={{background:'rgba(255,255,255,0.98)',borderRadius:20,padding:'24px 28px',width:wide?860:580,maxWidth:'96vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15)',border:`1px solid ${B.border}`}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:`1px solid ${B.border}`}}><span style={{fontSize:16,fontWeight:800,color:B.navy,letterSpacing:'-0.02em'}}>{title}</span><button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:B.textTer}}>×</button></div>{children}</div></div>}
-function MFoot({onClose,onDelete,submitLabel}){return <div style={{display:'flex',justifyContent:'space-between',marginTop:18,paddingTop:14,borderTop:`1px solid ${B.border}`}}><div>{onDelete&&<Btn danger onClick={onDelete}>Xóa</Btn>}</div><div style={{display:'flex',gap:8}}><Btn onClick={onClose}>Huỷ</Btn><button type="submit" style={{padding:'7px 20px',borderRadius:9,border:'none',background:B.gradPrimary,color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{submitLabel||'Lưu'}</button></div></div>}
-
-// ── DUPLICATE CHECKER ────────────────────────────────────
-async function checkDuplicate(supabase, table, checks) {
-  const warnings = []
-  for (const {field, value, label} of checks) {
-    if (!value || value.trim() === '') continue
-    const {data} = await supabase.from(table).select('id, name').ilike(field, value.trim())
-    if (data && data.length > 0) {
-      warnings.push({field, value, label, existing: data[0]})
-    }
-  }
-  return warnings
-}
-
-// ── DUP WARNING UI ───────────────────────────────────────
-function DupWarning({warnings, onUseExisting, onContinue, onCancel}) {
-  return <div style={{background:'#FFF7ED',border:'1.5px solid #F59E0B',borderRadius:12,padding:'16px 18px',marginBottom:16}}>
-    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-      <span style={{fontSize:18}}>⚠️</span>
-      <span style={{fontSize:13,fontWeight:700,color:'#92400E'}}>Phát hiện dữ liệu có thể trùng lặp</span>
-    </div>
-    {warnings.map((w,i)=>(
-      <div key={i} style={{background:'#fff',border:'1px solid #FCD34D',borderRadius:8,padding:'10px 12px',marginBottom:8}}>
-        <div style={{fontSize:12,fontWeight:600,color:'#92400E'}}>{w.label}: <span style={{color:B.primary}}>{w.value}</span></div>
-        <div style={{fontSize:11,color:B.textSec,marginTop:3}}>Trùng với record: <strong>{w.existing.name||w.existing.id}</strong></div>
-      </div>
-    ))}
-    <div style={{display:'flex',gap:8,marginTop:12}}>
-      <Btn sm onClick={()=>onUseExisting(warnings[0].existing)}>Dùng record có sẵn</Btn>
-      <Btn sm onClick={onContinue}>Bỏ qua, tạo mới</Btn>
-      <Btn sm danger onClick={onCancel}>Huỷ</Btn>
-    </div>
-  </div>
-}
 
 // ══════════════════════════════════════════════════════════
 // CONTRACTS PAGE
