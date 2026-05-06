@@ -972,7 +972,7 @@ function Contracts({data, supabase, reload, log}) {
 
       {/* Search */}
       <div style={{marginBottom:14}}>
-        <input placeholder="🔍  Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...INP.style,maxWidth:360}}/>
+        <input placeholder="🔍  Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP.style,maxWidth:360}}/>
       </div>
 
       {/* Table */}
@@ -1129,13 +1129,13 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
       <form onSubmit={handleSubmit}>
         <Sec title="Thông tin hợp đồng">
           <Row3>
-            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} {...INP} required/></FG>
-            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...INP}/></FG>
-            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...INP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></FG>
+            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} {...CINP} required/></CFG>
+            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...CINP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></CFG>
           </Row3>
           <CRow2>
-            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} {...INP}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign} ({p.client})</option>)}</select></FG>
-            <CFG label="Loại dịch vụ"><select value={form.service_type} onChange={e=>set('service_type',e.target.value)} {...INP}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option></select></FG>
+            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} {...CINP}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign} ({p.client})</option>)}</select></CFG>
+            <CFG label="Loại dịch vụ"><select value={form.service_type} onChange={e=>set('service_type',e.target.value)} {...CINP}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option></select></CFG>
           </CRow2>
         </Sec>
 
@@ -1144,18 +1144,18 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
             💡 Nhập tên client để auto-fill từ database
           </div>
           <CFG label="Tên công ty / Brand" required>
-            <input value={form.party_a_name} onChange={e=>{set('party_a_name',e.target.value);fillFromClient(e.target.value)}} list="cl-list-hd" {...INP} required/>
+            <input value={form.party_a_name} onChange={e=>{set('party_a_name',e.target.value);fillFromClient(e.target.value)}} list="cl-list-hd" {...CINP} required/>
             <datalist id="cl-list-hd">{data.clients.map(c=><option key={c.id} value={c.name}/>)}</datalist>
-          </FG>
+          </CFG>
           <Row3>
-            <CFG label="Mã số thuế"><input value={form.party_a_tax} onChange={e=>set('party_a_tax',e.target.value)} {...INP} placeholder="VD: 0317761797"/></FG>
-            <CFG label="Người đại diện"><input value={form.party_a_rep} onChange={e=>set('party_a_rep',e.target.value)} {...INP}/></FG>
-            <CFG label="Chức vụ"><input value={form.party_a_title} onChange={e=>set('party_a_title',e.target.value)} {...INP}/></FG>
+            <CFG label="Mã số thuế"><input value={form.party_a_tax} onChange={e=>set('party_a_tax',e.target.value)} {...CINP} placeholder="VD: 0317761797"/></CFG>
+            <CFG label="Người đại diện"><input value={form.party_a_rep} onChange={e=>set('party_a_rep',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Chức vụ"><input value={form.party_a_title} onChange={e=>set('party_a_title',e.target.value)} {...CINP}/></CFG>
           </Row3>
-          <CFG label="Địa chỉ"><input value={form.party_a_address} onChange={e=>set('party_a_address',e.target.value)} {...INP}/></FG>
+          <CFG label="Địa chỉ"><input value={form.party_a_address} onChange={e=>set('party_a_address',e.target.value)} {...CINP}/></CFG>
           <CRow2>
-            <CFG label="Số tài khoản"><input value={form.party_a_bank_account} onChange={e=>set('party_a_bank_account',e.target.value)} {...INP}/></FG>
-            <CFG label="Ngân hàng"><input value={form.party_a_bank_name} onChange={e=>set('party_a_bank_name',e.target.value)} {...INP}/></FG>
+            <CFG label="Số tài khoản"><input value={form.party_a_bank_account} onChange={e=>set('party_a_bank_account',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Ngân hàng"><input value={form.party_a_bank_name} onChange={e=>set('party_a_bank_name',e.target.value)} {...CINP}/></CFG>
           </CRow2>
         </Sec>
 
@@ -1179,10 +1179,10 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
               {form.kol_list.map((k,i)=>(
                 <tr key={i}>
                   <td style={{padding:'5px 6px',fontSize:11,color:B.textTer,textAlign:'center'}}>{i+1}</td>
-                  <td style={{padding:'5px 6px'}}><input value={k.name} onChange={e=>updateKol(i,'name',e.target.value)} list="kol-list-hd" style={{...INP.style,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL"/><datalist id="kol-list-hd">{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist></td>
-                  <td style={{padding:'5px 6px'}}><input value={k.tiktok} onChange={e=>updateKol(i,'tiktok',e.target.value)} style={{...INP.style,padding:'5px 8px',fontSize:12}} placeholder="@username"/></td>
-                  <td style={{padding:'5px 6px'}}><input value={k.work} onChange={e=>updateKol(i,'work',e.target.value)} style={{...INP.style,padding:'5px 8px',fontSize:12}}/></td>
-                  <td style={{padding:'5px 6px'}}><input type="number" value={k.fee} onChange={e=>updateKol(i,'fee',e.target.value)} style={{...INP.style,padding:'5px 8px',fontSize:12,width:120}}/></td>
+                  <td style={{padding:'5px 6px'}}><input value={k.name} onChange={e=>updateKol(i,'name',e.target.value)} list="kol-list-hd" style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL"/><datalist id="kol-list-hd">{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist></td>
+                  <td style={{padding:'5px 6px'}}><input value={k.tiktok} onChange={e=>updateKol(i,'tiktok',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="@username"/></td>
+                  <td style={{padding:'5px 6px'}}><input value={k.work} onChange={e=>updateKol(i,'work',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}}/></td>
+                  <td style={{padding:'5px 6px'}}><input type="number" value={k.fee} onChange={e=>updateKol(i,'fee',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12,width:120}}/></td>
                   <td style={{padding:'5px 6px'}}><button type="button" onClick={()=>removeKol(i)} style={{background:'none',border:'none',cursor:'pointer',color:B.danger,fontSize:16}}>×</button></td>
                 </tr>
               ))}
@@ -1194,26 +1194,26 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
         <Sec title="Giá trị hợp đồng">
           <Row3>
             <CFG label="Phí dịch vụ (VND)">
-              <input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} {...INP}/>
+              <input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} {...CINP}/>
               <div style={{fontSize:10,color:B.textTer,marginTop:3}}>= Tổng KOL list nếu có</div>
-            </FG>
+            </CFG>
             <CFG label="Thuế GTGT (%)">
-              <input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} {...INP}/>
-            </FG>
+              <input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} {...CINP}/>
+            </CFG>
             <CFG label="Tổng giá trị (có VAT)">
               <div style={{padding:'9px 12px',background:B.gradSoft,borderRadius:8,fontSize:14,fontWeight:800,color:B.primary,border:`1px solid ${B.border}`}}>{fmt(form.total_with_vat)} VND</div>
               <div style={{fontSize:10,color:B.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
-            </FG>
+            </CFG>
           </Row3>
           <CFG label="Điều khoản thanh toán">
-            <textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...INP.style,minHeight:70}}/>
-          </FG>
+            <textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...CINP.style,minHeight:70}}/>
+          </CFG>
         </Sec>
 
         <Sec title="Thời gian thực hiện">
           <CRow2>
-            <CFG label="Ngày bắt đầu"><input type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} {...INP}/></FG>
-            <CFG label="Ghi chú"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...INP.style,minHeight:50}}/></FG>
+            <CFG label="Ngày bắt đầu"><input type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Ghi chú"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...CINP.style,minHeight:50}}/></CFG>
           </CRow2>
         </Sec>
 
@@ -1327,13 +1327,13 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
 
         <Sec title="Thông tin hợp đồng">
           <Row3>
-            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} {...INP} required/></FG>
-            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...INP}/></FG>
-            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...INP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></FG>
+            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} {...CINP} required/></CFG>
+            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...CINP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></CFG>
           </Row3>
           <CRow2>
-            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} {...INP}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign}</option>)}</select></FG>
-            <CFG label="Kênh đăng tải"><input value={form.channels} onChange={e=>set('channels',e.target.value)} {...INP} placeholder="@tiktok_username"/></FG>
+            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} {...CINP}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign}</option>)}</select></CFG>
+            <CFG label="Kênh đăng tải"><input value={form.channels} onChange={e=>set('channels',e.target.value)} {...CINP} placeholder="@tiktok_username"/></CFG>
           </CRow2>
         </Sec>
 
@@ -1343,32 +1343,32 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
           </div>
           <CRow2>
             <CFG label="Họ và tên thật" required>
-              <input value={form.party_b_name} onChange={e=>{set('party_b_name',e.target.value);fillFromKOL(e.target.value)}} list="kol-list-ctv" {...INP} required/>
+              <input value={form.party_b_name} onChange={e=>{set('party_b_name',e.target.value);fillFromKOL(e.target.value)}} list="kol-list-ctv" {...CINP} required/>
               <datalist id="kol-list-ctv">{data.kols.map(k=><option key={k.id} value={k.real_name||k.name}/>)}</datalist>
-            </FG>
-            <CFG label="CCCD / MST cá nhân"><input value={form.party_b_cccd} onChange={e=>set('party_b_cccd',e.target.value)} {...INP} placeholder="Số CCCD"/></FG>
+            </CFG>
+            <CFG label="CCCD / MST cá nhân"><input value={form.party_b_cccd} onChange={e=>set('party_b_cccd',e.target.value)} {...CINP} placeholder="Số CCCD"/></CFG>
           </CRow2>
-          <CFG label="Địa chỉ thường trú"><input value={form.party_b_address} onChange={e=>set('party_b_address',e.target.value)} {...INP}/></FG>
+          <CFG label="Địa chỉ thường trú"><input value={form.party_b_address} onChange={e=>set('party_b_address',e.target.value)} {...CINP}/></CFG>
           <CRow2>
-            <CFG label="Số tài khoản"><input value={form.party_b_bank_account} onChange={e=>set('party_b_bank_account',e.target.value)} {...INP}/></FG>
-            <CFG label="Ngân hàng"><input value={form.party_b_bank_name} onChange={e=>set('party_b_bank_name',e.target.value)} {...INP}/></FG>
+            <CFG label="Số tài khoản"><input value={form.party_b_bank_account} onChange={e=>set('party_b_bank_account',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Ngân hàng"><input value={form.party_b_bank_name} onChange={e=>set('party_b_bank_name',e.target.value)} {...CINP}/></CFG>
           </CRow2>
         </Sec>
 
         <Sec title="Phạm vi công việc">
-          <CFG label="Nội dung công việc"><textarea value={form.scope_of_work} onChange={e=>set('scope_of_work',e.target.value)} style={{...INP.style,minHeight:80}}/></FG>
+          <CFG label="Nội dung công việc"><textarea value={form.scope_of_work} onChange={e=>set('scope_of_work',e.target.value)} style={{...CINP.style,minHeight:80}}/></CFG>
         </Sec>
 
         <Sec title="Thù lao">
           <Row3>
-            <CFG label="Thù lao gốc (VND)"><input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} {...INP}/></FG>
-            <CFG label="Thuế TNCN (%)"><input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} {...INP}/></FG>
+            <CFG label="Thù lao gốc (VND)"><input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} {...CINP}/></CFG>
+            <CFG label="Thuế TNCN (%)"><input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} {...CINP}/></CFG>
             <CFG label="Thù lao thực nhận">
               <div style={{padding:'9px 12px',background:B.gradSoft,borderRadius:8,fontSize:14,fontWeight:800,color:B.primary,border:`1px solid ${B.border}`}}>{fmt(form.total_with_vat)} VND</div>
               <div style={{fontSize:10,color:B.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
-            </FG>
+            </CFG>
           </Row3>
-          <CFG label="Thời hạn thanh toán"><textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...INP.style,minHeight:60}}/></FG>
+          <CFG label="Thời hạn thanh toán"><textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...CINP.style,minHeight:60}}/></CFG>
         </Sec>
 
         <CMFoot onClose={onClose} submitLabel={saving?'Đang lưu...':'Lưu hợp đồng'} onDelete={edit?async()=>{await supabase.from('contracts').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
@@ -1633,24 +1633,24 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
       <form onSubmit={handleSubmit}>
         <Sec title="Thông tin biên bản">
           <Row3>
-            <CFG label="Số BBNT" required><input value={form.report_code} onChange={e=>set('report_code',e.target.value)} {...INP} required/></FG>
+            <CFG label="Số BBNT" required><input value={form.report_code} onChange={e=>set('report_code',e.target.value)} {...CINP} required/></CFG>
             <CFG label="Hợp đồng tham chiếu" required>
-              <select value={form.contract_id} onChange={e=>set('contract_id',e.target.value)} {...INP} required>
+              <select value={form.contract_id} onChange={e=>set('contract_id',e.target.value)} {...CINP} required>
                 <option value="">— Chọn hợp đồng —</option>
                 {contracts.map(c=><option key={c.id} value={c.id}>{c.contract_code} — {type==='client'?c.party_a_name:c.party_b_name}</option>)}
               </select>
-            </FG>
-            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...INP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option></select></FG>
+            </CFG>
+            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...CINP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option></select></CFG>
           </Row3>
           <CRow2>
-            <CFG label="Ngày ký BBNT"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...INP}/></FG>
+            <CFG label="Ngày ký BBNT"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...CINP}/></CFG>
             <CFG label="Thời gian thực hiện">
               <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <input type="date" value={form.actual_start_date} onChange={e=>set('actual_start_date',e.target.value)} style={{...INP.style,flex:1}}/>
+                <input type="date" value={form.actual_start_date} onChange={e=>set('actual_start_date',e.target.value)} style={{...CINP.style,flex:1}}/>
                 <span style={{color:B.textTer,fontSize:12}}>đến</span>
-                <input type="date" value={form.actual_end_date} onChange={e=>set('actual_end_date',e.target.value)} style={{...INP.style,flex:1}}/>
+                <input type="date" value={form.actual_end_date} onChange={e=>set('actual_end_date',e.target.value)} style={{...CINP.style,flex:1}}/>
               </div>
-            </FG>
+            </CFG>
           </CRow2>
         </Sec>
 
@@ -1672,9 +1672,9 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
               {form.deliverables.map((d,i)=>(
                 <tr key={i}>
                   <td style={{padding:'5px 6px',fontSize:11,textAlign:'center',color:B.textTer}}>{i+1}</td>
-                  <td style={{padding:'5px 6px'}}><input value={d.name} onChange={e=>updateDeliverable(i,'name',e.target.value)} style={{...INP.style,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL / kênh"/></td>
-                  <td style={{padding:'5px 6px'}}><input value={d.link} onChange={e=>updateDeliverable(i,'link',e.target.value)} style={{...INP.style,padding:'5px 8px',fontSize:12}} placeholder="https://tiktok.com/@..."/></td>
-                  <td style={{padding:'5px 6px'}}><input value={d.result} onChange={e=>updateDeliverable(i,'result',e.target.value)} style={{...INP.style,padding:'5px 8px',fontSize:12}}/></td>
+                  <td style={{padding:'5px 6px'}}><input value={d.name} onChange={e=>updateDeliverable(i,'name',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL / kênh"/></td>
+                  <td style={{padding:'5px 6px'}}><input value={d.link} onChange={e=>updateDeliverable(i,'link',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="https://tiktok.com/@..."/></td>
+                  <td style={{padding:'5px 6px'}}><input value={d.result} onChange={e=>updateDeliverable(i,'result',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}}/></td>
                   <td><button type="button" onClick={()=>set('deliverables',form.deliverables.filter((_,j)=>j!==i))} style={{background:'none',border:'none',cursor:'pointer',color:B.danger,fontSize:16}}>×</button></td>
                 </tr>
               ))}
@@ -1685,20 +1685,20 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
 
         <Sec title="Điều khoản thanh toán">
           <CRow2>
-            <CFG label="Giá trị theo HĐ (VND)"><input type="number" value={form.contract_value} onChange={e=>set('contract_value',Number(e.target.value))} {...INP}/></FG>
-            <CFG label="Giá trị nghiệm thu (VND)"><input type="number" value={form.accepted_value} onChange={e=>set('accepted_value',Number(e.target.value))} {...INP}/></FG>
+            <CFG label="Giá trị theo HĐ (VND)"><input type="number" value={form.contract_value} onChange={e=>set('contract_value',Number(e.target.value))} {...CINP}/></CFG>
+            <CFG label="Giá trị nghiệm thu (VND)"><input type="number" value={form.accepted_value} onChange={e=>set('accepted_value',Number(e.target.value))} {...CINP}/></CFG>
           </CRow2>
           <Row3>
-            <CFG label="Đã thanh toán (VND)"><input type="number" value={form.paid_amount} onChange={e=>set('paid_amount',Number(e.target.value))} {...INP}/></FG>
+            <CFG label="Đã thanh toán (VND)"><input type="number" value={form.paid_amount} onChange={e=>set('paid_amount',Number(e.target.value))} {...CINP}/></CFG>
             <CFG label="Còn phải thanh toán">
               <div style={{padding:'9px 12px',background:form.remaining_amount>0?'#FFF7ED':'#F0FDF4',borderRadius:8,fontSize:14,fontWeight:800,color:form.remaining_amount>0?B.warning:B.success,border:`1px solid ${form.remaining_amount>0?B.warning:B.success}30`}}>{fmt(form.remaining_amount)} VND</div>
-            </FG>
-            <CFG label="Thời hạn TT (ngày làm việc)"><input type="number" value={form.payment_deadline} onChange={e=>set('payment_deadline',Number(e.target.value))} {...INP}/></FG>
+            </CFG>
+            <CFG label="Thời hạn TT (ngày làm việc)"><input type="number" value={form.payment_deadline} onChange={e=>set('payment_deadline',Number(e.target.value))} {...CINP}/></CFG>
           </Row3>
         </Sec>
 
         <Sec title="Ghi chú">
-          <CFG label="Ghi chú thêm"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...INP.style,minHeight:70}}/></FG>
+          <CFG label="Ghi chú thêm"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...CINP.style,minHeight:70}}/></CFG>
         </Sec>
 
         <CMFoot onClose={onClose} submitLabel="Lưu BBNT" onDelete={edit?async()=>{await supabase.from('acceptance_reports').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
