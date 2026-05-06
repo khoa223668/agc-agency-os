@@ -950,7 +950,7 @@ function Contracts({data, supabase, reload, log}) {
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
         <h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Hợp đồng</h2>
-        <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo hợp đồng</Btn>
+        <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo hợp đồng</CBtn>
       </div>
 
       {/* Tabs */}
@@ -990,8 +990,8 @@ function Contracts({data, supabase, reload, log}) {
                 <td style={{...TD,fontSize:11,color:B.textTer}}>{c.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={c.status}/></td>
                 <td style={{...TD,display:'flex',gap:6}}>
-                  <CBtn sm onClick={()=>setViewItem(c)}>Xem</Btn>
-                  <CBtn sm onClick={()=>{setEditItem(c);setShowForm(true)}}>Sửa</Btn>
+                  <CBtn sm onClick={()=>setViewItem(c)}>Xem</CBtn>
+                  <CBtn sm onClick={()=>{setEditItem(c);setShowForm(true)}}>Sửa</CBtn>
                 </td>
               </tr>
             ))}
@@ -1188,7 +1188,7 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
               ))}
             </tbody>
           </table>
-          <CBtn sm onClick={addKolRow}>+ Thêm KOL</Btn>
+          <CBtn sm onClick={addKolRow}>+ Thêm KOL</CBtn>
         </Sec>
 
         <Sec title="Giá trị hợp đồng">
@@ -1436,7 +1436,7 @@ function ContractPreview({contract:c, type, onClose}) {
   return (
     <CModal title={'Preview: '+c.contract_code} onClose={onClose} wide>
       <div style={{marginBottom:14,display:'flex',gap:8,flexWrap:'wrap'}}>
-        <CBtn primary onClick={printContract}>🖨️ In / Export PDF</Btn>
+        <CBtn primary onClick={printContract}>🖨️ In / Export PDF</CBtn>
         <CBadge text={c.status}/>
         <span style={{fontSize:11,color:B.textTer,alignSelf:'center'}}>Tạo lúc {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
       </div>
@@ -1483,7 +1483,7 @@ function ContractPreview({contract:c, type, onClose}) {
         </div>
       </div>
 
-      <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</Btn></div>
+      <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</CBtn></div>
     </CModal>
   )
 }
@@ -1537,7 +1537,7 @@ function AcceptanceReports({data, supabase, reload, log}) {
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
         <h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Biên bản nghiệm thu</h2>
-        <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo BBNT</Btn>
+        <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo BBNT</CBtn>
       </div>
 
       {/* Tabs */}
@@ -1561,8 +1561,8 @@ function AcceptanceReports({data, supabase, reload, log}) {
                 <td style={{...TD,fontSize:11,color:B.textTer}}>{r.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={r.status}/></td>
                 <td style={{...TD,display:'flex',gap:6}}>
-                  <CBtn sm onClick={()=>setViewItem({report:r,contract:c,type:tab})}>Xem</Btn>
-                  <CBtn sm onClick={()=>{setEditItem(r);setShowForm(true)}}>Sửa</Btn>
+                  <CBtn sm onClick={()=>setViewItem({report:r,contract:c,type:tab})}>Xem</CBtn>
+                  <CBtn sm onClick={()=>{setEditItem(r);setShowForm(true)}}>Sửa</CBtn>
                 </td>
               </tr>
             })}
@@ -1680,7 +1680,7 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
               ))}
             </tbody>
           </table>
-          <CBtn sm onClick={addDeliverable}>+ Thêm dòng</Btn>
+          <CBtn sm onClick={addDeliverable}>+ Thêm dòng</CBtn>
         </Sec>
 
         <Sec title="Điều khoản thanh toán">
@@ -1764,7 +1764,7 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
   return (
     <CModal title={'Preview BBNT: '+r.report_code} onClose={onClose} wide>
       <div style={{marginBottom:14,display:'flex',gap:8}}>
-        <CBtn primary onClick={printBBNT}>🖨️ In / Export PDF</Btn>
+        <CBtn primary onClick={printBBNT}>🖨️ In / Export PDF</CBtn>
         <CBadge text={r.status}/>
       </div>
       <div style={{background:B.white,border:`2px solid ${B.border}`,borderRadius:14,padding:'28px 32px',fontFamily:'Times New Roman,serif',fontSize:13,lineHeight:1.7,color:'#000'}}>
@@ -1798,7 +1798,7 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
           <div><div style={{fontWeight:700}}>{isClient?'ĐẠI DIỆN BÊN B':'BÊN B'}</div><div style={{fontSize:12,color:'#666'}}>{isClient?partyB.title:'(Ký ghi rõ họ tên)'}</div><div style={{height:50}}/><div style={{fontWeight:700}}>{isClient?partyB.rep:partyB.name}</div></div>
         </div>
       </div>
-      <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</Btn></div>
+      <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</CBtn></div>
     </CModal>
   )
 }
