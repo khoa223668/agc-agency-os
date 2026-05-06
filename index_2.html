@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html, body, #root { height: 100%; }
@@ -17,7 +19,7 @@
       ::-webkit-scrollbar-thumb { background: rgba(26,86,219,0.2); border-radius: 99px; }
       ::-webkit-scrollbar-thumb:hover { background: rgba(26,86,219,0.4); }
       input:focus, select:focus, textarea:focus { border-color: #1A56DB !important; box-shadow: 0 0 0 3px rgba(26,86,219,0.12) !important; }
-      tr:hover td { background: rgba(26,86,219,0.02) !important; }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
