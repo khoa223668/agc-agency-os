@@ -118,24 +118,10 @@ function StatCard({label,value,sub,color,icon}){
 }
 
 export default function App(){
+  return <div style={{padding:40,fontSize:40}}>APP WORKING</div>
   const [page,setPage]=useState('dashboard')
-const [data,setData]=useState({
-  projects:[],
-  clients:[],
-  kols:[],
-  team:[],
-  invoices:[],
-  deals:[],
-  dealHistory:[],
-  vendors:[],
-  approvals:[],
-
-  campaigns:[],
-  clientContracts:[],
-  kolContracts:[],
-  deliverables:[],
-  acceptanceReports:[]
-})
+  const [data,setData]=useState({projects:[],clients:[],kols:[],team:[],invoices:[],deals:[],dealHistory:[],vendors:[],approvals:[]})
+  const [loading,setLoading]=useState(true)
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false)
   useEffect(()=>{loadAll()},[])
 
