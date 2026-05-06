@@ -119,23 +119,89 @@ function StatCard({label,value,sub,color,icon}){
 
 export default function App(){
   const [page,setPage]=useState('dashboard')
-  const [data,setData]=useState({projects:[],clients:[],kols:[],team:[],invoices:[],deals:[],dealHistory:[],vendors:[],approvals:[]})
-  const [loading,setLoading]=useState(true)
+const [data,setData]=useState({
+  projects:[],
+  clients:[],
+  kols:[],
+  team:[],
+  invoices:[],
+  deals:[],
+  dealHistory:[],
+  vendors:[],
+  approvals:[],
+
+  campaigns:[],
+  clientContracts:[],
+  kolContracts:[],
+  deliverables:[],
+  acceptanceReports:[]
+})
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false)
   useEffect(()=>{loadAll()},[])
 
-  async function loadAll(){
+async function loadAll(){
+  try{
     setLoading(true)
-    const tables=['projects','clients','kols','team','invoices','deals','deal_history','vendors','approvals']
-    const res=await Promise.all(tables.map(t=>supabase.from(t).select('*').order('created_at',{ascending:false})))
-    setData({projects:res[0].data||[],clients:res[1].data||[],kols:res[2].data||[],team:res[3].data||[],invoices:res[4].data||[],deals:res[5].data||[],dealHistory:res[6].data||[],vendors:res[7].data||[],approvals:res[8].data||[]})
+
+    const tables=[
+      'projects',
+      'clients',
+      'kols',
+      'team',
+      'invoices',
+      'deals',
+      'deal_history',
+      'vendors',
+      'approvals',
+
+      // LEGAL MODULE
+      'campaigns',
+      'client_contracts',
+      'kol_contracts',
+      'deliverables',
+      'acceptance_reports'
+    ]
+
+    const res = await Promise.all(
+      tables.map(async (t)=>{
+        const r = await supabase
+          .from(t)
+          .select('*')
+          .order('created_at',{ascending:false})
+
+        return r
+      })
+    )
+
+    setData({
+      projects:res[0]?.data || [],
+      clients:res[1]?.data || [],
+      kols:res[2]?.data || [],
+      team:res[3]?.data || [],
+      invoices:res[4]?.data || [],
+      deals:res[5]?.data || [],
+      dealHistory:res[6]?.data || [],
+      vendors:res[7]?.data || [],
+      approvals:res[8]?.data || [],
+
+      campaigns:res[9]?.data || [],
+      clientContracts:res[10]?.data || [],
+      kolContracts:res[11]?.data || [],
+      deliverables:res[12]?.data || [],
+      acceptanceReports:res[13]?.data || []
+    })
+
+  }catch(err){
+    console.error(err)
+    alert('Load dữ liệu thất bại: '+err.message)
+  }finally{
     setLoading(false)
   }
+}
   async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
   async function upd(t,id,r){const{error}=await supabase.from(t).update(r).eq('id',id);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
   async function del(t,id){if(!confirm('Xác nhận xóa?'))return;await supabase.from(t).delete().eq('id',id);await loadAll()}
   const log = async (msg) => { await supabase.from('audit_log').insert([{message:msg,role:'User'}]) }
-  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
 
   const NAV=[
     {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
