@@ -1112,11 +1112,44 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
   }
 
   async function saveContract() {
-    const payload = {...form, contract_type:'client', created_by: 'User'}
+    const payload = {
+      contract_code: form.contract_code,
+      contract_type: 'client',
+      project_id: form.project_id || null,
+      party_a_name: form.party_a_name,
+      party_a_tax: form.party_a_tax,
+      party_a_address: form.party_a_address,
+      party_a_rep: form.party_a_rep,
+      party_a_title: form.party_a_title,
+      party_a_bank_account: form.party_a_bank_account,
+      party_a_bank_name: form.party_a_bank_name,
+      party_b_name: 'CÔNG TY TNHH QUẢNG CÁO K&K',
+      party_b_tax: '0317776715',
+      party_b_address: '737/7 Kha Vạn Cân, Phường Linh Xuân, TP. Hồ Chí Minh',
+      party_b_rep: 'TÔ NGUYỄN ĐĂNG KHOA',
+      party_b_title: 'Giám Đốc',
+      party_b_bank_account: '116002937563',
+      party_b_bank_name: 'VIETINBANK Chi nhánh/PGD: HCM',
+      service_type: form.service_type,
+      scope_of_work: form.scope_of_work,
+      kol_list: form.kol_list,
+      total_fee: Number(form.total_fee||0),
+      vat_rate: Number(form.vat_rate||8),
+      total_with_vat: Number(form.total_with_vat||0),
+      payment_terms: form.payment_terms,
+      start_date: form.start_date || null,
+      sign_date: form.sign_date || null,
+      sign_location: form.sign_location,
+      status: form.status,
+      notes: form.notes,
+      created_by: 'User'
+    }
     if (edit) {
-      await supabase.from('contracts').update(payload).eq('id', edit.id)
+      const {error} = await supabase.from('contracts').update(payload).eq('id', edit.id)
+      if(error){alert('Lỗi cập nhật: '+error.message);return}
     } else {
-      await supabase.from('contracts').insert([payload])
+      const {error} = await supabase.from('contracts').insert([payload])
+      if(error){alert('Lỗi lưu HĐ: '+error.message);return}
       // Auto-save client nếu chưa có
       const existing = data.clients.find(c=>c.tax_code===form.party_a_tax||c.name===form.party_a_name)
       if (!existing && form.party_a_name) {
@@ -1300,15 +1333,44 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
   }
 
   async function saveKOLContract() {
-    const payload = {...form, contract_type:'kol',
-      party_a_name:KNK.name, party_a_tax:KNK.taxCode, party_a_address:KNK.address,
-      party_a_rep:KNK.rep, party_a_title:KNK.repTitle,
-      party_a_bank_account:KNK.bankAccount, party_a_bank_name:KNK.bankName,
-      created_by:'User'
+    const payload = {
+      contract_code: form.contract_code,
+      contract_type: 'kol',
+      project_id: form.project_id || null,
+      party_a_name: KNK.name,
+      party_a_tax: KNK.taxCode,
+      party_a_address: KNK.address,
+      party_a_rep: KNK.rep,
+      party_a_title: KNK.repTitle,
+      party_a_bank_account: KNK.bankAccount,
+      party_a_bank_name: KNK.bankName + ' Chi nhánh/PGD: ' + KNK.bankBranch,
+      party_b_name: form.party_b_name,
+      party_b_tax: form.party_b_tax,
+      party_b_address: form.party_b_address,
+      party_b_rep: form.party_b_name,
+      party_b_bank_account: form.party_b_bank_account,
+      party_b_bank_name: form.party_b_bank_name,
+      party_b_cccd: form.party_b_cccd,
+      service_type: form.service_type,
+      scope_of_work: form.scope_of_work,
+      kol_list: [],
+      total_fee: Number(form.total_fee||0),
+      vat_rate: Number(form.vat_rate||10),
+      total_with_vat: Number(form.total_with_vat||0),
+      payment_terms: form.payment_terms,
+      start_date: form.start_date || null,
+      sign_date: form.sign_date || null,
+      sign_location: 'Văn phòng Công Ty TNHH Quảng cáo K&K',
+      status: form.status,
+      notes: form.notes,
+      created_by: 'User'
     }
-    if (edit) { await supabase.from('contracts').update(payload).eq('id',edit.id) }
-    else {
-      await supabase.from('contracts').insert([payload])
+    if (edit) {
+      const {error} = await supabase.from('contracts').update(payload).eq('id',edit.id)
+      if(error){alert('Lỗi: '+error.message);return}
+    } else {
+      const {error} = await supabase.from('contracts').insert([payload])
+      if(error){alert('Lỗi lưu HĐ KOL: '+error.message);return}
       const existing = data.kols.find(k=>k.cccd===form.party_b_cccd||k.name===form.party_b_name)
       if (!existing && form.party_b_name) {
         await supabase.from('kols').insert([{
