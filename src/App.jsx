@@ -466,7 +466,7 @@ function Dashboard({data,setPage,currentUser}){
           {!pending.length&&<div style={{fontSize:12,color:B.success,fontWeight:600,padding:'6px 0'}}>Queue trống ✓</div>}
           <div style={{marginTop:12,padding:'10px 0',borderTop:'1px solid rgba(26,86,219,0.06)'}}>
             <div style={{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Deal Funnel</div>
-            <div style={{display:'flex',gap:6'}}>
+            <div style={{display:'flex',gap:6}}>
               {['Lead','Pitching','Negotiation','Won'].map(stage=>{
                 const cnt=data.deals.filter(d=>d.stage===stage).length
                 const stageC={Lead:'#94A3B8',Pitching:B.primary,Negotiation:B.warning,Won:B.success}
