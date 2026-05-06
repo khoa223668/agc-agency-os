@@ -122,7 +122,25 @@ export default function App(){
   const [data,setData]=useState({projects:[],clients:[],kols:[],team:[],invoices:[],deals:[],dealHistory:[],vendors:[],approvals:[]})
   const [loading,setLoading]=useState(true)
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false)
-  useEffect(()=>{loadAll()},[])
+  const [currentUser,setCurrentUser]=useState(null)
+  const [authReady,setAuthReady]=useState(false)
+
+  useEffect(()=>{
+    const stored = localStorage.getItem('kk_session')
+    if(stored){try{setCurrentUser(JSON.parse(stored))}catch(e){}}
+    setAuthReady(true)
+    loadAll()
+  },[])
+
+  function handleLogin(session){setCurrentUser(session)}
+  function handleLogout(){localStorage.removeItem('kk_session');setCurrentUser(null)}
+
+  function canAccess(module){
+    if(!currentUser) return false
+    if(currentUser.isMaster) return true
+    const p = currentUser.permissions?.[module]
+    return p?.can_view||false
+  }
 
   async function loadAll(){
     setLoading(true)
@@ -152,9 +170,13 @@ export default function App(){
     {id:'team',label:'Team',icon:'◒',grp:'DATA'},
     {id:'reports',label:'Analytics',icon:'▨',grp:'INSIGHTS'},
   ]
-  const groups=[...new Set(NAV.map(n=>n.grp))]
+  const visibleNAV = currentUser?.isMaster ? NAV : NAV.filter(n=>canAccess(n.id))
+  const groups=[...new Set(visibleNAV.map(n=>n.grp))]
   const pending=data.approvals.filter(a=>a.status==='Pending').length
   const overdue=data.invoices.filter(i=>i.status==='Overdue').length
+
+  if(!authReady) return null
+  if(!currentUser) return <LoginScreen supabase={supabase} onLogin={handleLogin}/>
 
   if(loading)return(
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:20,background:B.bgMesh,fontFamily:"'Plus Jakarta Sans', sans-serif"}}>
@@ -174,7 +196,7 @@ export default function App(){
   return(
     <div style={{display:'flex',height:'100vh',fontFamily:"'Plus Jakarta Sans', system-ui, sans-serif",background:B.bgMesh,overflow:'hidden'}}>
       {/* SIDEBAR */}
-      <div style={{width:sidebarCollapsed?64:232,background:'rgba(255,255,255,0.85)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRight:`1px solid ${B.border}`,display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',boxShadow:'4px 0 24px rgba(26,86,219,0.06)'}}>
+      <div style={{width:sidebarCollapsed?64:220,background:'rgba(255,255,255,0.85)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRight:`1px solid ${B.border}`,display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',boxShadow:'4px 0 24px rgba(26,86,219,0.06)'}}>
         {/* Logo row */}
         <div style={{padding:'18px 16px 16px',borderBottom:`1px solid ${B.border}`,display:'flex',alignItems:'center',gap:12,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
           <Logo size={36}/>
@@ -215,16 +237,25 @@ export default function App(){
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         {/* Topbar */}
         <div style={{height:56,background:'rgba(255,255,255,0.8)',backdropFilter:'blur(20px)',borderBottom:`1px solid ${B.border}`,display:'flex',alignItems:'center',padding:'0 24px',gap:16,boxShadow:'0 1px 0 rgba(26,86,219,0.06)'}}>
-          <span style={{flex:1,fontWeight:900,fontSize:16,color:B.navy,letterSpacing:'-0.02em'}}>{NAV.find(n=>n.id===page)?.label}</span>
+          <span style={{flex:1,fontWeight:900,fontSize:16,color:B.navy,letterSpacing:'-0.02em'}}>{visibleNAV.find(n=>n.id===page)?.label||NAV.find(n=>n.id===page)?.label}</span>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <div style={{fontSize:11,color:B.textTer,background:B.gradSoft,padding:'5px 12px',borderRadius:99,border:`1px solid ${B.border}`,fontWeight:600}}>
               {new Date().toLocaleDateString('vi-VN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
             </div>
-            <div style={{width:34,height:34,borderRadius:'50%',background:B.gradPrimary,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:13,fontWeight:900,boxShadow:`0 3px 10px ${B.primaryGlow}`,cursor:'pointer'}}>K</div>
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderRadius:99,background:B.gradSoft,border:`1px solid ${B.border}`,cursor:'pointer'}}>
+              <div style={{width:26,height:26,borderRadius:'50%',background:currentUser?.avatar_color||B.gradPrimary,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:10,fontWeight:900,boxShadow:`0 2px 8px rgba(26,86,219,0.25)`}}>
+                {currentUser?.avatar_initials||'K'}
+              </div>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:B.navy,lineHeight:1}}>{currentUser?.name?.split(' ').slice(-1)[0]||'User'}</div>
+                <div style={{fontSize:9,color:B.textTer,marginTop:1}}>{currentUser?.isMaster?'CEO':'Staff'}</div>
+              </div>
+            </div>
+            <button onClick={handleLogout} style={{padding:'5px 12px',borderRadius:99,border:`1.5px solid ${B.border}`,background:'transparent',color:B.textTer,cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Đăng xuất</button>
           </div>
         </div>
         {/* Content */}
-        <div style={{flex:1,overflow:'auto',padding:24}}>
+        <div style={{flex:1,overflow:'auto',padding:'20px 28px'}}>
           {page==='dashboard'&&<Dashboard {...P} setPage={setPage}/>}
           {page==='pipeline'&&<Pipeline {...P}/>}
           {page==='projects'&&<Projects {...P}/>}
@@ -234,7 +265,7 @@ export default function App(){
           {page==='clients'&&<Clients {...P}/>}
           {page==='kols'&&<Kols {...P}/>}
           {page==='vendors'&&<Vendors {...P}/>}
-          {page==='team'&&<Team {...P}/>}
+          {page==='team'&&<TeamPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
           {page==='reports'&&<Reports {...P}/>}
           {page==='contracts'&&<Contracts data={data} supabase={supabase} reload={loadAll} log={log}/>}
           {page==='bbnt'&&<AcceptanceReports data={data} supabase={supabase} reload={loadAll} log={log}/>}
@@ -244,7 +275,13 @@ export default function App(){
   )
 }
 
-function Dashboard({data,setPage}){
+function StatusBadge(text){
+  const SC={Active:'#059669',Completed:'#1A56DB','On Hold':'#D97706',Cancelled:'#DC2626',Pending:'#D97706',Pitching:'#94A3B8'}
+  const c=SC[text]||'#94A3B8'
+  return <span style={{background:c+'18',color:c,padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700,border:`1px solid ${c}25`}}>{text}</span>
+}
+
+function Dashboard({data,setPage,currentUser}){
   const rev=data.projects.reduce((a,p)=>a+Number(p.revenue||0),0)
   const cost=data.projects.reduce((a,p)=>a+Number(p.actual_cost||0),0)
   const profit=rev-cost
@@ -252,68 +289,194 @@ function Dashboard({data,setPage}){
   const active=data.projects.filter(p=>p.status==='Active').length
   const overdue=data.invoices.filter(i=>i.status==='Overdue')
   const pending=data.approvals.filter(a=>a.status==='Pending')
+  const won=data.deals.filter(d=>d.stage==='Won').length
+  const wr=data.deals.length?Math.round(won/data.deals.length*100):0
   const svcs=['KOL/KOC','Performance','Creative','Event','PR','Consulting']
+  const now=new Date()
+  const hour=now.getHours()
+  const greeting=hour<12?'Chào buổi sáng':hour<18?'Chào buổi chiều':'Chào buổi tối'
+  const name=currentUser?.name?.split(' ').slice(-1)[0]||'K'
+
+  // Monthly revenue chart data
+  const byM=Array(12).fill(0)
+  data.projects.forEach(p=>{if(p.start_date){const m=new Date(p.start_date).getMonth();byM[m]+=Number(p.revenue||0)}})
+  const maxM=Math.max(...byM,1)
+
   return(
     <div>
-      {/* KPI Grid */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
-        <div style={{gridColumn:'span 1',background:B.gradPrimary,borderRadius:20,padding:'22px 24px',position:'relative',overflow:'hidden',boxShadow:`0 8px 32px ${B.primaryGlow}`}}>
-          <div style={{position:'absolute',top:-20,right:-20,width:100,height:100,borderRadius:'50%',background:'rgba(255,255,255,0.08)'}}/>
-          <div style={{position:'absolute',bottom:-30,right:20,width:70,height:70,borderRadius:'50%',background:'rgba(255,255,255,0.05)'}}/>
-          <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.6)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>TOTAL REVENUE</div>
-          <div style={{fontSize:32,fontWeight:900,color:'#fff',letterSpacing:'-0.04em',lineHeight:1}}>{fmtS(rev)}</div>
-          <div style={{fontSize:11,color:'rgba(255,255,255,0.6)',marginTop:6,fontWeight:600}}>VND · {data.projects.length} dự án</div>
+      {/* Hero greeting banner */}
+      <div style={{background:'linear-gradient(135deg,#0F172A 0%,#1A56DB 60%,#06B6D4 100%)',borderRadius:20,padding:'28px 32px',marginBottom:20,position:'relative',overflow:'hidden',boxShadow:'0 8px 40px rgba(26,86,219,0.3)'}}>
+        <div style={{position:'absolute',top:-40,right:-40,width:200,height:200,borderRadius:'50%',background:'rgba(255,255,255,0.04)'}}/>
+        <div style={{position:'absolute',bottom:-60,right:80,width:300,height:300,borderRadius:'50%',background:'rgba(6,182,212,0.08)'}}/>
+        <div style={{position:'absolute',top:20,right:200,width:100,height:100,borderRadius:'50%',background:'rgba(255,255,255,0.03)'}}/>
+        <div style={{position:'relative',zIndex:1}}>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.6)',fontWeight:500,marginBottom:6}}>{greeting},</div>
+          <div style={{fontSize:26,fontWeight:900,color:'#fff',letterSpacing:'-0.03em',marginBottom:4}}>{name} 👋</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.5)',fontWeight:500}}>
+            {now.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+            {pending.length>0&&<span style={{marginLeft:12,background:'rgba(220,38,38,0.3)',color:'#fca5a5',padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>⚡ {pending.length} approval đang chờ</span>}
+            {overdue.length>0&&<span style={{marginLeft:8,background:'rgba(217,119,6,0.3)',color:'#fcd34d',padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>⚠️ {overdue.length} công nợ quá hạn</span>}
+          </div>
         </div>
-        <StatCard label="Tổng Profit" value={fmtS(profit)} sub={margin+'% margin'} color={B.success}/>
-        <StatCard label="Active Projects" value={active} sub={data.projects.length+' tổng cộng'} color={B.accent}/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
-        <StatCard label="KOL Database" value={data.kols.length} sub="contacts" color="#7C3AED"/>
-        <StatCard label="Clients" value={data.clients.length} sub="đang hợp tác" color={B.primary}/>
-        <StatCard label="Công nợ quá hạn" value={overdue.length} sub={overdue.length?'Cần xử lý ngay':'Tất cả ổn ✓'} color={overdue.length?B.danger:B.success}/>
+        {/* Quick stats inline */}
+        <div style={{display:'flex',gap:24,marginTop:20,position:'relative',zIndex:1}}>
+          {[['Revenue YTD',fmtS(rev)+' VND'],['Profit',fmtS(profit)+' VND'],['Margin',margin+'%'],['Win Rate',wr+'%'],['Active Projects',active+'']].map(([l,v])=>(
+            <div key={l}>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>{l}</div>
+              <div style={{fontSize:18,fontWeight:900,color:'#fff',marginTop:2}}>{v}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:16,marginBottom:16}}>
-        <Card title="Doanh thu theo Service" glow>
+      {/* KPI Grid — 6 cards full width */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:12,marginBottom:20}}>
+        {[
+          ['TOTAL REVENUE',fmtS(rev),'VND',B.primary,'linear-gradient(135deg,rgba(26,86,219,0.1),rgba(6,182,212,0.1))'],
+          ['TOTAL PROFIT',fmtS(profit),margin+'% margin',B.success,'rgba(5,150,105,0.08)'],
+          ['ACTIVE PROJECTS',active,data.projects.length+' tổng','#7C3AED','rgba(124,58,237,0.08)'],
+          ['KOL DATABASE',data.kols.length,'contacts',B.accent,'rgba(6,182,212,0.08)'],
+          ['CLIENTS',data.clients.length,'đang hợp tác',B.primary,'rgba(26,86,219,0.06)'],
+          ['CÔNG NỢ QH',overdue.length,overdue.length?'Cần xử lý':'Ổn ✓',overdue.length?B.danger:B.success,overdue.length?'rgba(220,38,38,0.06)':'rgba(5,150,105,0.06)'],
+        ].map(([l,v,s,c,bg])=>(
+          <div key={l} style={{background:bg,borderRadius:14,padding:'16px 18px',border:`1px solid ${c}20`,position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:-10,right:-10,width:60,height:60,borderRadius:'50%',background:c+'08'}}/>
+            <div style={{fontSize:9,fontWeight:800,color:c,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{l}</div>
+            <div style={{fontSize:24,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1}}>{v}</div>
+            <div style={{fontSize:10,color:'#94A3B8',marginTop:5,fontWeight:500}}>{s}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main content grid */}
+      <div style={{display:'grid',gridTemplateColumns:'2fr 1.2fr 1fr',gap:14,marginBottom:14}}>
+        {/* Revenue chart */}
+        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)',boxShadow:'0 2px 12px rgba(26,86,219,0.06)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Revenue theo tháng — 2026</div>
+            <div style={{fontSize:11,color:'#94A3B8',fontWeight:500}}>VND</div>
+          </div>
+          <div style={{display:'flex',alignItems:'flex-end',gap:6,height:120}}>
+            {['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'].map((m,i)=>{
+              const h=byM[i]?Math.max(8,Math.round(byM[i]/maxM*100)):4
+              const isNow=i===now.getMonth()
+              return <div key={m} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                <div style={{width:'100%',height:h+'%',background:isNow?'linear-gradient(180deg,#1A56DB,#06B6D4)':byM[i]?'rgba(26,86,219,0.25)':'rgba(26,86,219,0.08)',borderRadius:'4px 4px 0 0',minHeight:4,transition:'height 0.3s',border:isNow?'none':'none'}}/>
+                <div style={{fontSize:9,color:isNow?'#1A56DB':'#94A3B8',fontWeight:isNow?800:500}}>{m}</div>
+              </div>
+            })}
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',marginTop:12,padding:'10px 0',borderTop:'1px solid rgba(26,86,219,0.06)'}}>
+            {[['Tổng',fmtS(rev)],['Tháng này',fmtS(byM[now.getMonth()])],['Avg/tháng',fmtS(Math.round(rev/12))]].map(([l,v])=>(
+              <div key={l} style={{textAlign:'center'}}>
+                <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase'}}>{l}</div>
+                <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginTop:2}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Service breakdown */}
+        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
+          <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>Revenue theo Service</div>
           {svcs.map((s,i)=>{
             const r=data.projects.filter(p=>p.service===s).reduce((a,p)=>a+Number(p.revenue||0),0)
             const pct=rev?Math.round(r/rev*100):0
-            return <div key={s} style={{marginBottom:12}}>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:11.5,marginBottom:5}}>
-                <span style={{fontWeight:600,color:B.text}}>{s}</span>
-                <span style={{color:B.textTer,fontWeight:500}}>{fmtS(r)} <span style={{color:PALETTE[i],fontWeight:700}}>({pct}%)</span></span>
+            return <div key={s} style={{marginBottom:11}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:11.5,marginBottom:4}}>
+                <span style={{fontWeight:600,color:'#0F172A'}}>{s}</span>
+                <span style={{color:PALETTE[i],fontWeight:700}}>{pct}%</span>
               </div>
-              <div style={{height:7,background:B.border,borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',width:pct+'%',background:`linear-gradient(90deg,${PALETTE[i]},${PALETTE[i]}BB)`,borderRadius:99,transition:'width 0.5s ease'}}/>
+              <div style={{height:6,background:'rgba(26,86,219,0.07)',borderRadius:99,overflow:'hidden'}}>
+                <div style={{height:'100%',width:pct+'%',background:PALETTE[i],borderRadius:99,transition:'width 0.5s ease'}}/>
               </div>
             </div>
           })}
-        </Card>
-        <div>
-          <Card title="Dự án gần đây" action={<Btn sm onClick={()=>setPage('projects')}>Xem tất →</Btn>}>
-            {data.projects.slice(0,4).map(p=>(
-              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:`1px solid ${B.border}`}}>
-                <div><div style={{fontWeight:700,fontSize:12,color:B.text}}>{p.campaign||'—'}</div><div style={{fontSize:10,color:B.textTer,marginTop:2}}>{p.client||'—'}</div></div>
-                <div style={{textAlign:'right'}}><div style={{fontSize:11,fontWeight:800,color:B.primary}}>{fmtS(p.revenue)}</div><div style={{marginTop:3}}><Badge text={p.status}/></div></div>
+        </div>
+
+        {/* Activity feed */}
+        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
+          <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>Hoạt động gần đây</div>
+          {data.projects.slice(0,6).map(p=>(
+            <div key={p.id} style={{display:'flex',gap:10,marginBottom:12,alignItems:'flex-start'}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:p.status==='Active'?B.success:p.status==='Completed'?B.primary:B.warning,marginTop:5,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:11.5,fontWeight:600,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'—'}</div>
+                <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{p.client||'—'} · {fmtS(p.revenue)}</div>
               </div>
-            ))}
-            {!data.projects.length&&<Empty>Chưa có dự án nào</Empty>}
-          </Card>
-          <Card title="Công nợ & Approvals">
-            {overdue.slice(0,2).map(i=>(
-              <div key={i.id} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:`1px solid ${B.border}`}}>
-                <span style={{fontSize:11.5,fontWeight:600,color:B.text}}>{i.client}</span>
-                <div style={{textAlign:'right'}}><span style={{fontSize:11,fontWeight:800,color:B.danger}}>{fmtS(Number(i.amount)-Number(i.paid))}</span><div style={{marginTop:2}}><Badge text={i.status}/></div></div>
+            </div>
+          ))}
+          {!data.projects.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có dự án</div>}
+        </div>
+      </div>
+
+      {/* Bottom row */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}}>
+        {/* Recent projects */}
+        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Dự án gần đây</div>
+            <button onClick={()=>setPage('projects')} style={{fontSize:11,color:B.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xem tất →</button>
+          </div>
+          {data.projects.slice(0,4).map(p=>(
+            <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+              <div style={{flex:1,minWidth:0,marginRight:8}}>
+                <div style={{fontWeight:700,fontSize:12,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'—'}</div>
+                <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{p.client||'—'}</div>
               </div>
-            ))}
-            {pending.slice(0,2).map(a=>(
-              <div key={a.id} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:`1px solid ${B.border}`}}>
-                <div style={{flex:1,minWidth:0,marginRight:8}}><div style={{fontSize:11.5,fontWeight:600,color:B.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.title}</div></div>
-                <Badge text={a.status}/>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{fontSize:11,fontWeight:800,color:B.primary}}>{fmtS(p.revenue)}</div>
+                <div style={{marginTop:2}}>{StatusBadge(p.status)}</div>
               </div>
-            ))}
-            {!overdue.length&&!pending.length&&<Empty>Không có vấn đề gì ✓</Empty>}
-          </Card>
+            </div>
+          ))}
+          {!data.projects.length&&<div style={{textAlign:'center',padding:'16px 0',color:'#94A3B8',fontSize:12}}>Chưa có dự án</div>}
+        </div>
+
+        {/* Overdue invoices */}
+        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Công nợ quá hạn</div>
+            <button onClick={()=>setPage('invoices')} style={{fontSize:11,color:B.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Chi tiết →</button>
+          </div>
+          {overdue.slice(0,4).map(i=>(
+            <div key={i.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+              <span style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{i.client}</span>
+              <span style={{fontSize:12,fontWeight:800,color:B.danger}}>{fmtS(Number(i.amount)-Number(i.paid))}</span>
+            </div>
+          ))}
+          {!overdue.length&&<div style={{textAlign:'center',padding:'20px 0',color:B.success,fontSize:12,fontWeight:600}}>Không có công nợ quá hạn 🎉</div>}
+        </div>
+
+        {/* Approvals + Pipeline */}
+        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Approvals & Pipeline</div>
+            <button onClick={()=>setPage('approval')} style={{fontSize:11,color:B.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xử lý →</button>
+          </div>
+          {pending.slice(0,3).map(a=>(
+            <div key={a.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+              <div style={{flex:1,minWidth:0,marginRight:8}}>
+                <div style={{fontSize:11.5,fontWeight:600,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.title}</div>
+                <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{a.type}</div>
+              </div>
+              {StatusBadge('Pending')}
+            </div>
+          ))}
+          {!pending.length&&<div style={{fontSize:12,color:B.success,fontWeight:600,padding:'6px 0'}}>Queue trống ✓</div>}
+          <div style={{marginTop:12,padding:'10px 0',borderTop:'1px solid rgba(26,86,219,0.06)'}}>
+            <div style={{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Deal Funnel</div>
+            <div style={{display:'flex',gap:6'}}>
+              {['Lead','Pitching','Negotiation','Won'].map(stage=>{
+                const cnt=data.deals.filter(d=>d.stage===stage).length
+                const stageC={Lead:'#94A3B8',Pitching:B.primary,Negotiation:B.warning,Won:B.success}
+                return <div key={stage} style={{flex:1,textAlign:'center',padding:'6px 4px',background:stageC[stage]+'12',borderRadius:8,border:`1px solid ${stageC[stage]}20`}}>
+                  <div style={{fontSize:16,fontWeight:900,color:stageC[stage]}}>{cnt}</div>
+                  <div style={{fontSize:9,color:'#94A3B8',marginTop:1,fontWeight:600}}>{stage}</div>
+                </div>
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2013,5 +2176,596 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
       </div>
       <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</CBtn></div>
     </CModal>
+  )
+}
+
+
+
+// ════════════════════════════════════════════════════════════
+// AUTH + PERMISSIONS MODULE — K&K Agency OS
+// ════════════════════════════════════════════════════════════
+
+const MODULES = [
+  {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
+  {id:'pipeline',label:'Deal Pipeline',icon:'◈',grp:'OVERVIEW'},
+  {id:'projects',label:'Dự án',icon:'◉',grp:'OPERATIONS'},
+  {id:'pricing',label:'Pricing Engine',icon:'◎',grp:'OPERATIONS'},
+  {id:'invoices',label:'Hóa đơn',icon:'▤',grp:'OPERATIONS'},
+  {id:'approval',label:'Approvals',icon:'✦',grp:'OPERATIONS'},
+  {id:'contracts',label:'Hợp đồng',icon:'📋',grp:'LEGAL'},
+  {id:'bbnt',label:'Biên bản NT',icon:'✅',grp:'LEGAL'},
+  {id:'clients',label:'Clients',icon:'◑',grp:'DATA'},
+  {id:'kols',label:'KOL / KOC',icon:'◐',grp:'DATA'},
+  {id:'vendors',label:'Vendors',icon:'◫',grp:'DATA'},
+  {id:'team',label:'Team',icon:'◒',grp:'DATA'},
+  {id:'reports',label:'Analytics',icon:'▨',grp:'INSIGHTS'},
+]
+
+const AVATAR_COLORS = [
+  '#1A56DB','#059669','#DC2626','#D97706','#7C3AED',
+  '#0891B2','#DB2777','#16A34A','#EA580C','#6366F1'
+]
+
+// Simple hash for password (client-side only — not for production security)
+function simpleHash(str) {
+  let hash = 0
+  for(let i=0;i<str.length;i++){hash=((hash<<5)-hash)+str.charCodeAt(i);hash|=0}
+  return Math.abs(hash).toString(36)
+}
+
+function getInitials(name) {
+  return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
+}
+
+// ── LOGIN SCREEN ─────────────────────────────────────────
+function LoginScreen({supabase, onLogin}) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleLogin(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    // Check master account (CEO)
+    if(email === 'admin@knk.com' && password === 'KnK@2026!') {
+      const session = {
+        id: 'master',
+        name: 'Tô Nguyễn Đăng Khoa',
+        email: 'admin@knk.com',
+        role: 'CEO / Founder',
+        isMaster: true,
+        avatar_color: '#1A56DB',
+        avatar_initials: 'KK',
+        permissions: MODULES.reduce((acc,m)=>({...acc,[m.id]:{can_view:true,can_create:true,can_edit:true,can_delete:true}}),{})
+      }
+      localStorage.setItem('kk_session', JSON.stringify(session))
+      onLogin(session)
+      return
+    }
+
+    // Check team accounts
+    const hash = simpleHash(password)
+    const {data:accounts} = await supabase.from('team_accounts')
+      .select('*, team(*)')
+      .eq('email', email.toLowerCase())
+      .eq('is_active', true)
+
+    if(!accounts?.length || accounts[0].password_hash !== hash) {
+      setError('Email hoặc mật khẩu không đúng')
+      setLoading(false)
+      return
+    }
+
+    const acc = accounts[0]
+    // Load permissions
+    const {data:perms} = await supabase.from('permissions')
+      .select('*').eq('team_account_id', acc.id)
+
+    const permMap = {}
+    perms?.forEach(p => { permMap[p.module] = p })
+
+    const session = {
+      id: acc.id,
+      team_id: acc.team_id,
+      name: acc.team?.name || email.split('@')[0],
+      email: acc.email,
+      role: acc.team?.role || 'Staff',
+      isMaster: false,
+      avatar_color: acc.avatar_color || '#1A56DB',
+      avatar_initials: acc.avatar_initials || getInitials(acc.team?.name||email),
+      avatar_url: acc.avatar_url,
+      permissions: permMap
+    }
+
+    // Update last login
+    await supabase.from('team_accounts').update({last_login: new Date().toISOString()}).eq('id', acc.id)
+    localStorage.setItem('kk_session', JSON.stringify(session))
+    onLogin(session)
+    setLoading(false)
+  }
+
+  return (
+    <div style={{minHeight:'100vh',background:'radial-gradient(ellipse at 30% 20%, rgba(26,86,219,0.12) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(6,182,212,0.1) 0%, transparent 50%), #F0F4FF',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif"}}>
+      {/* Background mesh */}
+      <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none'}}>
+        <div style={{position:'absolute',top:'10%',left:'5%',width:400,height:400,borderRadius:'50%',background:'rgba(26,86,219,0.04)',filter:'blur(60px)'}}/>
+        <div style={{position:'absolute',bottom:'10%',right:'5%',width:500,height:500,borderRadius:'50%',background:'rgba(6,182,212,0.05)',filter:'blur(80px)'}}/>
+      </div>
+
+      <div style={{width:420,position:'relative'}}>
+        {/* Logo */}
+        <div style={{textAlign:'center',marginBottom:32}}>
+          <div style={{width:64,height:64,borderRadius:18,background:'linear-gradient(135deg,#1A56DB,#06B6D4)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:'0 8px 32px rgba(26,86,219,0.3)'}}>
+            <span style={{color:'#fff',fontWeight:900,fontSize:28,letterSpacing:'-0.05em'}}>K</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em'}}>K&K Advertising</div>
+          <div style={{fontSize:13,color:'#94A3B8',marginTop:4,fontWeight:500}}>Agency OS — Đăng nhập</div>
+        </div>
+
+        {/* Card */}
+        <div style={{background:'rgba(255,255,255,0.92)',backdropFilter:'blur(20px)',borderRadius:20,padding:'32px 36px',border:'1px solid rgba(26,86,219,0.12)',boxShadow:'0 20px 60px rgba(26,86,219,0.1)'}}>
+          <form onSubmit={handleLogin}>
+            <div style={{marginBottom:18}}>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>Email</label>
+              <input
+                type="email" value={email} onChange={e=>setEmail(e.target.value)} required
+                placeholder="your@email.com"
+                style={{width:'100%',padding:'11px 14px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:10,fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'rgba(255,255,255,0.8)',color:'#0F172A',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
+                onFocus={e=>e.target.style.borderColor='#1A56DB'}
+                onBlur={e=>e.target.style.borderColor='rgba(26,86,219,0.15)'}
+              />
+            </div>
+            <div style={{marginBottom:24}}>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>Mật khẩu</label>
+              <input
+                type="password" value={password} onChange={e=>setPassword(e.target.value)} required
+                placeholder="••••••••"
+                style={{width:'100%',padding:'11px 14px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:10,fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'rgba(255,255,255,0.8)',color:'#0F172A',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
+                onFocus={e=>e.target.style.borderColor='#1A56DB'}
+                onBlur={e=>e.target.style.borderColor='rgba(26,86,219,0.15)'}
+              />
+            </div>
+            {error&&<div style={{background:'rgba(220,38,38,0.08)',border:'1px solid rgba(220,38,38,0.2)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#DC2626',marginBottom:18,fontWeight:500}}>{error}</div>}
+            <button type="submit" disabled={loading} style={{width:'100%',padding:'12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 4px 16px rgba(26,86,219,0.3)',opacity:loading?0.7:1}}>
+              {loading?'Đang đăng nhập...':'Đăng nhập →'}
+            </button>
+          </form>
+          <div style={{marginTop:20,padding:'12px 14px',background:'rgba(26,86,219,0.04)',borderRadius:8,fontSize:11,color:'#94A3B8',textAlign:'center'}}>
+            Tài khoản CEO: <strong style={{color:'#1A56DB'}}>admin@knk.com</strong> / <strong style={{color:'#1A56DB'}}>KnK@2026!</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── PERMISSION MANAGER (CEO only) ────────────────────────
+function PermissionManager({account, supabase, onClose}) {
+  const [perms, setPerms] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(()=>{loadPerms()},[])
+
+  async function loadPerms() {
+    const {data} = await supabase.from('permissions').select('*').eq('team_account_id', account.id)
+    const map = {}
+    MODULES.forEach(m => {
+      const p = data?.find(d=>d.module===m.id)
+      map[m.id] = {
+        can_view: p?.can_view||false,
+        can_create: p?.can_create||false,
+        can_edit: p?.can_edit||false,
+        can_delete: p?.can_delete||false,
+      }
+    })
+    setPerms(map)
+  }
+
+  function toggle(module, perm) {
+    setPerms(prev=>({...prev,[module]:{...prev[module],[perm]:!prev[module]?.[perm]}}))
+  }
+
+  function setAll(module, val) {
+    setPerms(prev=>({...prev,[module]:{can_view:val,can_create:val,can_edit:val,can_delete:val}}))
+  }
+
+  function setViewOnly(module) {
+    setPerms(prev=>({...prev,[module]:{can_view:true,can_create:false,can_edit:false,can_delete:false}}))
+  }
+
+  async function save() {
+    setSaving(true)
+    for(const [module, p] of Object.entries(perms)) {
+      await supabase.from('permissions').upsert({
+        team_account_id: account.id,
+        module, ...p
+      }, {onConflict: 'team_account_id,module'})
+    }
+    setSaving(false); setSaved(true)
+    setTimeout(()=>setSaved(false), 2000)
+  }
+
+  const grps = [...new Set(MODULES.map(m=>m.grp))]
+  const permCols = ['can_view','can_create','can_edit','can_delete']
+  const permLabels = {can_view:'Xem',can_create:'Tạo',can_edit:'Sửa',can_delete:'Xóa'}
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:3000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:700,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.15)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Phân quyền — {account.name}</div>
+            <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{account.email} · {account.role}</div>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
+        </div>
+
+        {grps.map(grp=>(
+          <div key={grp} style={{marginBottom:20}}>
+            <div style={{fontSize:10,fontWeight:800,color:'#94A3B8',letterSpacing:'0.1em',marginBottom:8,textTransform:'uppercase'}}>{grp}</div>
+            <table style={{width:'100%',borderCollapse:'collapse'}}>
+              <thead>
+                <tr>
+                  <th style={{fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:'left',padding:'5px 8px',borderBottom:'1px solid rgba(26,86,219,0.1)'}}>Module</th>
+                  {permCols.map(p=><th key={p} style={{fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:'center',padding:'5px 8px',width:70,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>{permLabels[p]}</th>)}
+                  <th style={{fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:'center',padding:'5px 8px',width:120,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>Nhanh</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MODULES.filter(m=>m.grp===grp).map(m=>(
+                  <tr key={m.id} style={{borderBottom:'1px solid rgba(26,86,219,0.04)'}}>
+                    <td style={{padding:'8px 8px',fontSize:12.5,fontWeight:500,color:'#0F172A'}}>
+                      <span style={{marginRight:8,opacity:0.6}}>{m.icon}</span>{m.label}
+                    </td>
+                    {permCols.map(p=>(
+                      <td key={p} style={{textAlign:'center',padding:'8px'}}>
+                        <input type="checkbox" checked={perms[m.id]?.[p]||false}
+                          onChange={()=>toggle(m.id,p)}
+                          style={{width:16,height:16,cursor:'pointer',accentColor:'#1A56DB'}}
+                        />
+                      </td>
+                    ))}
+                    <td style={{textAlign:'center',padding:'8px'}}>
+                      <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+                        <button onClick={()=>setAll(m.id,true)} style={{padding:'3px 8px',borderRadius:5,border:'1px solid rgba(5,150,105,0.3)',background:'rgba(5,150,105,0.08)',color:'#059669',cursor:'pointer',fontSize:10,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Tất cả</button>
+                        <button onClick={()=>setViewOnly(m.id)} style={{padding:'3px 8px',borderRadius:5,border:'1px solid rgba(26,86,219,0.3)',background:'rgba(26,86,219,0.08)',color:'#1A56DB',cursor:'pointer',fontSize:10,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Chỉ xem</button>
+                        <button onClick={()=>setAll(m.id,false)} style={{padding:'3px 8px',borderRadius:5,border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.08)',color:'#DC2626',cursor:'pointer',fontSize:10,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Khoá</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+        <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:14,borderTop:'1px solid rgba(26,86,219,0.1)'}}>
+          <button onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.1)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Đóng</button>
+          <button onClick={save} disabled={saving} style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(26,86,219,0.25)'}}>
+            {saving?'Đang lưu...':(saved?'✓ Đã lưu!':'Lưu phân quyền')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── TEAM PAGE (nâng cấp với accounts + permissions) ──────
+function TeamPage({data, supabase, reload, log, currentUser}) {
+  const [accounts, setAccounts] = useState([])
+  const [showAdd, setShowAdd] = useState(false)
+  const [editPerms, setEditPerms] = useState(null)
+  const [editAcc, setEditAcc] = useState(null)
+
+  useEffect(()=>{ loadAccounts() },[])
+
+  async function loadAccounts() {
+    const {data:accs} = await supabase.from('team_accounts')
+      .select('*, team(*), permissions(*)').order('created_at',{ascending:false})
+    setAccounts(accs||[])
+  }
+
+  async function deactivate(id) {
+    if(!confirm('Khoá tài khoản này?')) return
+    await supabase.from('team_accounts').update({is_active:false}).eq('id',id)
+    loadAccounts()
+  }
+
+  async function activate(id) {
+    await supabase.from('team_accounts').update({is_active:true}).eq('id',id)
+    loadAccounts()
+  }
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A'}}>Team & Accounts</h2>
+        {currentUser?.isMaster && <button onClick={()=>setShowAdd(true)} style={{padding:'7px 16px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(26,86,219,0.25)'}}>+ Thêm thành viên</button>}
+      </div>
+
+      {/* Capacity cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:14,marginBottom:20}}>
+        {data.team.map((m,i)=>{
+          const active = data.projects.filter(p=>p.pm===m.name&&p.status==='Active').length
+          const util = m.max_projects?Math.round(active/m.max_projects*100):0
+          const col = AVATAR_COLORS[i%AVATAR_COLORS.length]
+          const init = getInitials(m.name)
+          const acc = accounts.find(a=>a.team_id===m.id)
+          return (
+            <div key={m.id} style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.04)'}}>
+              <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${col},${col}88)`}}/>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
+                <div style={{width:44,height:44,borderRadius:'50%',background:m.avatar_color||col,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:15,flexShrink:0,boxShadow:`0 4px 12px ${col}40`}}>
+                  {m.avatar_initials||init}
+                </div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:13.5,color:'#0F172A'}}>{m.name}</div>
+                  <div style={{fontSize:11,color:'#94A3B8',marginTop:1}}>{m.role}</div>
+                  {acc&&<div style={{fontSize:10,color:acc.is_active?'#059669':'#DC2626',fontWeight:600,marginTop:2}}>{acc.is_active?'● Online account':'● Bị khoá'}</div>}
+                </div>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:7,fontSize:11}}>
+                <span style={{color:'#475569'}}>Projects: <strong style={{color:'#0F172A'}}>{active}/{m.max_projects||5}</strong></span>
+                <span style={{fontWeight:800,color:util>=80?'#DC2626':util>=60?'#D97706':'#059669'}}>{util}%</span>
+              </div>
+              <div style={{height:6,background:'rgba(26,86,219,0.08)',borderRadius:99,overflow:'hidden'}}>
+                <div style={{height:'100%',width:util+'%',background:util>=80?'#DC2626':'linear-gradient(90deg,#1A56DB,#06B6D4)',borderRadius:99}}/>
+              </div>
+              {currentUser?.isMaster && (
+                <div style={{display:'flex',gap:6,marginTop:12}}>
+                  {acc ? (
+                    <>
+                      <button onClick={()=>setEditPerms(acc)} style={{flex:1,padding:'5px 0',borderRadius:7,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:10.5,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>🔐 Phân quyền</button>
+                      {acc.is_active
+                        ? <button onClick={()=>deactivate(acc.id)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid rgba(220,38,38,0.2)',background:'rgba(220,38,38,0.06)',color:'#DC2626',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Khoá</button>
+                        : <button onClick={()=>activate(acc.id)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid rgba(5,150,105,0.2)',background:'rgba(5,150,105,0.06)',color:'#059669',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Mở</button>
+                      }
+                    </>
+                  ) : (
+                    <button onClick={()=>setShowAdd(m)} style={{flex:1,padding:'5px 0',borderRadius:7,border:'1.5px dashed rgba(26,86,219,0.3)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>+ Tạo tài khoản</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Accounts table */}
+      <div style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,overflow:'auto'}}>
+        <table style={{width:'100%',borderCollapse:'collapse'}}>
+          <thead>
+            <tr>
+              {['Thành viên','Email','SĐT','Role','Lần cuối đăng nhập','Trạng thái','Quyền truy cập',''].map(h=>(
+                <th key={h} style={{padding:'10px 14px',fontSize:10,fontWeight:800,color:'#94A3B8',borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'rgba(248,250,255,0.8)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {accounts.map(a=>{
+              const modCount = a.permissions?.filter(p=>p.can_view).length||0
+              return (
+                <tr key={a.id}>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div style={{width:32,height:32,borderRadius:'50%',background:a.avatar_color||'#1A56DB',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}}>
+                        {a.avatar_initials||getInitials(a.team?.name||a.email)}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:12.5,color:'#0F172A'}}>{a.team?.name||'—'}</div>
+                        <div style={{fontSize:10.5,color:'#94A3B8'}}>{a.team?.role||'Staff'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid rgba(26,86,219,0.06)',color:'#475569'}}>{a.email}</td>
+                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid rgba(26,86,219,0.06)',color:'#475569'}}>{a.phone||'—'}</td>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)'}}><span style={{background:'rgba(26,86,219,0.08)',color:'#1A56DB',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:600}}>{a.team?.role||'Staff'}</span></td>
+                  <td style={{padding:'11px 14px',fontSize:11,color:'#94A3B8',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>{a.last_login?new Date(a.last_login).toLocaleDateString('vi-VN'):'Chưa đăng nhập'}</td>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)'}}><span style={{background:a.is_active?'rgba(5,150,105,0.1)':'rgba(220,38,38,0.1)',color:a.is_active?'#059669':'#DC2626',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:700}}>{a.is_active?'Active':'Khoá'}</span></td>
+                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid rgba(26,86,219,0.06)',color:'#1A56DB',fontWeight:600}}>{modCount}/{MODULES.length} modules</td>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+                    {currentUser?.isMaster && (
+                      <div style={{display:'flex',gap:6}}>
+                        <button onClick={()=>setEditPerms(a)} style={{padding:'4px 10px',borderRadius:7,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>🔐 Quyền</button>
+                        <button onClick={()=>setEditAcc(a)} style={{padding:'4px 10px',borderRadius:7,border:'1px solid rgba(26,86,219,0.1)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Edit</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+            {!accounts.length&&<tr><td colSpan={8} style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có tài khoản nào</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {showAdd && <AddAccountForm supabase={supabase} teamMembers={data.team} preselected={typeof showAdd==='object'?showAdd:null} onClose={()=>setShowAdd(false)} onSaved={()=>{loadAccounts();reload();log('Thêm account')}}/>}
+      {editPerms && <PermissionManager account={{...editPerms,name:editPerms.team?.name||editPerms.email,role:editPerms.team?.role}} supabase={supabase} onClose={()=>setEditPerms(null)}/>}
+      {editAcc && <EditAccountForm account={editAcc} supabase={supabase} onClose={()=>setEditAcc(null)} onSaved={()=>{loadAccounts();log('Cập nhật account')}}/>}
+    </div>
+  )
+}
+
+// ── ADD ACCOUNT FORM ─────────────────────────────────────
+function AddAccountForm({supabase, teamMembers, preselected, onClose, onSaved}) {
+  const [form, setForm] = useState({
+    team_id: preselected?.id||'',
+    name: preselected?.name||'',
+    role: preselected?.role||'Account Manager',
+    email: '',
+    phone: '',
+    password: '',
+    confirm_password: '',
+    avatar_color: AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)],
+    max_projects: 5,
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if(form.password !== form.confirm_password) { setError('Mật khẩu không khớp!'); return }
+    if(form.password.length < 6) { setError('Mật khẩu ít nhất 6 ký tự!'); return }
+    setSaving(true); setError('')
+
+    // Create or get team member
+    let teamId = form.team_id
+    if(!teamId && form.name) {
+      const {data:newMember,error:teamErr} = await supabase.from('team').insert([{
+        name:form.name, role:form.role, email:form.email, phone:form.phone,
+        max_projects:Number(form.max_projects||5),
+        avatar_color:form.avatar_color,
+        avatar_initials:getInitials(form.name)
+      }]).select().single()
+      if(teamErr){setError('Lỗi tạo thành viên: '+teamErr.message);setSaving(false);return}
+      teamId = newMember.id
+    }
+
+    const {error:accErr} = await supabase.from('team_accounts').insert([{
+      team_id: teamId,
+      email: form.email.toLowerCase(),
+      phone: form.phone,
+      password_hash: simpleHash(form.password),
+      avatar_color: form.avatar_color,
+      avatar_initials: getInitials(form.name),
+      is_active: true
+    }])
+    if(accErr){setError('Lỗi tạo tài khoản: '+accErr.message);setSaving(false);return}
+    setSaving(false); onSaved(); onClose()
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:520,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.15)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
+          <span style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Thêm thành viên & tài khoản</span>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          {/* Avatar preview */}
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,padding:'16px',background:'rgba(26,86,219,0.04)',borderRadius:12,border:'1px solid rgba(26,86,219,0.1)'}}>
+            <div style={{width:56,height:56,borderRadius:'50%',background:form.avatar_color,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,boxShadow:`0 4px 16px ${form.avatar_color}50`,flexShrink:0}}>
+              {getInitials(form.name||'?')}
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:'#475569',marginBottom:8}}>Màu Avatar</div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {AVATAR_COLORS.map(c=>(
+                  <div key={c} onClick={()=>set('avatar_color',c)} style={{width:22,height:22,borderRadius:'50%',background:c,cursor:'pointer',border:form.avatar_color===c?'3px solid #0F172A':'3px solid transparent',transition:'border 0.1s'}}/>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {!preselected && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.04em'}}>Thành viên hiện có</div>
+              <select value={form.team_id} onChange={e=>{const m=teamMembers.find(t=>t.id===e.target.value);set('team_id',e.target.value);if(m){set('name',m.name);set('role',m.role)}}} style={{width:'100%',padding:'9px 12px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',color:'#0F172A',outline:'none'}}>
+                <option value="">— Tạo thành viên mới —</option>
+                {teamMembers.map(m=><option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
+              </select>
+            </div>
+          )}
+
+          {!form.team_id && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
+              {[['Họ và tên *','name','text',''],['Role','role','text','']].map(([l,k,t,ph])=>(
+                <div key={k} style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</label>
+                  <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} style={{width:'100%',padding:'9px 12px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',color:'#0F172A',outline:'none',boxSizing:'border-box'}} required={k==='name'}/>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            {[['Email *','email','email'],['Số điện thoại','phone','tel'],['Mật khẩu *','password','password'],['Xác nhận mật khẩu *','confirm_password','password']].map(([l,k,t])=>(
+              <div key={k} style={{marginBottom:12}}>
+                <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</label>
+                <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',color:'#0F172A',outline:'none',boxSizing:'border-box'}} required={['email','password','confirm_password'].includes(k)}/>
+              </div>
+            ))}
+          </div>
+
+          {error&&<div style={{background:'rgba(220,38,38,0.08)',border:'1px solid rgba(220,38,38,0.2)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#DC2626',marginBottom:16,fontWeight:500}}>{error}</div>}
+
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:8,paddingTop:14,borderTop:'1px solid rgba(26,86,219,0.1)'}}>
+            <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.1)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+            <button type="submit" disabled={saving} style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+              {saving?'Đang tạo...':'Tạo tài khoản'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ── EDIT ACCOUNT FORM ────────────────────────────────────
+function EditAccountForm({account, supabase, onClose, onSaved}) {
+  const [color, setColor] = useState(account.avatar_color||'#1A56DB')
+  const [phone, setPhone] = useState(account.phone||'')
+  const [newPwd, setNewPwd] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function save(e) {
+    e.preventDefault()
+    setSaving(true)
+    const upd = {avatar_color:color, phone, avatar_initials:getInitials(account.team?.name||account.email)}
+    if(newPwd.length>=6) upd.password_hash = simpleHash(newPwd)
+    await supabase.from('team_accounts').update(upd).eq('id',account.id)
+    if(account.team_id) {
+      await supabase.from('team').update({avatar_color:color,avatar_initials:getInitials(account.team?.name||''),phone}).eq('id',account.team_id)
+    }
+    setSaving(false); onSaved(); onClose()
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:420,maxWidth:'95vw',boxShadow:'0 24px 80px rgba(0,0,0,0.15)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
+          <span style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Chỉnh sửa tài khoản</span>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
+        </div>
+        <form onSubmit={save}>
+          {/* Avatar */}
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,padding:'16px',background:'rgba(26,86,219,0.04)',borderRadius:12}}>
+            <div style={{width:56,height:56,borderRadius:'50%',background:color,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,boxShadow:`0 4px 16px ${color}50`,flexShrink:0}}>
+              {account.avatar_initials||getInitials(account.team?.name||account.email)}
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:13,color:'#0F172A'}}>{account.team?.name||account.email}</div>
+              <div style={{fontSize:11,color:'#94A3B8',marginBottom:8}}>{account.email}</div>
+              <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+                {AVATAR_COLORS.map(c=>(
+                  <div key={c} onClick={()=>setColor(c)} style={{width:20,height:20,borderRadius:'50%',background:c,cursor:'pointer',border:color===c?'3px solid #0F172A':'3px solid transparent'}}/>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Số điện thoại</label>
+            <input value={phone} onChange={e=>setPhone(e.target.value)} type="tel" style={{width:'100%',padding:'9px 12px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',outline:'none',boxSizing:'border-box'}}/>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Đổi mật khẩu mới (để trống nếu không đổi)</label>
+            <input value={newPwd} onChange={e=>setNewPwd(e.target.value)} type="password" placeholder="Mật khẩu mới (≥6 ký tự)" style={{width:'100%',padding:'9px 12px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',outline:'none',boxSizing:'border-box'}}/>
+          </div>
+
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:14,borderTop:'1px solid rgba(26,86,219,0.1)'}}>
+            <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.1)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+            <button type="submit" disabled={saving} style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+              {saving?'Đang lưu...':'Lưu thay đổi'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
