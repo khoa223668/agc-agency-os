@@ -912,6 +912,19 @@ const STATUS_COLOR = {
   Completed:'#059669', Cancelled:'#DC2626', Pending:'#D97706'
 }
 
+function numToWords(n){
+  const units=['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín']
+  const teens=['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín']
+  const tens=['','mười','hai mươi','ba mươi','bốn mươi','năm mươi','sáu mươi','bảy mươi','tám mươi','chín mươi']
+  if(!n||n===0)return'không đồng'
+  if(n>=1e9){const b=Math.floor(n/1e9);return units[b]+' tỷ '+(n%1e9?numToWords(n%1e9):'')}
+  if(n>=1e6){const m=Math.floor(n/1e6);const mw=m>=20?tens[Math.floor(m/10)]+(m%10?' '+units[m%10]:''):teens[m-10]||tens[Math.floor(m/10)]+' '+units[m%10];return mw+' triệu '+(n%1e6?numToWords(n%1e6):'')}
+  if(n>=1e3){const k=Math.floor(n/1e3);return numToWords(k)+' nghìn '+(n%1e3?numToWords(n%1e3):'')}
+  if(n>=100){const h=Math.floor(n/100);return units[h]+' trăm '+(n%100?numToWords(n%100):'')}
+  if(n>=20)return tens[Math.floor(n/10)]+(n%10?' '+units[n%10]:'')
+  if(n>=10)return teens[n-10]
+  return units[n]
+}
 function toWords(n){const w=numToWords(Math.round(n));return w.trim().charAt(0).toUpperCase()+w.trim().slice(1)+' đồng./.'  }
 
 
