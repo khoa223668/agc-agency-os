@@ -119,89 +119,23 @@ function StatCard({label,value,sub,color,icon}){
 
 export default function App(){
   const [page,setPage]=useState('dashboard')
-const [data,setData]=useState({
-  projects:[],
-  clients:[],
-  kols:[],
-  team:[],
-  invoices:[],
-  deals:[],
-  dealHistory:[],
-  vendors:[],
-  approvals:[],
-
-  campaigns:[],
-  clientContracts:[],
-  kolContracts:[],
-  deliverables:[],
-  acceptanceReports:[]
-})
+  const [data,setData]=useState({projects:[],clients:[],kols:[],team:[],invoices:[],deals:[],dealHistory:[],vendors:[],approvals:[]})
+  const [loading,setLoading]=useState(true)
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false)
   useEffect(()=>{loadAll()},[])
 
-async function loadAll(){
-  try{
+  async function loadAll(){
     setLoading(true)
-
-    const tables=[
-      'projects',
-      'clients',
-      'kols',
-      'team',
-      'invoices',
-      'deals',
-      'deal_history',
-      'vendors',
-      'approvals',
-
-      // LEGAL MODULE
-      'campaigns',
-      'client_contracts',
-      'kol_contracts',
-      'deliverables',
-      'acceptance_reports'
-    ]
-
-    const res = await Promise.all(
-      tables.map(async (t)=>{
-        const r = await supabase
-          .from(t)
-          .select('*')
-          .order('created_at',{ascending:false})
-
-        return r
-      })
-    )
-
-    setData({
-      projects:res[0]?.data || [],
-      clients:res[1]?.data || [],
-      kols:res[2]?.data || [],
-      team:res[3]?.data || [],
-      invoices:res[4]?.data || [],
-      deals:res[5]?.data || [],
-      dealHistory:res[6]?.data || [],
-      vendors:res[7]?.data || [],
-      approvals:res[8]?.data || [],
-
-      campaigns:res[9]?.data || [],
-      clientContracts:res[10]?.data || [],
-      kolContracts:res[11]?.data || [],
-      deliverables:res[12]?.data || [],
-      acceptanceReports:res[13]?.data || []
-    })
-
-  }catch(err){
-    console.error(err)
-    alert('Load dữ liệu thất bại: '+err.message)
-  }finally{
+    const tables=['projects','clients','kols','team','invoices','deals','deal_history','vendors','approvals']
+    const res=await Promise.all(tables.map(t=>supabase.from(t).select('*').order('created_at',{ascending:false})))
+    setData({projects:res[0].data||[],clients:res[1].data||[],kols:res[2].data||[],team:res[3].data||[],invoices:res[4].data||[],deals:res[5].data||[],dealHistory:res[6].data||[],vendors:res[7].data||[],approvals:res[8].data||[]})
     setLoading(false)
   }
-}
   async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
   async function upd(t,id,r){const{error}=await supabase.from(t).update(r).eq('id',id);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
   async function del(t,id){if(!confirm('Xác nhận xóa?'))return;await supabase.from(t).delete().eq('id',id);await loadAll()}
   const log = async (msg) => { await supabase.from('audit_log').insert([{message:msg,role:'User'}]) }
+  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
 
   const NAV=[
     {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
@@ -935,14 +869,14 @@ function Reports({data}){
 }
 
 
-// ═══════════════════════════════════════════════════════════
-// CONTRACTS + BBNT MODULE — K&K Advertising Agency OS
-// ═══════════════════════════════════════════════════════════
 
-// ── KNK INFO (cố định) ──────────────────────────────────
+
+// ════════════════════════════════════════════════════════════
+// K&K CONTRACTS + BBNT MODULE — Clean rewrite
+// ════════════════════════════════════════════════════════════
+
 const KNK = {
   name: 'CÔNG TY TNHH QUẢNG CÁO K&K',
-  shortName: 'K&K Advertising',
   address: '737/7 Kha Vạn Cân, Phường Linh Xuân, TP. Hồ Chí Minh',
   taxCode: '0317776715',
   rep: 'TÔ NGUYỄN ĐĂNG KHOA',
@@ -952,54 +886,226 @@ const KNK = {
   bankBranch: 'HCM',
   phone: '0938 223 668',
   email: 'contact@weareknk.com',
-  website: 'weareknk.com',
 }
 
-// ── CONTRACT UI HELPERS (extended versions) ─────────────
-function Row3({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>{children}</div>}
-function Sec({title,children}){return <div style={{marginBottom:20}}><div style={{fontSize:12,fontWeight:800,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'2px solid rgba(26,86,219,0.1)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{title}</div>{children}</div>}
-function CModal({title,children,onClose,wide}){return <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}><div style={{background:'rgba(255,255,255,0.98)',borderRadius:20,padding:'24px 28px',width:wide?860:580,maxWidth:'96vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15)',border:'1px solid rgba(26,86,219,0.1)'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}><span style={{fontSize:16,fontWeight:800,color:'#0F172A',letterSpacing:'-0.02em'}}>{title}</span><button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button></div>{children}</div></div>}
-function CMFoot({onClose,onDelete,submitLabel}){return <div style={{display:'flex',justifyContent:'space-between',marginTop:18,paddingTop:14,borderTop:'1px solid rgba(26,86,219,0.1)'}}><div>{onDelete&&<button type="button" onClick={onDelete} style={{padding:'5px 12px',borderRadius:9,border:'1.5px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.08)',color:'#DC2626',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xóa</button>}</div><div style={{display:'flex',gap:8}}><button type="button" onClick={onClose} style={{padding:'6px 14px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.1)',background:'rgba(255,255,255,0.7)',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button><button type="submit" style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg, #1A56DB 0%, #06B6D4 100%)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{submitLabel||'Lưu'}</button></div></div>}
-function CFG({label,children,required}){return <div style={{marginBottom:13}}><label style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:5,display:'block',letterSpacing:'0.04em',textTransform:'uppercase'}}>{label}{required&&<span style={{color:'#DC2626',marginLeft:3}}>*</span>}</label>{children}</div>}
-function CRow2({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
-function CBadge({text}){const SC={Draft:'#94A3B8',Sent:'#1A56DB',Signed:'#059669',Completed:'#059669',Cancelled:'#DC2626',Pending:'#D97706'};const c=SC[text]||'#94A3B8';return <span style={{background:c+'18',color:c,padding:'3px 10px',borderRadius:99,fontSize:10,fontWeight:700,border:`1px solid ${c}25`}}>{text}</span>}
-function CCard({title,children,action,glow}){return <div style={{background:'rgba(255,255,255,0.95)',backdropFilter:'blur(20px)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,padding:'18px 22px',marginBottom:16,boxShadow:glow?'0 4px 24px rgba(26,86,219,0.15)':'0 1px 4px rgba(0,0,0,0.04)',position:'relative',overflow:'hidden'}}>{glow&&<div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(135deg, #1A56DB 0%, #06B6D4 100%)',borderRadius:'16px 16px 0 0'}}/>}<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:13}}><span style={{fontSize:12.5,fontWeight:700,color:'#0F172A'}}>{title}</span>{action}</div>{children}</div>}
-function CBtn({children,onClick,primary,sm,danger,type,style:s}){
-  if(primary)return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'none',background:'linear-gradient(135deg, #1A56DB 0%, #06B6D4 100%)',color:'#fff',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",...s}}>{children}</button>
-  if(danger)return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'1.5px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.08)',color:'#DC2626',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",...s}}>{children}</button>
-  return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.1)',background:'rgba(255,255,255,0.7)',color:'#475569',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",...s}}>{children}</button>
-}
-const CINP={style:{width:'100%',padding:'8px 11px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:8,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#FFFFFF',color:'#0F172A',outline:'none',boxSizing:'border-box'}}
-
-// ── BRAND COLORS (reuse từ App) ──────────────────────────
-
-const STATUS_COLOR = {
-  Draft:'#94A3B8', Sent:'#1A56DB', Signed:'#059669',
-  Completed:'#059669', Cancelled:'#DC2626', Pending:'#D97706'
+// ── Helpers (C-prefixed to avoid conflicts) ──────────────
+const CB = {
+  primary:'#1A56DB', accent:'#06B6D4', navy:'#0F172A',
+  grad:'linear-gradient(135deg,#1A56DB,#06B6D4)',
+  soft:'linear-gradient(135deg,rgba(26,86,219,0.08),rgba(6,182,212,0.08))',
+  white:'#FFFFFF', border:'rgba(26,86,219,0.1)',
+  text:'#0F172A', textSec:'#475569', textTer:'#94A3B8',
+  success:'#059669', warning:'#D97706', danger:'#DC2626',
 }
 
-function numToWords(n){
+const CINP_S = {width:'100%',padding:'8px 11px',border:'1.5px solid rgba(26,86,219,0.1)',borderRadius:8,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',color:'#0F172A',outline:'none',boxSizing:'border-box'}
+
+function cfmt(n){return Number(n||0).toLocaleString('vi-VN')}
+function cfmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
+
+function toWords(n) {
+  n = Math.round(Number(n||0))
+  if(!n) return 'Không đồng'
   const units=['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín']
   const teens=['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín']
   const tens=['','mười','hai mươi','ba mươi','bốn mươi','năm mươi','sáu mươi','bảy mươi','tám mươi','chín mươi']
-  if(!n||n===0)return'không đồng'
-  if(n>=1e9){const b=Math.floor(n/1e9);return units[b]+' tỷ '+(n%1e9?numToWords(n%1e9):'')}
-  if(n>=1e6){const m=Math.floor(n/1e6);const mw=m>=20?tens[Math.floor(m/10)]+(m%10?' '+units[m%10]:''):teens[m-10]||tens[Math.floor(m/10)]+' '+units[m%10];return mw+' triệu '+(n%1e6?numToWords(n%1e6):'')}
-  if(n>=1e3){const k=Math.floor(n/1e3);return numToWords(k)+' nghìn '+(n%1e3?numToWords(n%1e3):'')}
-  if(n>=100){const h=Math.floor(n/100);return units[h]+' trăm '+(n%100?numToWords(n%100):'')}
-  if(n>=20)return tens[Math.floor(n/10)]+(n%10?' '+units[n%10]:'')
-  if(n>=10)return teens[n-10]
-  return units[n]
+  function num(x) {
+    if(!x) return ''
+    if(x>=1e9){const b=Math.floor(x/1e9);return units[b]+' tỷ '+(x%1e9?num(x%1e9):'')}
+    if(x>=1e6){const m=Math.floor(x/1e6);const mw=m>=20?tens[Math.floor(m/10)]+(m%10?' '+units[m%10]:''):(m>=10?teens[m-10]:units[m]);return mw+' triệu '+(x%1e6?num(x%1e6):'')}
+    if(x>=1e3){const k=Math.floor(x/1e3);return num(k)+' nghìn '+(x%1e3?num(x%1e3):'')}
+    if(x>=100){return units[Math.floor(x/100)]+' trăm '+(x%100?num(x%100):'') }
+    if(x>=20) return tens[Math.floor(x/10)]+(x%10?' '+units[x%10]:'')
+    if(x>=10) return teens[x-10]
+    return units[x]
+  }
+  const w = num(n).trim()
+  return w.charAt(0).toUpperCase()+w.slice(1)+' đồng./.'
 }
-function toWords(n){const w=numToWords(Math.round(n));return w.trim().charAt(0).toUpperCase()+w.trim().slice(1)+' đồng./.'  }
 
+function fmtDate(s) {
+  if(!s) return '___/___/______'
+  const d=new Date(s)
+  return `ngày ${d.getDate()} tháng ${d.getMonth()+1} năm ${d.getFullYear()}`
+}
+
+function genCode(prefix) {
+  const d=new Date()
+  return `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getFullYear()).slice(2)}-${prefix}-KnK-`
+}
+
+// ── UI Components ─────────────────────────────────────────
+function CModal({title,children,onClose,wide}) {
+  return (
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose()}}
+      style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:wide?880:600,maxWidth:'96vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15)',border:'1px solid rgba(26,86,219,0.1)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
+          <span style={{fontSize:16,fontWeight:800,color:CB.navy}}>{title}</span>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:CB.textTer,lineHeight:1}}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function CBadge({text}) {
+  const colors={Draft:'#94A3B8',Sent:'#1A56DB',Signed:'#059669',Completed:'#059669',Cancelled:'#DC2626',Pending:'#D97706'}
+  const c=colors[text]||'#94A3B8'
+  return <span style={{background:c+'18',color:c,padding:'3px 10px',borderRadius:99,fontSize:10,fontWeight:700,border:`1px solid ${c}25`}}>{text}</span>
+}
+
+function CBtn({children,onClick,primary,sm,danger,type,style:s}) {
+  const base={display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,cursor:'pointer',fontSize:sm?10.5:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",...s}
+  if(primary) return <button type={type||'button'} onClick={onClick} style={{...base,border:'none',background:CB.grad,color:'#fff'}}>{children}</button>
+  if(danger) return <button type={type||'button'} onClick={onClick} style={{...base,border:'1.5px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.08)',color:'#DC2626'}}>{children}</button>
+  return <button type={type||'button'} onClick={onClick} style={{...base,border:'1.5px solid rgba(26,86,219,0.1)',background:'rgba(255,255,255,0.8)',color:CB.textSec}}>{children}</button>
+}
+
+function CFG({label,children,required}) {
+  return (
+    <div style={{marginBottom:13}}>
+      <label style={{fontSize:11,fontWeight:700,color:CB.textSec,marginBottom:5,display:'block',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+        {label}{required&&<span style={{color:CB.danger,marginLeft:3}}>*</span>}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function CRow2({children}) {return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
+function CRow3({children}) {return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>{children}</div>}
+function CSec({title,children}) {
+  return (
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:11.5,fontWeight:800,color:CB.navy,marginBottom:10,paddingBottom:6,borderBottom:`2px solid ${CB.border}`,textTransform:'uppercase',letterSpacing:'0.06em'}}>{title}</div>
+      {children}
+    </div>
+  )
+}
+function CMFoot({onClose,onDelete,label}) {
+  return (
+    <div style={{display:'flex',justifyContent:'space-between',marginTop:18,paddingTop:14,borderTop:`1px solid ${CB.border}`}}>
+      <div>{onDelete&&<CBtn danger onClick={onDelete}>Xóa</CBtn>}</div>
+      <div style={{display:'flex',gap:8}}>
+        <CBtn onClick={onClose}>Huỷ</CBtn>
+        <button type="submit" style={{padding:'7px 20px',borderRadius:9,border:'none',background:CB.grad,color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label||'Lưu'}</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Clauses HĐ Dịch vụ ───────────────────────────────────
+function clausesHDDV(partyA, partyB, form, kolList, fee, vat, total) {
+  return `
+<h3>ĐIỀU 1. ĐỊNH NGHĨA</h3>
+<p>Nếu không có những sự kiện vượt ra ngoài giới hạn kiểm soát hợp lý, những Điều, Khoản và từ ngữ bên dưới, bất cứ khi nào được sử dụng trong Hợp Đồng, Phụ lục Hợp Đồng (nếu có) nếu không thay đổi, được định nghĩa như sau:</p>
+<ol>
+<li><em>"Bên"</em> có nghĩa là Bên A hay Bên B;</li>
+<li><em>"Các Bên"</em> có nghĩa là cả hai Bên, Bên A và Bên B;</li>
+<li><em>"Bên Thứ ba"</em> có nghĩa là không phải là Các Bên;</li>
+<li><em>"Sự kiện bất khả kháng"</em> có nghĩa là sự kiện xảy ra một cách khách quan không thể lường trước được và không thể khắc phục được mặc dù đã áp dụng mọi biện pháp cần thiết và trong khả năng cho phép, chẳng hạn như: chiến tranh, bạo loạn, đình công, hỏa hoạn, thiên tai, lũ lụt, dịch bệnh, cách ly do kiểm dịch;</li>
+<li><em>"Phạm vi công việc"</em> có nghĩa là những công việc mà Bên có nghĩa vụ phải thực hiện cho đến khi Hợp Đồng này chấm dứt;</li>
+<li><em>"Thông tin"</em> có nghĩa là tất cả các thông tin, tài liệu có thể đọc được, nghe được, thấy được, thể hiện hoặc lưu trữ dưới các hình thức: văn bản, tệp (file), thư điện tử (email), hình ảnh,... hoặc bằng các hình thức khác mà Các Bên có được trong quá trình thực hiện Hợp Đồng.</li>
+</ol>
+
+<h3>ĐIỀU 2. ĐỐI TƯỢNG CỦA HỢP ĐỒNG</h3>
+<p>1. Bên A đồng ý giao và Bên B đồng ý nhận thực hiện dịch vụ theo yêu cầu của Bên A với nội dung cụ thể như sau:</p>
+<p>a) Bên B cung cấp người nổi tiếng/ người có tầm ảnh hưởng – KOLs/Influencers (sau đây gọi chung là "Nhân sự") thực hiện quay và sản xuất nội dung (sau đây gọi chung là "Sản phẩm") theo chủ đề và yêu cầu của Bên A và đăng tải lên tài khoản TikTok của Nhân sự.</p>
+<p>2. Thời gian thực hiện công việc: Bắt đầu từ ${form.start_date||'ngày ký'} đến khi thực hiện nghiệm thu.</p>
+<p>3. Báo giá chỉ có hiệu lực trong thời hạn từ 15 đến 30 ngày kể từ ngày ký kết Hợp Đồng.</p>
+<p>4. Phạm vi công việc cụ thể: Nhân sự của Bên B thực hiện quay và hoàn thiện Sản phẩm theo nội dung đã thỏa thuận. Số lần chỉnh sửa tối đa là hai (02) lần/Sản phẩm.</p>
+
+<h3>ĐIỀU 3. GIÁ TRỊ HỢP ĐỒNG VÀ TIẾN ĐỘ THANH TOÁN</h3>
+<p><strong>1. Giá trị Hợp Đồng:</strong></p>
+<p>&nbsp;&nbsp;&nbsp;a) Phí dịch vụ: ${cfmt(fee)} VNĐ</p>
+<p>&nbsp;&nbsp;&nbsp;b) Thuế GTGT (${form.vat_rate||8}%): ${cfmt(Number(fee)*Number(form.vat_rate||8)/100)} VNĐ</p>
+<p>&nbsp;&nbsp;&nbsp;c) Tổng giá trị Hợp Đồng: <strong>${cfmt(total)} VNĐ</strong></p>
+<p>&nbsp;&nbsp;&nbsp;<em>Bằng chữ: ${toWords(total)}</em></p>
+<p><strong>2. Tiến độ thanh toán:</strong> ${form.payment_terms||'Thanh toán 100% giá trị hợp đồng trong vòng 30 ngày làm việc sau khi Bên B hoàn tất toàn bộ công việc và Bên A đã nhận đầy đủ chứng từ hợp lệ bao gồm: Hợp đồng, Biên bản nghiệm thu và Hoá đơn GTGT hợp lệ.'}</p>
+<p><em>(Lưu ý: trong vòng 02 ngày làm việc tính từ khi Bên B gửi Biên Bản Nghiệm Thu nhưng chưa nhận được sự phản hồi từ Bên A, thì mặc định Biên Bản Nghiệm Thu này được thanh lý.)</em></p>
+
+<h3>ĐIỀU 4. QUYỀN VÀ NGHĨA VỤ BÊN B</h3>
+<p><strong>1. Quyền của Bên B:</strong> Được nhận thanh toán đầy đủ và đúng hạn; Từ chối thực hiện khi Bên A chậm giao tài liệu hoặc không thanh toán đúng hạn; Được quyền xóa hoặc ẩn bài đăng nếu phát hiện vi phạm pháp luật sau khi thông báo bằng văn bản.</p>
+<p><strong>2. Nghĩa vụ của Bên B:</strong> Đảm bảo thực hiện đúng và đầy đủ nội dung Điều 2; Tuyệt đối bảo mật thông tin trong vòng 02 năm kể từ ngày ký; Đảm bảo lưu trữ Sản phẩm đã đăng tải ở chế độ công khai tối thiểu 06 tháng.</p>
+
+<h3>ĐIỀU 5. QUYỀN VÀ NGHĨA VỤ BÊN A</h3>
+<p><strong>1. Quyền của Bên A:</strong> Yêu cầu Bên B thực hiện đúng nội dung và thời gian; Yêu cầu chỉnh sửa Sản phẩm theo quy định; Đơn phương chấm dứt Hợp Đồng nếu Bên B vi phạm sau khi đã gửi thông báo ít nhất 02 lần.</p>
+<p><strong>2. Nghĩa vụ của Bên A:</strong> Thanh toán đầy đủ và đúng hạn (lãi chậm thanh toán 0.05%/ngày); Cam kết tính hợp pháp của thông tin cung cấp; Không tự ý làm việc trực tiếp với KOL/KOC do Bên B cung cấp trong thời hạn hợp đồng; Cung cấp feedback trong vòng 24-48 giờ.</p>
+
+<h3>ĐIỀU 6. QUYỀN SỞ HỮU TRÍ TUỆ</h3>
+<p>Bên B đảm bảo tính nguyên gốc, tính sáng tạo và tính hợp pháp của các tài sản sở hữu trí tuệ sử dụng trong Sản phẩm. Các Bên cam kết tôn trọng và thực hiện đầy đủ các nghĩa vụ về quyền sở hữu trí tuệ.</p>
+
+<h3>ĐIỀU 7. BỒI THƯỜNG THIỆT HẠI VÀ PHẠT VI PHẠM</h3>
+<p>1. Bên vi phạm phải bồi thường tất cả tổn thất phát sinh từ hành vi vi phạm.</p>
+<p>2. Mọi trường hợp vi phạm đều phải chịu mức phạt 8% trên phần giá trị Hợp Đồng bị vi phạm.</p>
+<p>3. Trong trường hợp Bên A muốn chạy quảng cáo trên các video của nhân sự do Bên B quản lý thì bắt buộc phải thông qua Bên B; nếu vi phạm thì Bên A sẽ bồi thường 200% giá trị hợp đồng.</p>
+
+<h3>ĐIỀU 8. CHỐNG HỐI LỘ</h3>
+<p>Bên A không được trao cho nhân viên của Bên B các lợi ích bằng tiền hoặc hiện vật dưới bất kỳ hình thức nào mà không được sự đồng ý của Bên B. Vi phạm chịu phạt 8% giá trị Hợp đồng hoặc 200% giá trị hối lộ và bồi thường 20% giá trị Hợp đồng.</p>
+
+<h3>ĐIỀU 9. CHẤM DỨT HỢP ĐỒNG</h3>
+<p>Hợp Đồng chấm dứt khi: Các Bên hoàn thành đầy đủ nghĩa vụ; Một trong Các Bên bị phá sản; Các Bên thỏa thuận chấm dứt trước thời hạn (thông báo trước 15 ngày); Một Bên đơn phương chấm dứt do bên kia vi phạm không khắc phục trong 10 ngày; Sự kiện bất khả kháng kéo dài quá 30 ngày.</p>
+
+<h3>ĐIỀU 10. GIẢI QUYẾT TRANH CHẤP</h3>
+<p>Trong quá trình thực hiện Hợp Đồng, nếu có phát sinh tranh chấp thì Các Bên sẽ giải quyết bằng thương lượng, hòa giải. Trường hợp không giải quyết được trong vòng 30 ngày, một trong Các Bên có quyền yêu cầu Tòa án có thẩm quyền giải quyết. Bên thua kiện chịu mọi chi phí phát sinh.</p>
+
+<h3>ĐIỀU 11. ĐIỀU KHOẢN CHUNG</h3>
+<p>1. Hợp Đồng có hiệu lực kể từ ngày ký và tự động thanh lý sau khi Các Bên hoàn thành đầy đủ nghĩa vụ.</p>
+<p>2. Mọi sửa đổi, bổ sung Hợp Đồng phải thực hiện bằng Phụ lục Hợp Đồng.</p>
+<p>3. Hợp Đồng được lập thành 02 bản có giá trị giống như nhau, Bên A giữ 01 bản và Bên B giữ 01 bản.</p>
+`
+}
+
+// ── Clauses HĐ CTV ───────────────────────────────────────
+function clausesHDCTV(form, fee, tax, netFee) {
+  return `
+<h3>ĐIỀU 1. ĐỊNH NGHĨA</h3>
+<p>Các từ ngữ trong Hợp Đồng được định nghĩa như sau: <em>"Bên"</em> là Bên A hay Bên B; <em>"Các Bên"</em> là cả hai Bên; <em>"Bên Thứ ba"</em> là không phải Các Bên; <em>"Sự kiện bất khả kháng"</em> là những sự kiện khách quan không thể lường trước và không thể khắc phục; <em>"Phạm vi công việc"</em> là những công việc Bên B phải thực hiện; <em>"Biên tập"</em> là việc điều chỉnh, thêm, bớt nội dung video; <em>"Ngày làm việc"</em> là các ngày từ Thứ 2 đến Thứ 6.</p>
+
+<h3>ĐIỀU 2. ĐỐI TƯỢNG HỢP ĐỒNG</h3>
+<p>a) Bên A giao và Bên B đồng ý thực hiện: <strong>${form.scope_of_work||'1 video TikTok review sản phẩm theo định hướng của khách hàng'}</strong></p>
+<p>b) Thời gian thực hiện: từ ${form.start_date||'ngày ký'} đến khi thực hiện nghiệm thu.</p>
+<p>c) Kênh đăng tải: <strong>${form.channels||'Theo thỏa thuận'}</strong></p>
+<p>d) Thời hạn Hợp Đồng: kể từ ngày ký cho đến khi các Bên hoàn thành toàn bộ nghĩa vụ.</p>
+
+<h3>ĐIỀU 3. THÙ LAO VÀ THANH TOÁN</h3>
+<p>1. Thù lao gốc: <strong>${cfmt(fee)} VNĐ</strong></p>
+<p>2. Khấu trừ thuế TNCN (${form.vat_rate||10}%): ${cfmt(Number(fee)*Number(form.vat_rate||10)/100)} VNĐ</p>
+<p>3. <strong>Thù lao thực nhận (đã khấu trừ thuế TNCN): ${cfmt(netFee)} VNĐ</strong></p>
+<p>&nbsp;&nbsp;&nbsp;<em>Bằng chữ: ${toWords(netFee)}</em></p>
+<p>4. Phương thức: Chuyển khoản.</p>
+<p>5. Tiến độ: ${form.payment_terms||'100% trong vòng 15 ngày làm việc kể từ ngày hoàn thành công việc và ký Biên bản nghiệm thu.'}</p>
+
+<h3>ĐIỀU 4. QUYỀN VÀ NGHĨA VỤ CỦA BÊN A</h3>
+<p><strong>1. Quyền của Bên A:</strong> Điều chỉnh phạm vi và thời gian thực hiện; Yêu cầu điều chỉnh thể hiện của Bên B; Chấm dứt và miễn nghĩa vụ thanh toán nếu Bên B không thực hiện đúng; Sử dụng video, hình ảnh của Bên B để quảng bá; Là chủ sở hữu hợp pháp đối với tất cả sản phẩm Bên B tạo ra.</p>
+<p><strong>2. Nghĩa vụ của Bên A:</strong> Thông báo lịch làm việc; Phối hợp từ giai đoạn chuẩn bị đến hoàn thành; Thanh toán đúng hạn và đầy đủ.</p>
+
+<h3>ĐIỀU 5. QUYỀN VÀ NGHĨA VỤ CỦA BÊN B</h3>
+<p><strong>1. Quyền của Bên B:</strong> Nhận đầy đủ thù lao; Được thông báo khi có thay đổi thời gian.</p>
+<p><strong>2. Nghĩa vụ của Bên B:</strong> Thực hiện đầy đủ công việc; Đảm bảo chất lượng kỹ thuật; Không tạo dư luận xấu ảnh hưởng đến nhãn hàng; Cam kết giữ bài đăng công khai vĩnh viễn (vi phạm đền bù 200% giá trị tương ứng); Bảo mật toàn bộ thông tin Hợp Đồng.</p>
+
+<h3>ĐIỀU 6. BỒI THƯỜNG THIỆT HẠI VÀ PHẠT VI PHẠM</h3>
+<p>1. Mọi vi phạm phải bồi thường tổn thất và chịu phạt 8% giá trị phần nghĩa vụ bị vi phạm.</p>
+<p>2. Nếu Bên B không hoàn thành đúng thời hạn hoặc không đúng chất lượng, ngoài việc thực hiện phần còn lại, Bên B phải chịu phạt 200% giá trị phần Hợp Đồng bị vi phạm.</p>
+
+<h3>ĐIỀU 7. CHẤM DỨT HỢP ĐỒNG</h3>
+<p>Hợp Đồng chấm dứt khi: Các Bên hoàn thành nghĩa vụ; Các Bên thỏa thuận chấm dứt trước thời hạn (thông báo trước 30 ngày làm việc); Một Bên đơn phương chấm dứt do vi phạm (thông báo trước 15 ngày).</p>
+
+<h3>ĐIỀU 8. ĐIỀU KHOẢN CHUNG</h3>
+<p>1. Hợp Đồng có hiệu lực kể từ ngày ký và được thanh lý sau khi hoàn thành toàn bộ nghĩa vụ.</p>
+<p>2. Mọi sửa đổi, bổ sung phải được hai Bên thống nhất bằng văn bản.</p>
+<p>3. Tranh chấp giải quyết bằng thương lượng; nếu không được, một Bên có quyền yêu cầu Tòa án tại TP. Hồ Chí Minh giải quyết.</p>
+<p>4. Hợp Đồng được lập thành 02 bản có giá trị pháp lý như nhau, mỗi Bên giữ 01 bản.</p>
+`
+}
 
 // ══════════════════════════════════════════════════════════
 // CONTRACTS PAGE
 // ══════════════════════════════════════════════════════════
-
 function Contracts({data, supabase, reload, log}) {
-  const [tab, setTab] = useState('client') // 'client' | 'kol'
+  const [tab, setTab] = useState('client')
   const [contracts, setContracts] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState(null)
@@ -1007,97 +1113,117 @@ function Contracts({data, supabase, reload, log}) {
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(false)
 
-  useEffect(()=>{ loadContracts() }, [tab])
+  useEffect(() => { loadContracts() }, [tab])
 
   async function loadContracts() {
     setLoading(true)
-    const {data:rows} = await supabase.from('contracts').select('*').eq('contract_type',tab).order('created_at',{ascending:false})
+    const {data:rows,error} = await supabase.from('contracts').select('*').eq('contract_type',tab).order('created_at',{ascending:false})
+    if(error) console.error(error)
     setContracts(rows||[])
     setLoading(false)
   }
 
   const filtered = contracts.filter(c =>
-    !filter || (c.contract_code||'').toLowerCase().includes(filter.toLowerCase()) ||
+    !filter ||
+    (c.contract_code||'').toLowerCase().includes(filter.toLowerCase()) ||
     (c.party_a_name||'').toLowerCase().includes(filter.toLowerCase()) ||
     (c.party_b_name||'').toLowerCase().includes(filter.toLowerCase())
   )
 
-  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'rgba(248,250,255,0.8)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
-  const TD={padding:'10px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
+  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:CB.textTer,borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'rgba(248,250,255,0.8)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
+  const TD={padding:'10px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)',verticalAlign:'middle'}
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Hợp đồng</h2>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:CB.navy}}>Hợp đồng</h2>
         <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo hợp đồng</CBtn>
       </div>
 
-      {/* Tabs */}
-      <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.7)',padding:4,borderRadius:10,width:'fit-content',border:`1px solid ${B.border}`}}>
+      <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.7)',padding:4,borderRadius:10,width:'fit-content',border:'1px solid rgba(26,86,219,0.1)'}}>
         {[['client','🏢  HĐ Dịch vụ (Client)'],['kol','👤  HĐ Cộng tác viên (KOL)']].map(([key,label])=>(
-          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?B.gradPrimary:'transparent',color:tab===key?'#fff':B.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif",transition:'all 0.15s'}}>{label}</button>
+          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':CB.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
         ))}
       </div>
 
-      {/* KPIs */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16}}>
-        {[['Tổng HĐ',contracts.length],['Draft',contracts.filter(c=>c.status==='Draft').length],['Đã ký',contracts.filter(c=>c.status==='Signed').length],['Tổng giá trị',fmtS(contracts.reduce((a,c)=>a+Number(c.total_with_vat||0),0))+' VND']].map(([l,v])=>(
-          <div key={l} style={{background:'rgba(255,255,255,0.9)',borderRadius:12,padding:'12px 16px',border:`1px solid ${B.border}`}}>
-            <div style={{fontSize:10,fontWeight:700,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</div>
-            <div style={{fontSize:20,fontWeight:900,color:B.primary,marginTop:5}}>{v}</div>
+        {[
+          ['Tổng HĐ', contracts.length],
+          ['Draft', contracts.filter(c=>c.status==='Draft').length],
+          ['Đã ký', contracts.filter(c=>c.status==='Signed').length],
+          ['Tổng giá trị', cfmtS(contracts.reduce((a,c)=>a+Number(c.total_with_vat||0),0))+' VND']
+        ].map(([l,v])=>(
+          <div key={l} style={{background:'rgba(255,255,255,0.9)',borderRadius:12,padding:'12px 16px',border:'1px solid rgba(26,86,219,0.1)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:CB.textTer,textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</div>
+            <div style={{fontSize:20,fontWeight:900,color:CB.primary,marginTop:5}}>{v}</div>
           </div>
         ))}
       </div>
 
-      {/* Search */}
       <div style={{marginBottom:14}}>
-        <input placeholder="🔍  Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP.style,maxWidth:360}}/>
+        <input placeholder="🔍  Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP_S,maxWidth:380}}/>
       </div>
 
-      {/* Table */}
-      <div style={{background:'rgba(255,255,255,0.9)',border:`1px solid ${B.border}`,borderRadius:16,overflow:'auto'}}>
+      <div style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
-          <thead><tr>{['Số HĐ','Bên đối tác','Dự án','Giá trị (VND)','Ngày ký','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead>
+            <tr>
+              {['Số HĐ','Bên đối tác','Dự án','Giá trị (VND)','Ngày ký','Trạng thái',''].map(h=>(
+                <th key={h} style={TH}>{h}</th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
-            {loading&&<tr><td colSpan={7} style={{textAlign:'center',padding:32,color:B.textTer}}>Đang tải...</td></tr>}
-            {!loading&&filtered.map(c=>(
+            {loading && <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:CB.textTer}}>Đang tải...</td></tr>}
+            {!loading && filtered.map(c=>(
               <tr key={c.id}>
-                <td style={{...TD,fontWeight:800,color:B.primary,fontSize:12}}>{c.contract_code}</td>
+                <td style={{...TD,fontWeight:800,color:CB.primary,fontSize:12}}>{c.contract_code}</td>
                 <td style={{...TD,fontWeight:600}}>{tab==='client'?c.party_a_name:c.party_b_name}</td>
-                <td style={{...TD,fontSize:11,color:B.textSec}}>{data.projects.find(p=>p.id===c.project_id)?.campaign||'—'}</td>
-                <td style={{...TD,fontWeight:700,color:B.navy}}>{fmt(c.total_with_vat)}</td>
-                <td style={{...TD,fontSize:11,color:B.textTer}}>{c.sign_date||'—'}</td>
+                <td style={{...TD,fontSize:11,color:CB.textSec}}>{data.projects.find(p=>p.id===c.project_id)?.campaign||'—'}</td>
+                <td style={{...TD,fontWeight:700}}>{cfmt(c.total_with_vat)}</td>
+                <td style={{...TD,fontSize:11,color:CB.textTer}}>{c.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={c.status}/></td>
                 <td style={{...TD,display:'flex',gap:6}}>
-                  <CBtn sm onClick={()=>setViewItem(c)}>Xem</CBtn>
+                  <CBtn sm onClick={()=>setViewItem({contract:c,type:tab})}>Xem</CBtn>
                   <CBtn sm onClick={()=>{setEditItem(c);setShowForm(true)}}>Sửa</CBtn>
                 </td>
               </tr>
             ))}
-            {!loading&&!filtered.length&&<tr><td colSpan={7} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>Chưa có hợp đồng nào</td></tr>}
+            {!loading && !filtered.length && (
+              <tr><td colSpan={7} style={{textAlign:'center',padding:40,color:CB.textTer,fontSize:12}}>Chưa có hợp đồng nào</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Form Modal */}
-      {showForm && (
-        tab==='client'
-          ? <ContractClientForm data={data} supabase={supabase} edit={editItem} onClose={()=>setShowForm(false)} onSaved={()=>{loadContracts();reload();log('Lưu HĐ client')}} />
-          : <ContractKOLForm data={data} supabase={supabase} edit={editItem} onClose={()=>setShowForm(false)} onSaved={()=>{loadContracts();reload();log('Lưu HĐ KOL')}} />
+      {showForm && tab==='client' && (
+        <ContractClientForm
+          data={data} supabase={supabase} edit={editItem}
+          onClose={()=>{setShowForm(false);setEditItem(null)}}
+          onSaved={()=>{loadContracts();reload();log('Lưu HĐ client')}}
+        />
       )}
-
-      {/* View/Preview */}
+      {showForm && tab==='kol' && (
+        <ContractKOLForm
+          data={data} supabase={supabase} edit={editItem}
+          onClose={()=>{setShowForm(false);setEditItem(null)}}
+          onSaved={()=>{loadContracts();reload();log('Lưu HĐ KOL')}}
+        />
+      )}
       {viewItem && (
-        <ContractPreview contract={viewItem} type={tab} onClose={()=>setViewItem(null)} />
+        <ContractPreview
+          contract={viewItem.contract} type={viewItem.type}
+          onClose={()=>setViewItem(null)}
+        />
       )}
     </div>
   )
 }
 
-// ── FORM HĐ CLIENT ───────────────────────────────────────
+// ── HĐ Client Form ────────────────────────────────────────
 function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
   const [form, setForm] = useState({
-    contract_code: edit?.contract_code || generateCode('HDDV'),
+    contract_code: edit?.contract_code || genCode('HDDV'),
     sign_date: edit?.sign_date || new Date().toISOString().slice(0,10),
     sign_location: edit?.sign_location || 'Văn phòng Công Ty TNHH Quảng cáo K&K',
     project_id: edit?.project_id || '',
@@ -1114,26 +1240,27 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
     total_fee: edit?.total_fee || 0,
     vat_rate: edit?.vat_rate || 8,
     total_with_vat: edit?.total_with_vat || 0,
-    payment_terms: edit?.payment_terms || '30 ngày làm việc sau khi bên B hoàn tất toàn bộ công việc',
+    payment_terms: edit?.payment_terms || 'Thanh toán 100% giá trị hợp đồng trong vòng 30 ngày làm việc sau khi Bên B hoàn tất toàn bộ công việc và Bên A đã nhận đầy đủ chứng từ hợp lệ bao gồm: Hợp đồng, Biên bản nghiệm thu và Hoá đơn GTGT hợp lệ.',
     start_date: edit?.start_date || '',
     status: edit?.status || 'Draft',
     notes: edit?.notes || '',
   })
-  const [dupWarnings, setDupWarnings] = useState([])
   const [saving, setSaving] = useState(false)
-
   const set = (k,v) => setForm(p=>({...p,[k]:v}))
 
-  // Auto-calc total
   useEffect(()=>{
-    const vat = Number(form.total_fee||0) * Number(form.vat_rate||0) / 100
+    const vat = Number(form.total_fee||0) * Number(form.vat_rate||8) / 100
     set('total_with_vat', Number(form.total_fee||0) + vat)
   }, [form.total_fee, form.vat_rate])
 
-  // Auto-fill từ client DB
-  function fillFromClient(clientName) {
-    const c = data.clients.find(cl => cl.name?.toLowerCase() === clientName?.toLowerCase())
-    if (c) {
+  useEffect(()=>{
+    const total = form.kol_list.reduce((a,k)=>a+Number(k.fee||0),0)
+    if(total > 0) set('total_fee', total)
+  }, [form.kol_list])
+
+  function fillClient(name) {
+    const c = data.clients.find(cl => cl.name?.toLowerCase()===name?.toLowerCase())
+    if(c) {
       setForm(p=>({...p,
         party_a_name: c.name||p.party_a_name,
         party_a_tax: c.tax_code||p.party_a_tax,
@@ -1146,205 +1273,157 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
     }
   }
 
-  // KOL list management
-  const addKolRow = () => set('kol_list', [...form.kol_list, {stt:form.kol_list.length+1,name:'',tiktok:'',work:'Sản xuất 1 video theo yêu cầu của nhãn hàng',fee:0}])
-  const updateKol = (i,k,v) => { const arr=[...form.kol_list]; arr[i]={...arr[i],[k]:v}; set('kol_list',arr); recalcTotal(arr) }
-  const removeKol = (i) => { const arr=form.kol_list.filter((_,j)=>j!==i); set('kol_list',arr); recalcTotal(arr) }
-  const recalcTotal = (arr) => set('total_fee', arr.reduce((a,k)=>a+Number(k.fee||0),0))
+  const addKol = () => set('kol_list',[...form.kol_list,{name:'',tiktok:'',work:'Sản xuất 1 video theo yêu cầu của nhãn hàng',fee:0}])
+  const updKol = (i,k,v) => { const a=[...form.kol_list]; a[i]={...a[i],[k]:v}; set('kol_list',a) }
+  const delKol = (i) => set('kol_list', form.kol_list.filter((_,j)=>j!==i))
 
   async function handleSubmit(e) {
     e.preventDefault()
     setSaving(true)
-
-    // Check duplicate contract code
-    if (!edit) {
-      const {data:existing} = await supabase.from('contracts').select('id').eq('contract_code', form.contract_code)
-      if (existing?.length > 0) {
-        alert(`Số hợp đồng ${form.contract_code} đã tồn tại!`)
-        setSaving(false); return
-      }
-    }
-
-    // Check duplicate client
-    if (!edit && form.party_a_tax) {
-      const dups = await checkDuplicate(supabase, 'clients', [{field:'tax_code',value:form.party_a_tax,label:'Mã số thuế'}])
-      if (dups.length > 0) {
-        setDupWarnings(dups); setSaving(false); return
-      }
-    }
-
-    await saveContract()
-    setSaving(false)
-  }
-
-  async function saveContract() {
     const payload = {
-      contract_code: form.contract_code,
-      contract_type: 'client',
-      project_id: form.project_id || null,
-      party_a_name: form.party_a_name,
-      party_a_tax: form.party_a_tax,
-      party_a_address: form.party_a_address,
-      party_a_rep: form.party_a_rep,
-      party_a_title: form.party_a_title,
-      party_a_bank_account: form.party_a_bank_account,
+      contract_code: form.contract_code, contract_type: 'client',
+      project_id: form.project_id||null,
+      party_a_name: form.party_a_name, party_a_tax: form.party_a_tax,
+      party_a_address: form.party_a_address, party_a_rep: form.party_a_rep,
+      party_a_title: form.party_a_title, party_a_bank_account: form.party_a_bank_account,
       party_a_bank_name: form.party_a_bank_name,
-      party_b_name: 'CÔNG TY TNHH QUẢNG CÁO K&K',
-      party_b_tax: '0317776715',
-      party_b_address: '737/7 Kha Vạn Cân, Phường Linh Xuân, TP. Hồ Chí Minh',
-      party_b_rep: 'TÔ NGUYỄN ĐĂNG KHOA',
-      party_b_title: 'Giám Đốc',
-      party_b_bank_account: '116002937563',
-      party_b_bank_name: 'VIETINBANK Chi nhánh/PGD: HCM',
-      service_type: form.service_type,
-      scope_of_work: form.scope_of_work,
-      kol_list: form.kol_list,
-      total_fee: Number(form.total_fee||0),
-      vat_rate: Number(form.vat_rate||8),
-      total_with_vat: Number(form.total_with_vat||0),
-      payment_terms: form.payment_terms,
-      start_date: form.start_date || null,
-      sign_date: form.sign_date || null,
-      sign_location: form.sign_location,
-      status: form.status,
-      notes: form.notes,
-      created_by: 'User'
+      party_b_name: KNK.name, party_b_tax: KNK.taxCode,
+      party_b_address: KNK.address, party_b_rep: KNK.rep,
+      party_b_title: KNK.repTitle, party_b_bank_account: KNK.bankAccount,
+      party_b_bank_name: KNK.bankName+' Chi nhánh/PGD: '+KNK.bankBranch,
+      service_type: form.service_type, scope_of_work: form.scope_of_work,
+      kol_list: form.kol_list, total_fee: Number(form.total_fee||0),
+      vat_rate: Number(form.vat_rate||8), total_with_vat: Number(form.total_with_vat||0),
+      payment_terms: form.payment_terms, start_date: form.start_date||null,
+      sign_date: form.sign_date||null, sign_location: form.sign_location,
+      status: form.status, notes: form.notes, created_by: 'User'
     }
-    if (edit) {
-      const {error} = await supabase.from('contracts').update(payload).eq('id', edit.id)
-      if(error){alert('Lỗi cập nhật: '+error.message);return}
-    } else {
-      const {error} = await supabase.from('contracts').insert([payload])
-      if(error){alert('Lỗi lưu HĐ: '+error.message);return}
-      // Auto-save client nếu chưa có
-      const existing = data.clients.find(c=>c.tax_code===form.party_a_tax||c.name===form.party_a_name)
-      if (!existing && form.party_a_name) {
+    let error
+    if(edit) { ({error} = await supabase.from('contracts').update(payload).eq('id',edit.id)) }
+    else { ({error} = await supabase.from('contracts').insert([payload])) }
+    if(error) { alert('Lỗi: '+error.message); setSaving(false); return }
+    // Auto-save client
+    if(!edit && form.party_a_name) {
+      const exists = data.clients.find(c=>c.tax_code===form.party_a_tax||c.name===form.party_a_name)
+      if(!exists) {
         await supabase.from('clients').insert([{
-          name: form.party_a_name, tax_code: form.party_a_tax,
-          address: form.party_a_address, legal_rep: form.party_a_rep,
-          legal_rep_title: form.party_a_title, bank_account: form.party_a_bank_account,
-          bank_name: form.party_a_bank_name, since: new Date().toLocaleDateString('vi-VN')
+          name:form.party_a_name, tax_code:form.party_a_tax,
+          address:form.party_a_address, legal_rep:form.party_a_rep,
+          legal_rep_title:form.party_a_title, bank_account:form.party_a_bank_account,
+          bank_name:form.party_a_bank_name, since:new Date().toLocaleDateString('vi-VN')
         }])
       }
     }
-    onSaved(); onClose()
+    setSaving(false); onSaved(); onClose()
   }
 
   return (
-    <CModal title={edit?'Sửa hợp đồng dịch vụ':'Tạo hợp đồng dịch vụ (Bên A = Client)'} onClose={onClose} wide>
-      {dupWarnings.length > 0 && (
-        <DupWarning warnings={dupWarnings}
-          onUseExisting={(rec)=>{fillFromClient(rec.name);setDupWarnings([])}}
-          onContinue={()=>{setDupWarnings([]);saveContract()}}
-          onCancel={()=>setDupWarnings([])}/>
-      )}
+    <CModal title={edit?'Sửa HĐ Dịch vụ':'Tạo HĐ Dịch vụ — Bên A: Client | Bên B: K&K'} onClose={onClose} wide>
       <form onSubmit={handleSubmit}>
-        <Sec title="Thông tin hợp đồng">
-          <Row3>
-            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} {...CINP} required/></CFG>
-            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...CINP}/></CFG>
-            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...CINP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></CFG>
-          </Row3>
+        <CSec title="Thông tin hợp đồng">
+          <CRow3>
+            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} style={CINP_S} required/></CFG>
+            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} style={CINP_S}/></CFG>
+            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} style={CINP_S}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></CFG>
+          </CRow3>
           <CRow2>
-            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} {...CINP}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign} ({p.client})</option>)}</select></CFG>
-            <CFG label="Loại dịch vụ"><select value={form.service_type} onChange={e=>set('service_type',e.target.value)} {...CINP}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option></select></CFG>
+            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} style={CINP_S}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign}</option>)}</select></CFG>
+            <CFG label="Loại dịch vụ"><select value={form.service_type} onChange={e=>set('service_type',e.target.value)} style={CINP_S}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option></select></CFG>
           </CRow2>
-        </Sec>
+        </CSec>
 
-        <Sec title="Bên A — Khách hàng">
-          <div style={{marginBottom:10,background:B.infoBg,borderRadius:8,padding:'8px 12px',fontSize:11,color:B.primary,fontWeight:500}}>
-            💡 Nhập tên client để auto-fill từ database
-          </div>
+        <CSec title="Bên A — Khách hàng">
+          <div style={{marginBottom:10,background:'rgba(26,86,219,0.06)',borderRadius:8,padding:'8px 12px',fontSize:11,color:CB.primary,fontWeight:500}}>💡 Nhập tên client để auto-fill từ database</div>
           <CFG label="Tên công ty / Brand" required>
-            <input value={form.party_a_name} onChange={e=>{set('party_a_name',e.target.value);fillFromClient(e.target.value)}} list="cl-list-hd" {...CINP} required/>
-            <datalist id="cl-list-hd">{data.clients.map(c=><option key={c.id} value={c.name}/>)}</datalist>
+            <input value={form.party_a_name} onChange={e=>{set('party_a_name',e.target.value);fillClient(e.target.value)}} list="cl-hddv" style={CINP_S} required/>
+            <datalist id="cl-hddv">{data.clients.map(c=><option key={c.id} value={c.name}/>)}</datalist>
           </CFG>
-          <Row3>
-            <CFG label="Mã số thuế"><input value={form.party_a_tax} onChange={e=>set('party_a_tax',e.target.value)} {...CINP} placeholder="VD: 0317761797"/></CFG>
-            <CFG label="Người đại diện"><input value={form.party_a_rep} onChange={e=>set('party_a_rep',e.target.value)} {...CINP}/></CFG>
-            <CFG label="Chức vụ"><input value={form.party_a_title} onChange={e=>set('party_a_title',e.target.value)} {...CINP}/></CFG>
-          </Row3>
-          <CFG label="Địa chỉ"><input value={form.party_a_address} onChange={e=>set('party_a_address',e.target.value)} {...CINP}/></CFG>
+          <CRow3>
+            <CFG label="Mã số thuế"><input value={form.party_a_tax} onChange={e=>set('party_a_tax',e.target.value)} style={CINP_S} placeholder="VD: 0317761797"/></CFG>
+            <CFG label="Người đại diện"><input value={form.party_a_rep} onChange={e=>set('party_a_rep',e.target.value)} style={CINP_S}/></CFG>
+            <CFG label="Chức vụ"><input value={form.party_a_title} onChange={e=>set('party_a_title',e.target.value)} style={CINP_S}/></CFG>
+          </CRow3>
+          <CFG label="Địa chỉ"><input value={form.party_a_address} onChange={e=>set('party_a_address',e.target.value)} style={CINP_S}/></CFG>
           <CRow2>
-            <CFG label="Số tài khoản"><input value={form.party_a_bank_account} onChange={e=>set('party_a_bank_account',e.target.value)} {...CINP}/></CFG>
-            <CFG label="Ngân hàng"><input value={form.party_a_bank_name} onChange={e=>set('party_a_bank_name',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Số tài khoản"><input value={form.party_a_bank_account} onChange={e=>set('party_a_bank_account',e.target.value)} style={CINP_S}/></CFG>
+            <CFG label="Ngân hàng"><input value={form.party_a_bank_name} onChange={e=>set('party_a_bank_name',e.target.value)} style={CINP_S}/></CFG>
           </CRow2>
-        </Sec>
+        </CSec>
 
-        <Sec title="Bên B — K&K Advertising (cố định)">
-          <div style={{background:B.gradSoft,borderRadius:10,padding:'12px 16px',fontSize:12,color:B.textSec,border:`1px solid ${B.border}`}}>
+        <CSec title="Bên B — K&K Advertising (cố định)">
+          <div style={{background:'rgba(26,86,219,0.05)',borderRadius:10,padding:'12px 16px',fontSize:12,color:CB.textSec,border:'1px solid rgba(26,86,219,0.1)'}}>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
               <div><strong>Công ty:</strong> {KNK.name}</div>
               <div><strong>MST:</strong> {KNK.taxCode}</div>
-              <div><strong>Đại diện:</strong> {KNK.rep}</div>
-              <div><strong>Chức vụ:</strong> {KNK.repTitle}</div>
-              <div><strong>Địa chỉ:</strong> {KNK.address}</div>
-              <div><strong>STK:</strong> {KNK.bankAccount} — {KNK.bankName}</div>
+              <div><strong>Đại diện:</strong> {KNK.rep} — {KNK.repTitle}</div>
+              <div><strong>STK:</strong> {KNK.bankAccount} — {KNK.bankName} CN/PGD: {KNK.bankBranch}</div>
+              <div style={{gridColumn:'span 2'}}><strong>Địa chỉ:</strong> {KNK.address}</div>
             </div>
           </div>
-        </Sec>
+        </CSec>
 
-        <Sec title="Danh sách KOL/KOC thực hiện">
+        <CSec title="Danh sách KOL/KOC thực hiện">
           <table style={{width:'100%',borderCollapse:'collapse',marginBottom:10}}>
-            <thead><tr>{['STT','Họ và tên','Link TikTok','Nội dung công việc','Chi phí (VND)',''].map(h=><th key={h} style={{padding:'7px 8px',fontSize:10,fontWeight:700,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',textTransform:'uppercase'}}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>
+                {['STT','Họ và tên','Link TikTok','Nội dung công việc','Chi phí (VND)',''].map(h=>(
+                  <th key={h} style={{padding:'7px 8px',fontSize:10,fontWeight:700,color:CB.textTer,borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',textTransform:'uppercase'}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
               {form.kol_list.map((k,i)=>(
                 <tr key={i}>
-                  <td style={{padding:'5px 6px',fontSize:11,color:B.textTer,textAlign:'center'}}>{i+1}</td>
-                  <td style={{padding:'5px 6px'}}><input value={k.name} onChange={e=>updateKol(i,'name',e.target.value)} list="kol-list-hd" style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL"/><datalist id="kol-list-hd">{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist></td>
-                  <td style={{padding:'5px 6px'}}><input value={k.tiktok} onChange={e=>updateKol(i,'tiktok',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="@username"/></td>
-                  <td style={{padding:'5px 6px'}}><input value={k.work} onChange={e=>updateKol(i,'work',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}}/></td>
-                  <td style={{padding:'5px 6px'}}><input type="number" value={k.fee} onChange={e=>updateKol(i,'fee',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12,width:120}}/></td>
-                  <td style={{padding:'5px 6px'}}><button type="button" onClick={()=>removeKol(i)} style={{background:'none',border:'none',cursor:'pointer',color:B.danger,fontSize:16}}>×</button></td>
+                  <td style={{padding:'5px 6px',fontSize:11,color:CB.textTer,textAlign:'center'}}>{i+1}</td>
+                  <td style={{padding:'5px 4px'}}><input value={k.name} onChange={e=>updKol(i,'name',e.target.value)} list="kol-hddv" style={{...CINP_S,padding:'5px 8px',fontSize:12}}/><datalist id="kol-hddv">{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist></td>
+                  <td style={{padding:'5px 4px'}}><input value={k.tiktok} onChange={e=>updKol(i,'tiktok',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}} placeholder="@username"/></td>
+                  <td style={{padding:'5px 4px'}}><input value={k.work} onChange={e=>updKol(i,'work',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}}/></td>
+                  <td style={{padding:'5px 4px'}}><input type="number" value={k.fee} onChange={e=>updKol(i,'fee',Number(e.target.value))} style={{...CINP_S,padding:'5px 8px',fontSize:12,width:110}}/></td>
+                  <td style={{padding:'5px 4px'}}><button type="button" onClick={()=>delKol(i)} style={{background:'none',border:'none',cursor:'pointer',color:CB.danger,fontSize:18,lineHeight:1}}>×</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <CBtn sm onClick={addKolRow}>+ Thêm KOL</CBtn>
-        </Sec>
+          <CBtn sm onClick={addKol}>+ Thêm KOL</CBtn>
+        </CSec>
 
-        <Sec title="Giá trị hợp đồng">
-          <Row3>
+        <CSec title="Giá trị hợp đồng">
+          <CRow3>
             <CFG label="Phí dịch vụ (VND)">
-              <input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} {...CINP}/>
-              <div style={{fontSize:10,color:B.textTer,marginTop:3}}>= Tổng KOL list nếu có</div>
+              <input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} style={CINP_S}/>
             </CFG>
             <CFG label="Thuế GTGT (%)">
-              <input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} {...CINP}/>
+              <input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} style={CINP_S}/>
             </CFG>
-            <CFG label="Tổng giá trị (có VAT)">
-              <div style={{padding:'9px 12px',background:B.gradSoft,borderRadius:8,fontSize:14,fontWeight:800,color:B.primary,border:`1px solid ${B.border}`}}>{fmt(form.total_with_vat)} VND</div>
-              <div style={{fontSize:10,color:B.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
+            <CFG label="Tổng giá trị (VND)">
+              <div style={{padding:'9px 12px',background:'rgba(26,86,219,0.06)',borderRadius:8,fontSize:15,fontWeight:800,color:CB.primary,border:'1px solid rgba(26,86,219,0.15)'}}>{cfmt(form.total_with_vat)}</div>
+              <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
             </CFG>
-          </Row3>
+          </CRow3>
           <CFG label="Điều khoản thanh toán">
-            <textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...CINP.style,minHeight:70}}/>
+            <textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...CINP_S,minHeight:70}}/>
           </CFG>
-        </Sec>
+        </CSec>
 
-        <Sec title="Thời gian thực hiện">
-          <CRow2>
-            <CFG label="Ngày bắt đầu"><input type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} {...CINP}/></CFG>
-            <CFG label="Ghi chú"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...CINP.style,minHeight:50}}/></CFG>
-          </CRow2>
-        </Sec>
+        <CFG label="Ngày bắt đầu thực hiện">
+          <input type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} style={{...CINP_S,maxWidth:200}}/>
+        </CFG>
 
-        <CMFoot onClose={onClose} submitLabel={saving?'Đang lưu...':'Lưu hợp đồng'} onDelete={edit?async()=>{await supabase.from('contracts').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
+        <CMFoot onClose={onClose} label={saving?'Đang lưu...':'Lưu hợp đồng'} onDelete={edit?async()=>{await supabase.from('contracts').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
       </form>
     </CModal>
   )
 }
 
-// ── FORM HĐ KOL ─────────────────────────────────────────
+// ── HĐ KOL Form ───────────────────────────────────────────
 function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
   const [form, setForm] = useState({
-    contract_code: edit?.contract_code || generateCode('HDCTV'),
+    contract_code: edit?.contract_code || genCode('HDCTV'),
     sign_date: edit?.sign_date || new Date().toISOString().slice(0,10),
     project_id: edit?.project_id || '',
     party_b_name: edit?.party_b_name || '',
     party_b_tax: edit?.party_b_tax || '',
     party_b_address: edit?.party_b_address || '',
-    party_b_rep: edit?.party_b_rep || '',
     party_b_bank_account: edit?.party_b_bank_account || '',
     party_b_bank_name: edit?.party_b_bank_name || '',
     party_b_cccd: edit?.party_b_cccd || '',
@@ -1354,28 +1433,25 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
     total_fee: edit?.total_fee || 0,
     vat_rate: edit?.vat_rate || 10,
     total_with_vat: edit?.total_with_vat || 0,
-    payment_terms: edit?.payment_terms || '15 ngày làm việc kể từ ngày hoàn thành công việc và ký BBNT',
+    payment_terms: edit?.payment_terms || 'Bên A sẽ thanh toán 100% cho Bên B trong vòng 15 ngày làm việc kể từ ngày Bên B hoàn thành toàn bộ công việc và Bên A nhận được Biên bản nghiệm thu hai Bên ký kết.',
     start_date: edit?.start_date || '',
     status: edit?.status || 'Draft',
     notes: edit?.notes || '',
   })
-  const [dupWarnings, setDupWarnings] = useState([])
   const [saving, setSaving] = useState(false)
-  const set=(k,v)=>setForm(p=>({...p,[k]:v}))
+  const set = (k,v) => setForm(p=>({...p,[k]:v}))
 
-  // HĐ CTV: VAT là thuế TNCN 10%, trừ vào thù lao
-  // total_with_vat = total_fee (sau khấu trừ)
   useEffect(()=>{
     const afterTax = Number(form.total_fee||0) * (1 - Number(form.vat_rate||10)/100)
     set('total_with_vat', Math.round(afterTax))
   }, [form.total_fee, form.vat_rate])
 
-  function fillFromKOL(kolName) {
-    const k = data.kols.find(kl => kl.name?.toLowerCase() === kolName?.toLowerCase() || kl.real_name?.toLowerCase() === kolName?.toLowerCase())
-    if (k) {
+  function fillKOL(name) {
+    const k = data.kols.find(kl => kl.name?.toLowerCase()===name?.toLowerCase() || kl.real_name?.toLowerCase()===name?.toLowerCase())
+    if(k) {
       setForm(p=>({...p,
         party_b_name: k.real_name||k.name||p.party_b_name,
-        party_b_tax: k.personal_tax_code||k.cccd||p.party_b_tax,
+        party_b_tax: k.personal_tax_code||p.party_b_tax,
         party_b_address: k.address||p.party_b_address,
         party_b_bank_account: k.bank_account||p.party_b_bank_account,
         party_b_bank_name: k.bank_name||p.party_b_bank_name,
@@ -1386,259 +1462,250 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault(); setSaving(true)
-    if (!edit && form.party_b_cccd) {
-      const {data:existing} = await supabase.from('kols').select('id,name').eq('cccd', form.party_b_cccd)
-      if (existing?.length > 0) {
-        setDupWarnings([{field:'cccd',value:form.party_b_cccd,label:'CCCD',existing:existing[0]}])
-        setSaving(false); return
-      }
-    }
-    await saveKOLContract()
-    setSaving(false)
-  }
-
-  async function saveKOLContract() {
+    e.preventDefault()
+    setSaving(true)
     const payload = {
-      contract_code: form.contract_code,
-      contract_type: 'kol',
-      project_id: form.project_id || null,
-      party_a_name: KNK.name,
-      party_a_tax: KNK.taxCode,
-      party_a_address: KNK.address,
-      party_a_rep: KNK.rep,
-      party_a_title: KNK.repTitle,
-      party_a_bank_account: KNK.bankAccount,
-      party_a_bank_name: KNK.bankName + ' Chi nhánh/PGD: ' + KNK.bankBranch,
-      party_b_name: form.party_b_name,
-      party_b_tax: form.party_b_tax,
-      party_b_address: form.party_b_address,
-      party_b_rep: form.party_b_name,
+      contract_code: form.contract_code, contract_type: 'kol',
+      project_id: form.project_id||null,
+      party_a_name: KNK.name, party_a_tax: KNK.taxCode,
+      party_a_address: KNK.address, party_a_rep: KNK.rep,
+      party_a_title: KNK.repTitle, party_a_bank_account: KNK.bankAccount,
+      party_a_bank_name: KNK.bankName+' Chi nhánh/PGD: '+KNK.bankBranch,
+      party_b_name: form.party_b_name, party_b_tax: form.party_b_tax,
+      party_b_address: form.party_b_address, party_b_rep: form.party_b_name,
       party_b_bank_account: form.party_b_bank_account,
       party_b_bank_name: form.party_b_bank_name,
       party_b_cccd: form.party_b_cccd,
-      service_type: form.service_type,
-      scope_of_work: form.scope_of_work,
-      kol_list: [],
-      total_fee: Number(form.total_fee||0),
-      vat_rate: Number(form.vat_rate||10),
-      total_with_vat: Number(form.total_with_vat||0),
-      payment_terms: form.payment_terms,
-      start_date: form.start_date || null,
-      sign_date: form.sign_date || null,
+      service_type: form.service_type, scope_of_work: form.scope_of_work,
+      kol_list: [], total_fee: Number(form.total_fee||0),
+      vat_rate: Number(form.vat_rate||10), total_with_vat: Number(form.total_with_vat||0),
+      payment_terms: form.payment_terms, start_date: form.start_date||null,
+      sign_date: form.sign_date||null,
       sign_location: 'Văn phòng Công Ty TNHH Quảng cáo K&K',
-      status: form.status,
-      notes: form.notes,
-      created_by: 'User'
+      status: form.status, notes: form.notes, created_by: 'User'
     }
-    if (edit) {
-      const {error} = await supabase.from('contracts').update(payload).eq('id',edit.id)
-      if(error){alert('Lỗi: '+error.message);return}
-    } else {
-      const {error} = await supabase.from('contracts').insert([payload])
-      if(error){alert('Lỗi lưu HĐ KOL: '+error.message);return}
-      const existing = data.kols.find(k=>k.cccd===form.party_b_cccd||k.name===form.party_b_name)
-      if (!existing && form.party_b_name) {
+    let error
+    if(edit) { ({error} = await supabase.from('contracts').update(payload).eq('id',edit.id)) }
+    else { ({error} = await supabase.from('contracts').insert([payload])) }
+    if(error) { alert('Lỗi: '+error.message); setSaving(false); return }
+    if(!edit && form.party_b_name) {
+      const exists = data.kols.find(k=>k.cccd===form.party_b_cccd||k.name===form.party_b_name)
+      if(!exists) {
         await supabase.from('kols').insert([{
-          name: form.party_b_name, real_name: form.party_b_name,
-          cccd: form.party_b_cccd, personal_tax_code: form.party_b_tax,
-          address: form.party_b_address, bank_account: form.party_b_bank_account,
-          bank_name: form.party_b_bank_name, platform: form.channels,
-          available: true
+          name:form.party_b_name, real_name:form.party_b_name,
+          cccd:form.party_b_cccd, personal_tax_code:form.party_b_tax,
+          address:form.party_b_address, bank_account:form.party_b_bank_account,
+          bank_name:form.party_b_bank_name, platform:form.channels, available:true
         }])
       }
     }
-    onSaved(); onClose()
+    setSaving(false); onSaved(); onClose()
   }
 
   return (
-    <CModal title={edit?'Sửa HĐ cộng tác viên':'Tạo HĐ cộng tác viên (Bên B = KOL/CTV)'} onClose={onClose} wide>
-      {dupWarnings.length>0&&<DupWarning warnings={dupWarnings} onUseExisting={(rec)=>{fillFromKOL(rec.name);setDupWarnings([])}} onContinue={()=>{setDupWarnings([]);saveKOLContract()}} onCancel={()=>setDupWarnings([])}/>}
+    <CModal title={edit?'Sửa HĐ Cộng tác viên':'Tạo HĐ Cộng tác viên — Bên A: K&K | Bên B: KOL'} onClose={onClose} wide>
       <form onSubmit={handleSubmit}>
-        <Sec title="Bên A — K&K Advertising (cố định)">
-          <div style={{background:B.gradSoft,borderRadius:10,padding:'12px 16px',fontSize:12,color:B.textSec,border:`1px solid ${B.border}`}}>
+        <CSec title="Bên A — K&K Advertising (cố định)">
+          <div style={{background:'rgba(26,86,219,0.05)',borderRadius:10,padding:'12px 16px',fontSize:12,color:CB.textSec,border:'1px solid rgba(26,86,219,0.1)'}}>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
               <div><strong>Công ty:</strong> {KNK.name}</div>
               <div><strong>MST:</strong> {KNK.taxCode}</div>
               <div><strong>Đại diện:</strong> {KNK.rep} — {KNK.repTitle}</div>
-              <div><strong>STK:</strong> {KNK.bankAccount} — {KNK.bankName}</div>
+              <div><strong>STK:</strong> {KNK.bankAccount} — {KNK.bankName} CN: {KNK.bankBranch}</div>
             </div>
           </div>
-        </Sec>
+        </CSec>
 
-        <Sec title="Thông tin hợp đồng">
-          <Row3>
-            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} {...CINP} required/></CFG>
-            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...CINP}/></CFG>
-            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...CINP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></CFG>
-          </Row3>
+        <CSec title="Thông tin hợp đồng">
+          <CRow3>
+            <CFG label="Số hợp đồng" required><input value={form.contract_code} onChange={e=>set('contract_code',e.target.value)} style={CINP_S} required/></CFG>
+            <CFG label="Ngày ký"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} style={CINP_S}/></CFG>
+            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} style={CINP_S}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option><option>Cancelled</option></select></CFG>
+          </CRow3>
           <CRow2>
-            <CFG label="Dự án liên quan"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} {...CINP}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign}</option>)}</select></CFG>
-            <CFG label="Kênh đăng tải"><input value={form.channels} onChange={e=>set('channels',e.target.value)} {...CINP} placeholder="@tiktok_username"/></CFG>
+            <CFG label="Dự án"><select value={form.project_id} onChange={e=>set('project_id',e.target.value)} style={CINP_S}><option value="">— Chọn dự án —</option>{data.projects.map(p=><option key={p.id} value={p.id}>{p.campaign}</option>)}</select></CFG>
+            <CFG label="Kênh đăng tải"><input value={form.channels} onChange={e=>set('channels',e.target.value)} style={CINP_S} placeholder="@tiktok_username"/></CFG>
           </CRow2>
-        </Sec>
+        </CSec>
 
-        <Sec title="Bên B — KOL / Cộng tác viên">
-          <div style={{marginBottom:10,background:B.infoBg,borderRadius:8,padding:'8px 12px',fontSize:11,color:B.primary,fontWeight:500}}>
-            💡 Nhập tên KOL để auto-fill từ database
-          </div>
+        <CSec title="Bên B — KOL / Cộng tác viên">
+          <div style={{marginBottom:10,background:'rgba(26,86,219,0.06)',borderRadius:8,padding:'8px 12px',fontSize:11,color:CB.primary,fontWeight:500}}>💡 Nhập tên KOL để auto-fill từ database</div>
           <CRow2>
             <CFG label="Họ và tên thật" required>
-              <input value={form.party_b_name} onChange={e=>{set('party_b_name',e.target.value);fillFromKOL(e.target.value)}} list="kol-list-ctv" {...CINP} required/>
-              <datalist id="kol-list-ctv">{data.kols.map(k=><option key={k.id} value={k.real_name||k.name}/>)}</datalist>
+              <input value={form.party_b_name} onChange={e=>{set('party_b_name',e.target.value);fillKOL(e.target.value)}} list="kol-ctv" style={CINP_S} required/>
+              <datalist id="kol-ctv">{data.kols.map(k=><option key={k.id} value={k.real_name||k.name}/>)}</datalist>
             </CFG>
-            <CFG label="CCCD / MST cá nhân"><input value={form.party_b_cccd} onChange={e=>set('party_b_cccd',e.target.value)} {...CINP} placeholder="Số CCCD"/></CFG>
+            <CFG label="CCCD"><input value={form.party_b_cccd} onChange={e=>set('party_b_cccd',e.target.value)} style={CINP_S} placeholder="Số CCCD"/></CFG>
           </CRow2>
-          <CFG label="Địa chỉ thường trú"><input value={form.party_b_address} onChange={e=>set('party_b_address',e.target.value)} {...CINP}/></CFG>
+          <CFG label="Địa chỉ thường trú"><input value={form.party_b_address} onChange={e=>set('party_b_address',e.target.value)} style={CINP_S}/></CFG>
           <CRow2>
-            <CFG label="Số tài khoản"><input value={form.party_b_bank_account} onChange={e=>set('party_b_bank_account',e.target.value)} {...CINP}/></CFG>
-            <CFG label="Ngân hàng"><input value={form.party_b_bank_name} onChange={e=>set('party_b_bank_name',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Số tài khoản"><input value={form.party_b_bank_account} onChange={e=>set('party_b_bank_account',e.target.value)} style={CINP_S}/></CFG>
+            <CFG label="Ngân hàng"><input value={form.party_b_bank_name} onChange={e=>set('party_b_bank_name',e.target.value)} style={CINP_S}/></CFG>
           </CRow2>
-        </Sec>
+        </CSec>
 
-        <Sec title="Phạm vi công việc">
-          <CFG label="Nội dung công việc"><textarea value={form.scope_of_work} onChange={e=>set('scope_of_work',e.target.value)} style={{...CINP.style,minHeight:80}}/></CFG>
-        </Sec>
+        <CSec title="Phạm vi công việc">
+          <CFG label="Nội dung công việc"><textarea value={form.scope_of_work} onChange={e=>set('scope_of_work',e.target.value)} style={{...CINP_S,minHeight:80}}/></CFG>
+        </CSec>
 
-        <Sec title="Thù lao">
-          <Row3>
-            <CFG label="Thù lao gốc (VND)"><input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} {...CINP}/></CFG>
-            <CFG label="Thuế TNCN (%)"><input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} {...CINP}/></CFG>
+        <CSec title="Thù lao">
+          <CRow3>
+            <CFG label="Thù lao gốc (VND)"><input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} style={CINP_S}/></CFG>
+            <CFG label="Thuế TNCN (%)"><input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} style={CINP_S}/></CFG>
             <CFG label="Thù lao thực nhận">
-              <div style={{padding:'9px 12px',background:B.gradSoft,borderRadius:8,fontSize:14,fontWeight:800,color:B.primary,border:`1px solid ${B.border}`}}>{fmt(form.total_with_vat)} VND</div>
-              <div style={{fontSize:10,color:B.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
+              <div style={{padding:'9px 12px',background:'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:'#059669',border:'1px solid rgba(5,150,105,0.2)'}}>{cfmt(form.total_with_vat)}</div>
+              <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
             </CFG>
-          </Row3>
-          <CFG label="Thời hạn thanh toán"><textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...CINP.style,minHeight:60}}/></CFG>
-        </Sec>
+          </CRow3>
+          <CFG label="Điều khoản thanh toán"><textarea value={form.payment_terms} onChange={e=>set('payment_terms',e.target.value)} style={{...CINP_S,minHeight:60}}/></CFG>
+        </CSec>
 
-        <CMFoot onClose={onClose} submitLabel={saving?'Đang lưu...':'Lưu hợp đồng'} onDelete={edit?async()=>{await supabase.from('contracts').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
+        <CMFoot onClose={onClose} label={saving?'Đang lưu...':'Lưu hợp đồng'} onDelete={edit?async()=>{await supabase.from('contracts').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
       </form>
     </CModal>
   )
 }
 
-// ── CONTRACT PREVIEW ─────────────────────────────────────
+// ── Contract Preview + Print ──────────────────────────────
 function ContractPreview({contract:c, type, onClose}) {
-  const isClient = type === 'client'
-  const partyA = isClient ? {name:c.party_a_name,tax:c.party_a_tax,address:c.party_a_address,rep:c.party_a_rep,title:c.party_a_title,bank:c.party_a_bank_account,bankName:c.party_a_bank_name} : {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName+' CN/PGD: '+KNK.bankBranch}
-  const partyB = isClient ? {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName+' CN/PGD: '+KNK.bankBranch} : {name:c.party_b_name,cccd:c.party_b_cccd,address:c.party_b_address,bank:c.party_b_bank_account,bankName:c.party_b_bank_name}
-  const kolList = c.kol_list || []
-  const fee = Number(c.total_fee||0), vat = isClient?fee*Number(c.vat_rate||8)/100:0, total = Number(c.total_with_vat||0)
+  const isClient = type==='client'
+  const pA = isClient
+    ? {name:c.party_a_name,tax:c.party_a_tax,address:c.party_a_address,rep:c.party_a_rep,title:c.party_a_title,bank:c.party_a_bank_account,bankName:c.party_a_bank_name}
+    : {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName+' Chi nhánh/PGD: '+KNK.bankBranch}
+  const pB = isClient
+    ? {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName+' Chi nhánh/PGD: '+KNK.bankBranch}
+    : {name:c.party_b_name,cccd:c.party_b_cccd,tax:c.party_b_tax,address:c.party_b_address,bank:c.party_b_bank_account,bankName:c.party_b_bank_name}
 
-  function printContract() {
+  const kolList = c.kol_list||[]
+  const fee = Number(c.total_fee||0)
+  const vat = isClient ? fee*Number(c.vat_rate||8)/100 : 0
+  const total = Number(c.total_with_vat||0)
+
+  function printDoc() {
     const w = window.open('','_blank')
-    w.document.write('<html><head><title>'+c.contract_code+'</title><style>body{font-family:Times New Roman,serif;font-size:13px;margin:40px;color:#000;line-height:1.6}h1{text-align:center;font-size:18px;text-transform:uppercase;margin-bottom:5px}h2{text-align:center;font-size:13px;margin-top:0}h3{font-size:13px;font-weight:bold;margin:16px 0 8px;text-transform:uppercase}p{margin:6px 0;text-align:justify}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #000;padding:6px 8px;font-size:12px}th{background:#f0f0f0;font-weight:bold;text-align:center}.sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}.logo-header{display:flex;align-items:center;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:10px}.logo-text{font-size:20px;font-weight:bold;color:#1A56DB}.footer{font-size:11px;color:#666;margin-top:20px;border-top:1px solid #ccc;padding-top:8px}@media print{body{margin:20px}}</style></head><body>')
-    w.document.write('<div class="logo-header"><div class="logo-text">K&K advertising</div></div>')
-    w.document.write('<h1>'+(isClient?'HỢP ĐỒNG DỊCH VỤ':'HỢP ĐỒNG CỘNG TÁC VIÊN')+'</h1>')
-    w.document.write('<h2>Số: '+c.contract_code+'</h2>')
-    w.document.write('<p>Hôm nay, ngày <strong>'+formatDate(c.sign_date)+'</strong>, tại '+c.sign_location+',<br>Chúng tôi gồm:</p>')
-    w.document.write('<h3>Bên A: '+partyA.name+'</h3>')
-    w.document.write('<p>Đại diện: <strong>'+partyA.rep+'</strong></p>')
-    w.document.write('<p>Chức vụ: '+partyA.title+'</p>')
-    w.document.write('<p>Địa chỉ: '+partyA.address+'</p>')
-    if(partyA.tax)w.document.write('<p>Mã số thuế: '+partyA.tax+'</p>')
-    if(!isClient&&c.party_b_cccd)w.document.write('<p>CCCD: '+c.party_b_cccd+'</p>')
-    if(partyA.bank)w.document.write('<p>Số tài khoản: '+partyA.bank+' — Ngân hàng: '+partyA.bankName+'</p>')
-    w.document.write('<p><em>(Sau đây gọi là "Bên A")</em></p>')
-    w.document.write('<h3>Bên B: '+partyB.name+'</h3>')
-    if(partyB.tax)w.document.write('<p>Mã số thuế: '+partyB.tax+'</p>')
-    if(partyB.cccd)w.document.write('<p>CCCD: '+partyB.cccd+'</p>')
-    w.document.write('<p>Địa chỉ: '+partyB.address+'</p>')
-    if(isClient){w.document.write('<p>Đại diện: <strong>'+partyB.rep+'</strong></p>');w.document.write('<p>Chức vụ: '+partyB.title+'</p>')}
-    if(partyB.bank)w.document.write('<p>Số tài khoản: '+partyB.bank+' — Ngân hàng: '+partyB.bankName+'</p>')
-    w.document.write('<p><em>(Sau đây gọi là "Bên B")</em></p>')
-    if(isClient&&kolList.length>0){
-      w.document.write('<h3>Điều 2. Đối tượng hợp đồng</h3>')
-      w.document.write('<table><thead><tr><th>STT</th><th>Họ và tên</th><th>Link TikTok</th><th>Nội dung công việc</th><th>Chi phí</th></tr></thead><tbody>')
-      kolList.forEach((k,i)=>w.document.write('<tr><td style="text-align:center">'+(i+1)+'</td><td>'+k.name+'</td><td>'+k.tiktok+'</td><td>'+k.work+'</td><td style="text-align:right">'+fmt(k.fee)+'</td></tr>'))
-      w.document.write('<tr><td colspan="4" style="text-align:right"><strong>TOTAL</strong></td><td style="text-align:right"><strong>'+fmt(fee)+'</strong></td></tr>')
-      w.document.write('<tr><td colspan="4" style="text-align:right">VAT ('+c.vat_rate+'%)</td><td style="text-align:right">'+fmt(vat)+'</td></tr>')
-      w.document.write('<tr><td colspan="4" style="text-align:right"><strong>TOTAL + VAT</strong></td><td style="text-align:right"><strong>'+fmt(total)+'</strong></td></tr>')
-      w.document.write('</tbody></table>')
-    }
-    if(!isClient){
-      w.document.write('<h3>Điều 2. Đối tượng hợp đồng</h3>')
-      w.document.write('<p>'+c.scope_of_work+'</p>')
-      w.document.write('<p>Kênh TikTok: '+(c.channels||'')+'</p>')
-      w.document.write('<h3>Điều 3. Thù lao và thanh toán</h3>')
-      w.document.write('<p>Thù lao (đã khấu trừ '+c.vat_rate+'% Thuế TNCN): <strong>'+fmt(total)+' VNĐ</strong></p>')
-      w.document.write('<p>Bằng chữ: <em>'+toWords(total)+'</em></p>')
-    }
-    w.document.write('<h3>Điều 3. Giá trị và thanh toán</h3>')
-    w.document.write('<p>'+c.payment_terms+'</p>')
-    w.document.write('<div class="sig"><div><p><strong>Đại diện Bên A</strong></p><p>'+partyA.title+'</p><br><br><p><strong>'+partyA.rep+'</strong></p></div><div><p><strong>Đại diện Bên B</strong></p><p>'+(isClient?partyB.title:'(Ký và ghi rõ họ tên)')+'</p><br><br><p><strong>'+(isClient?partyB.rep:partyB.name)+'</strong></p></div></div>')
-    w.document.write('<div class="footer">A: '+KNK.address+' | P: '+KNK.phone+' | E: '+KNK.email+'</div>')
-    w.document.write('</body></html>')
+    const kolTable = isClient && kolList.length ? `
+      <table><thead><tr><th>STT</th><th>Họ và tên</th><th>Link TikTok</th><th>Nội dung công việc</th><th>Chi phí</th></tr></thead>
+      <tbody>
+        ${kolList.map((k,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${k.name}</td><td>${k.tiktok}</td><td>${k.work}</td><td style="text-align:right">${cfmt(k.fee)}</td></tr>`).join('')}
+        <tr><td colspan="4" style="text-align:right;font-weight:700">TOTAL</td><td style="text-align:right;font-weight:700">${cfmt(fee)}</td></tr>
+        <tr><td colspan="4" style="text-align:right">VAT (${c.vat_rate}%)</td><td style="text-align:right">${cfmt(vat)}</td></tr>
+        <tr style="background:#f0f0f0"><td colspan="4" style="text-align:right;font-weight:700">TOTAL + VAT</td><td style="text-align:right;font-weight:700">${cfmt(total)}</td></tr>
+      </tbody></table>` : ''
+
+    const clauses = isClient
+      ? clausesHDDV(pA, pB, c, kolList, fee, vat, total)
+      : clausesHDCTV(c, fee, fee*Number(c.vat_rate||10)/100, total)
+
+    w.document.write(`<html><head><title>${c.contract_code}</title>
+    <style>
+      body{font-family:'Times New Roman',serif;font-size:13px;margin:40px 50px;color:#000;line-height:1.7}
+      h1{text-align:center;font-size:17px;text-transform:uppercase;margin:10px 0 4px;font-weight:bold}
+      h2{text-align:center;font-size:13px;margin:0 0 16px;font-weight:normal}
+      h3{font-size:13px;font-weight:bold;margin:16px 0 6px;text-transform:uppercase}
+      p{margin:5px 0;text-align:justify}
+      ol,ul{margin:4px 0;padding-left:24px}
+      li{margin:3px 0}
+      table{width:100%;border-collapse:collapse;margin:10px 0}
+      th,td{border:1px solid #000;padding:5px 8px;font-size:12px}
+      th{background:#f0f0f0;font-weight:bold;text-align:center}
+      .logo{font-size:20px;font-weight:900;color:#1A56DB;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:16px}
+      .parties{margin:12px 0}
+      .party-name{font-weight:bold;text-transform:uppercase;margin:10px 0 4px}
+      .sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}
+      .footer{font-size:11px;color:#666;margin-top:20px;border-top:1px solid #ccc;padding-top:8px}
+      @media print{body{margin:20px 25px}}
+    </style></head><body>
+    <div class="logo">K&K advertising</div>
+    <h1>${isClient?'HỢP ĐỒNG DỊCH VỤ':'HỢP ĐỒNG CỘNG TÁC VIÊN'}</h1>
+    <h2>Số: ${c.contract_code}</h2>
+    <p>Hôm nay, <strong>${fmtDate(c.sign_date)}</strong>, tại ${c.sign_location||'Văn phòng Công Ty TNHH Quảng cáo K&K'},<br>Chúng tôi gồm:</p>
+    <div class="parties">
+      <div class="party-name">BÊN A: ${pA.name}</div>
+      ${pA.tax?`<p>Mã số thuế: ${pA.tax}</p>`:''}
+      <p>Đại diện: <strong>${pA.rep}</strong> &nbsp; Chức danh: ${pA.title}</p>
+      <p>Địa chỉ: ${pA.address}</p>
+      ${pA.bank?`<p>Số tài khoản: ${pA.bank} &nbsp; Ngân hàng: ${pA.bankName}</p>`:''}
+      <p><em>(Sau đây gọi là "Bên A")</em></p>
+      <p>Và</p>
+      <div class="party-name">BÊN B: ${pB.name}</div>
+      ${pB.cccd?`<p>CCCD: ${pB.cccd}</p>`:''}
+      ${pB.tax?`<p>Mã số thuế: ${pB.tax}</p>`:''}
+      <p>Địa chỉ: ${pB.address}</p>
+      ${isClient?`<p>Đại diện: <strong>${pB.rep}</strong> &nbsp; Chức danh: ${pB.title}</p>`:''}
+      ${pB.bank?`<p>Số tài khoản: ${pB.bank} &nbsp; Ngân hàng: ${pB.bankName}</p>`:''}
+      <p><em>(Sau đây gọi là "Bên B")</em></p>
+    </div>
+    ${kolTable}
+    ${clauses}
+    <div class="sig">
+      <div><p><strong>Đại diện Bên A</strong></p><p>${pA.title}</p><br><br><br><p><strong>${pA.rep}</strong></p></div>
+      <div><p><strong>${isClient?'Đại diện Bên B':'Bên B'}</strong></p><p>${isClient?pB.title:'(Ký và ghi rõ họ tên)'}</p><br><br><br><p><strong>${isClient?pB.rep:pB.name}</strong></p></div>
+    </div>
+    <div class="footer">A: ${KNK.address} &nbsp;|&nbsp; P: ${KNK.phone} &nbsp;|&nbsp; E: ${KNK.email}</div>
+    </body></html>`)
     w.document.close()
-    setTimeout(()=>w.print(), 500)
+    setTimeout(()=>w.print(), 600)
   }
 
   return (
-    <CModal title={'Preview: '+c.contract_code} onClose={onClose} wide>
-      <div style={{marginBottom:14,display:'flex',gap:8,flexWrap:'wrap'}}>
-        <CBtn primary onClick={printContract}>🖨️ In / Export PDF</CBtn>
+    <CModal title={`Preview: ${c.contract_code}`} onClose={onClose} wide>
+      <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
+        <CBtn primary onClick={printDoc}>🖨️ In / Export PDF</CBtn>
         <CBadge text={c.status}/>
-        <span style={{fontSize:11,color:B.textTer,alignSelf:'center'}}>Tạo lúc {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
+        <span style={{fontSize:11,color:CB.textTer}}>Tạo lúc {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
       </div>
-
-      {/* Preview card */}
-      <div style={{background:B.white,border:`2px solid ${B.border}`,borderRadius:14,padding:'28px 32px',fontFamily:'Times New Roman, serif',fontSize:13,lineHeight:1.7,color:'#000'}}>
-        <div style={{display:'flex',alignItems:'center',marginBottom:16,paddingBottom:12,borderBottom:'2px solid #000'}}>
-          <div style={{fontSize:22,fontWeight:900,color:B.primary,letterSpacing:'-0.02em',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>K&K <span style={{color:B.accent}}>advertising</span></div>
+      <div style={{background:'#fff',border:'2px solid rgba(26,86,219,0.15)',borderRadius:14,padding:'28px 32px',fontFamily:'Times New Roman,serif',fontSize:13,lineHeight:1.7,color:'#000',maxHeight:'60vh',overflowY:'auto'}}>
+        <div style={{fontSize:20,fontWeight:900,color:CB.primary,borderBottom:'2px solid #000',paddingBottom:8,marginBottom:14,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>K&K <span style={{color:CB.accent}}>advertising</span></div>
+        <div style={{textAlign:'center',marginBottom:14}}>
+          <div style={{fontSize:17,fontWeight:700,textTransform:'uppercase'}}>{isClient?'HỢP ĐỒNG DỊCH VỤ':'HỢP ĐỒNG CỘNG TÁC VIÊN'}</div>
+          <div style={{fontSize:13,color:'#666'}}>Số: {c.contract_code}</div>
         </div>
-        <div style={{textAlign:'center',marginBottom:16}}>
-          <div style={{fontSize:18,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em'}}>{isClient?'HỢP ĐỒNG DỊCH VỤ':'HỢP ĐỒNG CỘNG TÁC VIÊN'}</div>
-          <div style={{fontSize:13,color:'#555'}}>Số: {c.contract_code}</div>
-        </div>
-        <p>Hôm nay, ngày <strong>{formatDate(c.sign_date)}</strong>, tại {c.sign_location},</p>
+        <p>Hôm nay, <strong>{fmtDate(c.sign_date)}</strong>, tại {c.sign_location||'Văn phòng Công Ty TNHH Quảng cáo K&K'}</p>
         <p style={{marginBottom:8}}>Chúng tôi gồm:</p>
-        <PartyBlock title="BÊN A" party={partyA} isCompany={isClient}/>
-        <PartyBlock title="BÊN B" party={partyB} isCompany={isClient} cccd={!isClient?c.party_b_cccd:null}/>
-        {isClient && kolList.length > 0 && (
-          <div style={{marginTop:14}}>
-            <div style={{fontWeight:700,marginBottom:8,textTransform:'uppercase',fontSize:12}}>Danh sách KOL/KOC:</div>
+        <div style={{marginBottom:10}}>
+          <div style={{fontWeight:700,textTransform:'uppercase',marginBottom:4}}>BÊN A: {pA.name}</div>
+          {pA.tax&&<div>Mã số thuế: {pA.tax}</div>}
+          <div>Đại diện: <strong>{pA.rep}</strong> — {pA.title}</div>
+          <div>Địa chỉ: {pA.address}</div>
+          {pA.bank&&<div>STK: {pA.bank} — {pA.bankName}</div>}
+          <div style={{fontSize:12,color:'#666',marginTop:2}}>(Sau đây gọi là "Bên A")</div>
+        </div>
+        <div style={{marginBottom:12}}>
+          <div style={{fontWeight:700,textTransform:'uppercase',marginBottom:4}}>BÊN B: {pB.name}</div>
+          {pB.cccd&&<div>CCCD: {pB.cccd}</div>}
+          {pB.tax&&<div>Mã số thuế: {pB.tax}</div>}
+          <div>Địa chỉ: {pB.address}</div>
+          {isClient&&<div>Đại diện: <strong>{pB.rep}</strong> — {pB.title}</div>}
+          {pB.bank&&<div>STK: {pB.bank} — {pB.bankName}</div>}
+          <div style={{fontSize:12,color:'#666',marginTop:2}}>(Sau đây gọi là "Bên B")</div>
+        </div>
+        {isClient&&kolList.length>0&&(
+          <div style={{margin:'12px 0'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-              <thead><tr style={{background:'#f0f0f0'}}>{['STT','Họ và tên','Link TikTok','Nội dung công việc','Chi phí'].map(h=><th key={h} style={{border:'1px solid #ccc',padding:'5px 8px',textAlign:'center'}}>{h}</th>)}</tr></thead>
+              <thead><tr style={{background:'#f0f0f0'}}>{['STT','Tên KOL','Link TikTok','Nội dung','Chi phí'].map(h=><th key={h} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{h}</th>)}</tr></thead>
               <tbody>
-                {kolList.map((k,i)=><tr key={i}><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{i+1}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.name}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.tiktok}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.work}</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right'}}>{fmt(k.fee)}</td></tr>)}
-                <tr><td colSpan={4} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>TOTAL</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>{fmt(fee)}</td></tr>
-                <tr><td colSpan={4} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right'}}>VAT ({c.vat_rate}%)</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right'}}>{fmt(vat)}</td></tr>
-                <tr style={{background:'#f0f0f0'}}><td colSpan={4} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>TOTAL + VAT</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>{fmt(total)}</td></tr>
+                {kolList.map((k,i)=><tr key={i}><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{i+1}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.name}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.tiktok}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.work}</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right'}}>{cfmt(k.fee)}</td></tr>)}
+                <tr style={{background:'#f0f0f0'}}><td colSpan={4} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>TOTAL + VAT ({c.vat_rate}%)</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>{cfmt(total)}</td></tr>
               </tbody>
             </table>
           </div>
         )}
-        {!isClient && (
-          <div style={{marginTop:12,padding:'10px 14px',background:'#f8f9fa',borderRadius:8,border:'1px solid #ddd'}}>
-            <div><strong>Phạm vi công việc:</strong> {c.scope_of_work}</div>
-            <div style={{marginTop:6}}><strong>Thù lao thực nhận:</strong> {fmt(total)} VNĐ <em>({toWords(total)})</em></div>
-          </div>
-        )}
-        <div style={{marginTop:14,padding:'10px 14px',background:'#f8f9fa',borderRadius:8,border:'1px solid #ddd'}}>
-          <strong>Điều khoản thanh toán:</strong> {c.payment_terms}
+        <div style={{marginTop:12,padding:'10px 14px',background:'#f8f9fa',borderRadius:8,fontSize:12}}>
+          <div><strong>Giá trị HĐ:</strong> {cfmt(total)} VNĐ</div>
+          <div style={{fontStyle:'italic',marginTop:2}}>Bằng chữ: {toWords(total)}</div>
+          <div style={{marginTop:6}}><strong>Thanh toán:</strong> {c.payment_terms}</div>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:32,textAlign:'center'}}>
-          <div><div style={{fontWeight:700}}>Đại diện Bên A</div><div style={{fontSize:12,color:'#666'}}>{partyA.title}</div><div style={{height:50}}/><div style={{fontWeight:700}}>{partyA.rep}</div></div>
-          <div><div style={{fontWeight:700}}>Đại diện Bên B</div><div style={{fontSize:12,color:'#666'}}>{isClient?partyB.title:'(Ký và ghi rõ họ tên)'}</div><div style={{height:50}}/><div style={{fontWeight:700}}>{isClient?partyB.rep:partyB.name}</div></div>
+        <div style={{background:'rgba(26,86,219,0.04)',borderRadius:8,padding:'10px 12px',marginTop:12,fontSize:11.5,color:CB.textSec}}>
+          <em>Hợp đồng bao gồm đầy đủ Điều 1–{isClient?'11':'8'} với điều khoản pháp lý chuẩn K&K. Nhấn "In / Export PDF" để xem toàn bộ nội dung.</em>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:28,textAlign:'center'}}>
+          <div><div style={{fontWeight:700}}>Đại diện Bên A</div><div style={{fontSize:12,color:'#666'}}>{pA.title}</div><div style={{height:45}}/><div style={{fontWeight:700}}>{pA.rep}</div></div>
+          <div><div style={{fontWeight:700}}>{isClient?'Đại diện Bên B':'Bên B'}</div><div style={{fontSize:12,color:'#666'}}>{isClient?pB.title:'(Ký và ghi rõ họ tên)'}</div><div style={{height:45}}/><div style={{fontWeight:700}}>{isClient?pB.rep:pB.name}</div></div>
         </div>
       </div>
-
       <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</CBtn></div>
     </CModal>
   )
-}
-
-function PartyBlock({title, party, isCompany, cccd}) {
-  return <div style={{marginBottom:12}}>
-    <div style={{fontWeight:700,fontSize:13,textTransform:'uppercase',marginBottom:4}}>{title}: {isCompany?(title==='BÊN A'?party.name:'CÔNG TY TNHH QUẢNG CÁO K&K'):party.name}</div>
-    {party.tax&&<div>Mã số thuế: {party.tax}</div>}
-    {cccd&&<div>CCCD: {cccd}</div>}
-    {party.address&&<div>Địa chỉ: {party.address}</div>}
-    {party.rep&&<div>Đại diện: <strong>{party.rep}</strong>{party.title&&' — '+party.title}</div>}
-    {party.bank&&<div>Số tài khoản: {party.bank} — Ngân hàng: {party.bankName}</div>}
-    <div style={{fontSize:12,color:'#555',marginTop:2}}>(Sau đây gọi là "{title}")</div>
-  </div>
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1646,11 +1713,11 @@ function PartyBlock({title, party, isCompany, cccd}) {
 // ══════════════════════════════════════════════════════════
 function AcceptanceReports({data, supabase, reload, log}) {
   const [reports, setReports] = useState([])
+  const [contracts, setContracts] = useState([])
   const [tab, setTab] = useState('client')
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [viewItem, setViewItem] = useState(null)
-  const [contracts, setContracts] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(()=>{ loadData() },[tab])
@@ -1666,75 +1733,67 @@ function AcceptanceReports({data, supabase, reload, log}) {
     setLoading(false)
   }
 
-  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'rgba(248,250,255,0.8)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
-  const TD={padding:'10px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
-
-  const filtered = reports.filter(r => {
-    const c = contracts.find(ct=>ct.id===r.contract_id)
-    return !!c
-  })
+  const filtered = reports.filter(r => contracts.some(c=>c.id===r.contract_id))
+  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:CB.textTer,borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'rgba(248,250,255,0.8)',textTransform:'uppercase',letterSpacing:'0.06em'}
+  const TD={padding:'10px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)',verticalAlign:'middle'}
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Biên bản nghiệm thu</h2>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:CB.navy}}>Biên bản nghiệm thu</h2>
         <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo BBNT</CBtn>
       </div>
 
-      {/* Tabs */}
-      <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.7)',padding:4,borderRadius:10,width:'fit-content',border:`1px solid ${B.border}`}}>
+      <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.7)',padding:4,borderRadius:10,width:'fit-content',border:'1px solid rgba(26,86,219,0.1)'}}>
         {[['client','🏢  BBNT Client'],['kol','👤  BBNT KOL/CTV']].map(([key,label])=>(
-          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?B.gradPrimary:'transparent',color:tab===key?'#fff':B.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
+          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':CB.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
         ))}
       </div>
 
-      <div style={{background:'rgba(255,255,255,0.9)',border:`1px solid ${B.border}`,borderRadius:16,overflow:'auto'}}>
-        <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
-          <thead><tr>{['Số BBNT','Hợp đồng liên quan','Giá trị NT','Ngày ký','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+      <div style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,overflow:'auto'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',minWidth:700}}>
+          <thead><tr>{['Số BBNT','HĐ tham chiếu','Giá trị NT','Còn lại','Ngày ký','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>
-            {loading&&<tr><td colSpan={6} style={{textAlign:'center',padding:32,color:B.textTer}}>Đang tải...</td></tr>}
+            {loading&&<tr><td colSpan={7} style={{textAlign:'center',padding:32,color:CB.textTer}}>Đang tải...</td></tr>}
             {!loading&&filtered.map(r=>{
-              const c=contracts.find(ct=>ct.id===r.contract_id)
+              const ct=contracts.find(c=>c.id===r.contract_id)
               return <tr key={r.id}>
-                <td style={{...TD,fontWeight:800,color:B.primary}}>{r.report_code}</td>
-                <td style={{...TD,fontWeight:600}}>{c?.contract_code||'—'}</td>
-                <td style={{...TD,fontWeight:700}}>{fmt(r.accepted_value)} VND</td>
-                <td style={{...TD,fontSize:11,color:B.textTer}}>{r.sign_date||'—'}</td>
+                <td style={{...TD,fontWeight:800,color:CB.primary}}>{r.report_code}</td>
+                <td style={{...TD,fontWeight:600}}>{ct?.contract_code||'—'}</td>
+                <td style={{...TD,fontWeight:700}}>{cfmt(r.accepted_value)}</td>
+                <td style={{...TD,fontWeight:700,color:Number(r.remaining_amount)>0?CB.warning:CB.success}}>{cfmt(r.remaining_amount)}</td>
+                <td style={{...TD,fontSize:11,color:CB.textTer}}>{r.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={r.status}/></td>
                 <td style={{...TD,display:'flex',gap:6}}>
-                  <CBtn sm onClick={()=>setViewItem({report:r,contract:c,type:tab})}>Xem</CBtn>
+                  <CBtn sm onClick={()=>setViewItem({report:r,contract:ct,type:tab})}>Xem</CBtn>
                   <CBtn sm onClick={()=>{setEditItem(r);setShowForm(true)}}>Sửa</CBtn>
                 </td>
               </tr>
             })}
-            {!loading&&!filtered.length&&<tr><td colSpan={6} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>Chưa có biên bản nào</td></tr>}
+            {!loading&&!filtered.length&&<tr><td colSpan={7} style={{textAlign:'center',padding:40,color:CB.textTer,fontSize:12}}>Chưa có biên bản nào</td></tr>}
           </tbody>
         </table>
       </div>
 
-      {showForm && <BBNTForm contracts={contracts} data={data} supabase={supabase} edit={editItem} type={tab} onClose={()=>setShowForm(false)} onSaved={()=>{loadData();reload();log('Lưu BBNT')}}/>}
-      {viewItem && <BBNTPreview {...viewItem} onClose={()=>setViewItem(null)}/>}
+      {showForm&&<BBNTForm contracts={contracts} data={data} supabase={supabase} edit={editItem} type={tab} onClose={()=>{setShowForm(false);setEditItem(null)}} onSaved={()=>{loadData();reload();log('Lưu BBNT')}}/>}
+      {viewItem&&<BBNTPreview report={viewItem.report} contract={viewItem.contract} type={viewItem.type} onClose={()=>setViewItem(null)}/>}
     </div>
   )
 }
 
-// ── BBNT FORM ────────────────────────────────────────────
 function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
   const [form, setForm] = useState({
-    report_code: edit?.report_code || generateCode('BBNT'),
+    report_code: edit?.report_code || genCode('BBNT'),
     contract_id: edit?.contract_id || '',
     sign_date: edit?.sign_date || new Date().toISOString().slice(0,10),
     actual_start_date: edit?.actual_start_date || '',
     actual_end_date: edit?.actual_end_date || new Date().toISOString().slice(0,10),
     deliverables: edit?.deliverables || [],
-    total_videos: edit?.total_videos || 0,
-    completed_videos: edit?.completed_videos || 0,
     contract_value: edit?.contract_value || 0,
     accepted_value: edit?.accepted_value || 0,
     paid_amount: edit?.paid_amount || 0,
     remaining_amount: edit?.remaining_amount || 0,
-    payment_deadline: edit?.payment_deadline || 30,
-    evidence_items: edit?.evidence_items || [],
+    payment_deadline: edit?.payment_deadline || (type==='kol'?15:30),
     status: edit?.status || 'Draft',
     notes: edit?.notes || '',
   })
@@ -1742,219 +1801,217 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
   const selectedContract = contracts.find(c=>c.id===form.contract_id)
 
   useEffect(()=>{
-    if(selectedContract){
+    if(selectedContract) {
+      const kols = selectedContract.kol_list||[]
       set('contract_value', selectedContract.total_with_vat||0)
       set('accepted_value', selectedContract.total_with_vat||0)
-      const arr=selectedContract.kol_list||[]
-      set('total_videos', arr.length||1)
-      set('completed_videos', arr.length||1)
-      set('deliverables', arr.map((k,i)=>({stt:i+1,name:k.name,link:'',result:'Hoàn thành 100%'})))
       set('actual_start_date', selectedContract.start_date||'')
-      set('payment_deadline', type==='kol'?15:30)
+      set('deliverables', kols.length>0
+        ? kols.map((k,i)=>({stt:i+1,name:k.name,link:'',result:'Hoàn thành 100%'}))
+        : [{stt:1,name:selectedContract.party_b_name||'',link:'',result:'Hoàn thành 100%'}]
+      )
     }
   },[form.contract_id])
 
   useEffect(()=>{
-    set('remaining_amount', Number(form.accepted_value||0)-Number(form.paid_amount||0))
-  },[form.accepted_value,form.paid_amount])
+    set('remaining_amount', Math.max(0, Number(form.accepted_value||0)-Number(form.paid_amount||0)))
+  },[form.accepted_value, form.paid_amount])
 
-  const updateDeliverable=(i,k,v)=>{const arr=[...form.deliverables];arr[i]={...arr[i],[k]:v};set('deliverables',arr)}
-  const addDeliverable=()=>set('deliverables',[...form.deliverables,{stt:form.deliverables.length+1,name:'',link:'',result:'Hoàn thành 100%'}])
+  const updD=(i,k,v)=>{const a=[...form.deliverables];a[i]={...a[i],[k]:v};set('deliverables',a)}
+  const addD=()=>set('deliverables',[...form.deliverables,{stt:form.deliverables.length+1,name:'',link:'',result:'Hoàn thành 100%'}])
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const payload={...form,project_id:selectedContract?.project_id}
-    if(edit){await supabase.from('acceptance_reports').update(payload).eq('id',edit.id)}
-    else{await supabase.from('acceptance_reports').insert([payload])}
+    const payload={
+      report_code:form.report_code, contract_id:form.contract_id||null,
+      project_id:selectedContract?.project_id||null,
+      sign_date:form.sign_date||null, actual_start_date:form.actual_start_date||null,
+      actual_end_date:form.actual_end_date||null, deliverables:form.deliverables,
+      contract_value:Number(form.contract_value||0), accepted_value:Number(form.accepted_value||0),
+      paid_amount:Number(form.paid_amount||0), remaining_amount:Number(form.remaining_amount||0),
+      payment_deadline:Number(form.payment_deadline||30), status:form.status, notes:form.notes
+    }
+    let error
+    if(edit){({error}=await supabase.from('acceptance_reports').update(payload).eq('id',edit.id))}
+    else{({error}=await supabase.from('acceptance_reports').insert([payload]))}
+    if(error){alert('Lỗi: '+error.message);return}
     onSaved();onClose()
   }
 
   return (
     <CModal title={edit?'Sửa BBNT':'Tạo biên bản nghiệm thu'} onClose={onClose} wide>
       <form onSubmit={handleSubmit}>
-        <Sec title="Thông tin biên bản">
-          <Row3>
-            <CFG label="Số BBNT" required><input value={form.report_code} onChange={e=>set('report_code',e.target.value)} {...CINP} required/></CFG>
-            <CFG label="Hợp đồng tham chiếu" required>
-              <select value={form.contract_id} onChange={e=>set('contract_id',e.target.value)} {...CINP} required>
+        <CSec title="Thông tin biên bản">
+          <CRow3>
+            <CFG label="Số BBNT" required><input value={form.report_code} onChange={e=>set('report_code',e.target.value)} style={CINP_S} required/></CFG>
+            <CFG label="HĐ tham chiếu" required>
+              <select value={form.contract_id} onChange={e=>set('contract_id',e.target.value)} style={CINP_S} required>
                 <option value="">— Chọn hợp đồng —</option>
                 {contracts.map(c=><option key={c.id} value={c.id}>{c.contract_code} — {type==='client'?c.party_a_name:c.party_b_name}</option>)}
               </select>
             </CFG>
-            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} {...CINP}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option></select></CFG>
-          </Row3>
+            <CFG label="Trạng thái"><select value={form.status} onChange={e=>set('status',e.target.value)} style={CINP_S}><option>Draft</option><option>Sent</option><option>Signed</option><option>Completed</option></select></CFG>
+          </CRow3>
           <CRow2>
-            <CFG label="Ngày ký BBNT"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} {...CINP}/></CFG>
+            <CFG label="Ngày ký BBNT"><input type="date" value={form.sign_date} onChange={e=>set('sign_date',e.target.value)} style={CINP_S}/></CFG>
             <CFG label="Thời gian thực hiện">
               <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <input type="date" value={form.actual_start_date} onChange={e=>set('actual_start_date',e.target.value)} style={{...CINP.style,flex:1}}/>
-                <span style={{color:B.textTer,fontSize:12}}>đến</span>
-                <input type="date" value={form.actual_end_date} onChange={e=>set('actual_end_date',e.target.value)} style={{...CINP.style,flex:1}}/>
+                <input type="date" value={form.actual_start_date} onChange={e=>set('actual_start_date',e.target.value)} style={{...CINP_S,flex:1}}/>
+                <span style={{color:CB.textTer,fontSize:12,flexShrink:0}}>→</span>
+                <input type="date" value={form.actual_end_date} onChange={e=>set('actual_end_date',e.target.value)} style={{...CINP_S,flex:1}}/>
               </div>
             </CFG>
           </CRow2>
-        </Sec>
+        </CSec>
 
-        {selectedContract && (
-          <div style={{background:B.gradSoft,borderRadius:10,padding:'12px 16px',marginBottom:16,border:`1px solid ${B.border}`,fontSize:12}}>
-            <div style={{fontWeight:700,color:B.navy,marginBottom:6}}>Thông tin hợp đồng: {selectedContract.contract_code}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,color:B.textSec}}>
-              <div>Đối tác: <strong>{type==='client'?selectedContract.party_a_name:selectedContract.party_b_name}</strong></div>
-              <div>Giá trị: <strong style={{color:B.primary}}>{fmt(selectedContract.total_with_vat)} VND</strong></div>
-              <div>Dịch vụ: <strong>{selectedContract.service_type}</strong></div>
-            </div>
+        {selectedContract&&(
+          <div style={{background:'rgba(26,86,219,0.05)',borderRadius:10,padding:'12px 16px',marginBottom:16,border:'1px solid rgba(26,86,219,0.1)',fontSize:12}}>
+            <strong>{selectedContract.contract_code}</strong> — {type==='client'?selectedContract.party_a_name:selectedContract.party_b_name} — <span style={{color:CB.primary,fontWeight:700}}>{cfmt(selectedContract.total_with_vat)} VND</span>
           </div>
         )}
 
-        <Sec title="Kết quả nghiệm thu">
+        <CSec title="Kết quả nghiệm thu">
           <table style={{width:'100%',borderCollapse:'collapse',marginBottom:10}}>
-            <thead><tr>{['STT','Tên / Kênh','Link video/air','Kết quả',''].map(h=><th key={h} style={{padding:'7px 8px',fontSize:10,fontWeight:700,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',textTransform:'uppercase'}}>{h}</th>)}</tr></thead>
+            <thead><tr>{['STT','Tên / Kênh','Link video/air','Kết quả',''].map(h=><th key={h} style={{padding:'7px 8px',fontSize:10,fontWeight:700,color:CB.textTer,borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',textTransform:'uppercase'}}>{h}</th>)}</tr></thead>
             <tbody>
               {form.deliverables.map((d,i)=>(
                 <tr key={i}>
-                  <td style={{padding:'5px 6px',fontSize:11,textAlign:'center',color:B.textTer}}>{i+1}</td>
-                  <td style={{padding:'5px 6px'}}><input value={d.name} onChange={e=>updateDeliverable(i,'name',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL / kênh"/></td>
-                  <td style={{padding:'5px 6px'}}><input value={d.link} onChange={e=>updateDeliverable(i,'link',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}} placeholder="https://tiktok.com/@..."/></td>
-                  <td style={{padding:'5px 6px'}}><input value={d.result} onChange={e=>updateDeliverable(i,'result',e.target.value)} style={{...CINP.style,padding:'5px 8px',fontSize:12}}/></td>
-                  <td><button type="button" onClick={()=>set('deliverables',form.deliverables.filter((_,j)=>j!==i))} style={{background:'none',border:'none',cursor:'pointer',color:B.danger,fontSize:16}}>×</button></td>
+                  <td style={{padding:'5px 4px',fontSize:11,textAlign:'center',color:CB.textTer}}>{i+1}</td>
+                  <td style={{padding:'5px 4px'}}><input value={d.name} onChange={e=>updD(i,'name',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}} placeholder="Tên KOL / kênh"/></td>
+                  <td style={{padding:'5px 4px'}}><input value={d.link} onChange={e=>updD(i,'link',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}} placeholder="https://tiktok.com/@..."/></td>
+                  <td style={{padding:'5px 4px'}}><input value={d.result} onChange={e=>updD(i,'result',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}}/></td>
+                  <td><button type="button" onClick={()=>set('deliverables',form.deliverables.filter((_,j)=>j!==i))} style={{background:'none',border:'none',cursor:'pointer',color:CB.danger,fontSize:18,lineHeight:1}}>×</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <CBtn sm onClick={addDeliverable}>+ Thêm dòng</CBtn>
-        </Sec>
+          <CBtn sm onClick={addD}>+ Thêm dòng</CBtn>
+        </CSec>
 
-        <Sec title="Điều khoản thanh toán">
+        <CSec title="Điều khoản thanh toán">
           <CRow2>
-            <CFG label="Giá trị theo HĐ (VND)"><input type="number" value={form.contract_value} onChange={e=>set('contract_value',Number(e.target.value))} {...CINP}/></CFG>
-            <CFG label="Giá trị nghiệm thu (VND)"><input type="number" value={form.accepted_value} onChange={e=>set('accepted_value',Number(e.target.value))} {...CINP}/></CFG>
+            <CFG label="Giá trị theo HĐ (VND)"><input type="number" value={form.contract_value} onChange={e=>set('contract_value',Number(e.target.value))} style={CINP_S}/></CFG>
+            <CFG label="Giá trị nghiệm thu (VND)"><input type="number" value={form.accepted_value} onChange={e=>set('accepted_value',Number(e.target.value))} style={CINP_S}/></CFG>
           </CRow2>
-          <Row3>
-            <CFG label="Đã thanh toán (VND)"><input type="number" value={form.paid_amount} onChange={e=>set('paid_amount',Number(e.target.value))} {...CINP}/></CFG>
+          <CRow3>
+            <CFG label="Đã thanh toán (VND)"><input type="number" value={form.paid_amount} onChange={e=>set('paid_amount',Number(e.target.value))} style={CINP_S}/></CFG>
             <CFG label="Còn phải thanh toán">
-              <div style={{padding:'9px 12px',background:form.remaining_amount>0?'#FFF7ED':'#F0FDF4',borderRadius:8,fontSize:14,fontWeight:800,color:form.remaining_amount>0?B.warning:B.success,border:`1px solid ${form.remaining_amount>0?B.warning:B.success}30`}}>{fmt(form.remaining_amount)} VND</div>
+              <div style={{padding:'9px 12px',background:Number(form.remaining_amount)>0?'rgba(217,119,6,0.08)':'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:Number(form.remaining_amount)>0?CB.warning:CB.success,border:`1px solid ${Number(form.remaining_amount)>0?CB.warning:CB.success}30`}}>{cfmt(form.remaining_amount)}</div>
+              <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.remaining_amount)}</div>
             </CFG>
-            <CFG label="Thời hạn TT (ngày làm việc)"><input type="number" value={form.payment_deadline} onChange={e=>set('payment_deadline',Number(e.target.value))} {...CINP}/></CFG>
-          </Row3>
-        </Sec>
+            <CFG label="TT trong (ngày làm việc)"><input type="number" value={form.payment_deadline} onChange={e=>set('payment_deadline',Number(e.target.value))} style={CINP_S}/></CFG>
+          </CRow3>
+        </CSec>
 
-        <Sec title="Ghi chú">
-          <CFG label="Ghi chú thêm"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...CINP.style,minHeight:70}}/></CFG>
-        </Sec>
+        <CFG label="Ghi chú"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...CINP_S,minHeight:60}}/></CFG>
 
-        <CMFoot onClose={onClose} submitLabel="Lưu BBNT" onDelete={edit?async()=>{await supabase.from('acceptance_reports').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
+        <CMFoot onClose={onClose} label="Lưu BBNT" onDelete={edit?async()=>{await supabase.from('acceptance_reports').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
       </form>
     </CModal>
   )
 }
 
-// ── BBNT PREVIEW ─────────────────────────────────────────
 function BBNTPreview({report:r, contract:c, type, onClose}) {
-  const isClient = type === 'client'
-  const partyA = isClient ? {name:c?.party_a_name,tax:c?.party_a_tax,address:c?.party_a_address,rep:c?.party_a_rep,title:c?.party_a_title,bank:c?.party_a_bank_account,bankName:c?.party_a_bank_name} : {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName}
-  const partyB = isClient ? {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName} : {name:c?.party_b_name,cccd:c?.party_b_cccd,address:c?.party_b_address,bank:c?.party_b_bank_account,bankName:c?.party_b_bank_name}
-  const deliverables = r.deliverables||[]
+  const isClient = type==='client'
+  const pA = isClient
+    ? {name:c?.party_a_name,tax:c?.party_a_tax,address:c?.party_a_address,rep:c?.party_a_rep,title:c?.party_a_title,bank:c?.party_a_bank_account,bankName:c?.party_a_bank_name}
+    : {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName}
+  const pB = isClient
+    ? {name:KNK.name,tax:KNK.taxCode,address:KNK.address,rep:KNK.rep,title:KNK.repTitle,bank:KNK.bankAccount,bankName:KNK.bankName}
+    : {name:c?.party_b_name,cccd:c?.party_b_cccd,address:c?.party_b_address,bank:c?.party_b_bank_account,bankName:c?.party_b_bank_name}
+  const dels = r.deliverables||[]
 
   function printBBNT() {
     const w=window.open('','_blank')
-    w.document.write('<html><head><title>'+r.report_code+'</title><style>body{font-family:Times New Roman,serif;font-size:13px;margin:40px;color:#000;line-height:1.6}h1{text-align:center;font-size:17px;font-weight:bold;text-transform:uppercase;margin-bottom:4px}h2{text-align:center;font-size:13px;margin-top:0;font-style:italic}h3{font-size:13px;font-weight:bold;margin:14px 0 6px;text-transform:uppercase}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #000;padding:6px 8px;font-size:12px}th{background:#f0f0f0;font-weight:bold;text-align:center}.sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}.logo{font-size:20px;font-weight:bold;color:#000;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:16px}.footer{font-size:11px;color:#666;margin-top:20px;border-top:1px solid #ccc;padding-top:8px}@media print{body{margin:20px}}</style></head><body>')
-    w.document.write('<div class="logo">K&K advertising</div>')
-    w.document.write('<h1>BIÊN BẢN NGHIỆM THU VÀ THANH LÝ</h1>')
-    w.document.write('<h2>Hợp Đồng số: '+(c?.contract_code||'')+'</h2>')
-    w.document.write('<p><em>Căn cứ Hợp đồng số: '+(c?.contract_code||'')+' ngày '+formatDate(c?.sign_date)+' giữa '+partyA.name+' và '+partyB.name+';</em></p>')
-    w.document.write('<p><em>Căn cứ vào kết quả thực hiện Hợp Đồng,</em></p>')
-    w.document.write('<p>Hôm nay, ngày <strong>'+formatDate(r.sign_date)+'</strong>, chúng tôi gồm:</p>')
-    w.document.write('<h3>Bên A: '+partyA.name+'</h3>')
-    if(partyA.tax)w.document.write('<p>Mã số thuế: '+partyA.tax+'</p>')
-    w.document.write('<p>Đại diện: <strong>'+partyA.rep+'</strong> — Chức danh: '+partyA.title+'</p>')
-    w.document.write('<p>Địa chỉ: '+partyA.address+'</p>')
-    if(partyA.bank)w.document.write('<p>Số tài khoản: '+partyA.bank+' — Ngân hàng: '+partyA.bankName+'</p>')
-    w.document.write('<p><em>(Sau đây gọi là "Bên A")</em></p>')
-    w.document.write('<h3>Bên B: '+partyB.name+'</h3>')
-    if(partyB.cccd)w.document.write('<p>CCCD: '+partyB.cccd+'</p>')
-    if(partyB.tax)w.document.write('<p>Mã số thuế: '+partyB.tax+'</p>')
-    w.document.write('<p>Địa chỉ: '+partyB.address+'</p>')
-    if(isClient){w.document.write('<p>Đại diện: <strong>'+partyB.rep+'</strong> — Chức danh: '+partyB.title+'</p>')}
-    if(partyB.bank)w.document.write('<p>Số tài khoản: '+partyB.bank+' — Ngân hàng: '+partyB.bankName+'</p>')
-    w.document.write('<p><em>(Sau đây gọi là "Bên B")</em></p>')
-    w.document.write('<h3>Điều 1. Điều khoản nghiệm thu</h3>')
-    w.document.write('<p>Bên '+(isClient?'B':'A')+' đã hoàn thành dịch vụ theo thỏa thuận tại Hợp Đồng và yêu cầu của Bên '+(isClient?'A':'B')+'.</p>')
-    w.document.write('<p>Thời gian thực hiện thực tế: '+formatDate(r.actual_start_date)+' đến '+formatDate(r.actual_end_date)+'</p>')
-    if(deliverables.length>0){
-      w.document.write('<table><thead><tr><th>STT</th><th>Tên / Kênh</th><th>Link Air</th><th>Kết quả</th></tr></thead><tbody>')
-      deliverables.forEach((d,i)=>w.document.write('<tr><td style="text-align:center">'+(i+1)+'</td><td>'+d.name+'</td><td>'+d.link+'</td><td>'+d.result+'</td></tr>'))
-      w.document.write('</tbody></table>')
-    }
-    w.document.write('<h3>Điều 2. Điều khoản thanh toán</h3>')
-    w.document.write('<p>- Phí dịch vụ theo HĐ đã ký: <strong>'+fmt(r.contract_value)+' đồng</strong></p>')
-    w.document.write('<p>- Giá trị nghiệm thu: <strong>'+fmt(r.accepted_value)+' đồng</strong></p>')
-    w.document.write('<p>- Giá trị Bên A đã thanh toán: <strong>'+fmt(r.paid_amount)+' đồng</strong></p>')
-    w.document.write('<p>- Giá trị còn phải thanh toán: <strong>'+fmt(r.remaining_amount)+' đồng</strong></p>')
-    w.document.write('<p><em>Bằng chữ: '+toWords(r.remaining_amount)+'</em></p>')
-    w.document.write('<p>Thời hạn thanh toán: '+r.payment_deadline+' ngày làm việc sau khi ký BBNT.</p>')
-    if(r.notes)w.document.write('<p><em>Lưu ý: '+r.notes+'</em></p>')
-    w.document.write('<h3>Điều 3. Điều khoản chung</h3>')
-    w.document.write('<p>Biên Bản có hiệu lực kể từ ngày ký. Biên bản được lập thành 02 bản có giá trị pháp lý như nhau.</p>')
-    w.document.write('<div class="sig"><div><p><strong>ĐẠI DIỆN BÊN A</strong></p><p>'+partyA.title+'</p><br><br><p><strong>'+partyA.rep+'</strong></p></div><div><p><strong>'+(isClient?'ĐẠI DIỆN BÊN B':'BÊN B')+'</strong></p><p>'+(isClient?partyB.title:'(Ký ghi rõ họ, tên)')+'</p><br><br><p><strong>'+(isClient?partyB.rep:partyB.name)+'</strong></p></div></div>')
-    w.document.write('<div class="footer">A: '+KNK.address+' | P: '+KNK.phone+' | E: '+KNK.email+'</div>')
-    w.document.write('</body></html>')
+    const delTable = dels.length ? `
+      <table><thead><tr><th>STT</th><th>Tên / Kênh</th><th>Link Air</th><th>Kết quả</th></tr></thead>
+      <tbody>${dels.map((d,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${d.name}</td><td>${d.link}</td><td>${d.result}</td></tr>`).join('')}
+      </tbody></table>` : ''
+
+    w.document.write(`<html><head><title>${r.report_code}</title>
+    <style>body{font-family:'Times New Roman',serif;font-size:13px;margin:40px 50px;color:#000;line-height:1.7}h1{text-align:center;font-size:17px;font-weight:bold;text-transform:uppercase;margin:10px 0 4px}h2{text-align:center;font-size:13px;margin:0 0 12px;font-style:italic}h3{font-size:13px;font-weight:bold;margin:14px 0 6px;text-transform:uppercase}p{margin:5px 0;text-align:justify}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #000;padding:5px 8px;font-size:12px}th{background:#f0f0f0;font-weight:bold;text-align:center}.logo{font-size:20px;font-weight:900;color:#1A56DB;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:16px}.sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}.footer{font-size:11px;color:#666;margin-top:20px;border-top:1px solid #ccc;padding-top:8px}@media print{body{margin:20px 25px}}</style>
+    </head><body>
+    <div class="logo">K&K advertising</div>
+    <h1>BIÊN BẢN NGHIỆM THU VÀ THANH LÝ</h1>
+    <h2>Hợp Đồng số: ${c?.contract_code||'—'}</h2>
+    <p><em>Căn cứ Hợp đồng số: ${c?.contract_code||'—'} ngày ${fmtDate(c?.sign_date)} giữa ${pA.name} và ${pB.name};</em></p>
+    <p><em>Căn cứ vào kết quả thực hiện Hợp Đồng,</em></p>
+    <p>Hôm nay, <strong>${fmtDate(r.sign_date)}</strong>, chúng tôi gồm:</p>
+    <p><strong>BÊN A: ${pA.name}</strong></p>
+    ${pA.tax?`<p>Mã số thuế: ${pA.tax}</p>`:''}
+    <p>Đại diện: <strong>${pA.rep}</strong> — Chức danh: ${pA.title}</p>
+    <p>Địa chỉ: ${pA.address}</p>
+    ${pA.bank?`<p>STK: ${pA.bank} — Ngân hàng: ${pA.bankName}</p>`:''}
+    <p><em>(Sau đây gọi là "Bên A")</em></p>
+    <p><strong>BÊN B: ${pB.name}</strong></p>
+    ${pB.cccd?`<p>CCCD: ${pB.cccd}</p>`:''}
+    ${pB.tax?`<p>Mã số thuế: ${pB.tax}</p>`:''}
+    <p>Địa chỉ: ${pB.address}</p>
+    ${isClient?`<p>Đại diện: <strong>${pB.rep}</strong> — Chức danh: ${pB.title}</p>`:''}
+    ${pB.bank?`<p>STK: ${pB.bank} — Ngân hàng: ${pB.bankName}</p>`:''}
+    <p><em>(Sau đây gọi là "Bên B")</em></p>
+    <h3>ĐIỀU 1. ĐIỀU KHOẢN NGHIỆM THU</h3>
+    <p>Bên ${isClient?'B':'A'} đã hoàn thành dịch vụ theo thỏa thuận tại Hợp Đồng và yêu cầu của Bên ${isClient?'A':'B'}.</p>
+    <p>Thời gian thực hiện thực tế: ${fmtDate(r.actual_start_date)} đến ${fmtDate(r.actual_end_date)}</p>
+    ${delTable}
+    <h3>ĐIỀU 2. ĐIỀU KHOẢN THANH TOÁN</h3>
+    <p>- Phí dịch vụ theo Hợp đồng đã ký: <strong>${cfmt(r.contract_value)} đồng</strong></p>
+    <p>- Giá trị nghiệm thu: <strong>${cfmt(r.accepted_value)} đồng</strong></p>
+    <p>- Giá trị thực tế Bên A đã thanh toán: <strong>${cfmt(r.paid_amount)} đồng</strong></p>
+    <p>- Giá trị Bên A còn phải thanh toán: <strong>${cfmt(r.remaining_amount)} đồng</strong></p>
+    <p><em>Bằng chữ: ${toWords(r.remaining_amount)}</em></p>
+    <p>Tiến độ thanh toán: 100% trong vòng ${r.payment_deadline} ngày làm việc sau khi ký BBNT.</p>
+    ${r.notes?`<p><em>Lưu ý: ${r.notes}</em></p>`:''}
+    <p><em>(Lưu ý: trong vòng 02 ngày làm việc tính từ khi Bên B gửi Biên Bản Nghiệm Thu nhưng chưa nhận được sự phản hồi từ Bên A, thì mặc định Biên Bản Nghiệm Thu này được thanh lý.)</em></p>
+    <h3>ĐIỀU 3. ĐIỀU KHOẢN CHUNG</h3>
+    <p>1. Biên Bản có hiệu lực kể từ ngày ký, hai Bên thống nhất nghiệm thu và không có bất cứ tranh chấp, khiếu nại nào.</p>
+    <p>2. Hợp Đồng tự động thanh lý ngay sau Bên A hoàn tất việc thanh toán cho Bên B.</p>
+    <p>3. Biên bản được lập thành 02 bản có giá trị pháp lý như nhau, mỗi Bên giữ 01 bản.</p>
+    <div class="sig">
+      <div><p><strong>ĐẠI DIỆN BÊN A</strong></p><p>${pA.title}</p><br><br><br><p><strong>${pA.rep}</strong></p></div>
+      <div><p><strong>${isClient?'ĐẠI DIỆN BÊN B':'BÊN B'}</strong></p><p>${isClient?pB.title:'(Ký ghi rõ họ, tên)'}</p><br><br><br><p><strong>${isClient?pB.rep:pB.name}</strong></p></div>
+    </div>
+    <div class="footer">A: ${KNK.address} | P: ${KNK.phone} | E: ${KNK.email}</div>
+    </body></html>`)
     w.document.close()
-    setTimeout(()=>w.print(),500)
+    setTimeout(()=>w.print(),600)
   }
 
   return (
-    <CModal title={'Preview BBNT: '+r.report_code} onClose={onClose} wide>
-      <div style={{marginBottom:14,display:'flex',gap:8}}>
+    <CModal title={`Preview BBNT: ${r.report_code}`} onClose={onClose} wide>
+      <div style={{display:'flex',gap:8,marginBottom:14}}>
         <CBtn primary onClick={printBBNT}>🖨️ In / Export PDF</CBtn>
         <CBadge text={r.status}/>
       </div>
-      <div style={{background:B.white,border:`2px solid ${B.border}`,borderRadius:14,padding:'28px 32px',fontFamily:'Times New Roman,serif',fontSize:13,lineHeight:1.7,color:'#000'}}>
-        <div style={{fontSize:22,fontWeight:900,color:B.primary,fontFamily:"'Plus Jakarta Sans',sans-serif",borderBottom:'2px solid #000',paddingBottom:8,marginBottom:16}}>K&K <span style={{color:B.accent}}>advertising</span></div>
+      <div style={{background:'#fff',border:'2px solid rgba(26,86,219,0.15)',borderRadius:14,padding:'28px 32px',fontFamily:'Times New Roman,serif',fontSize:13,lineHeight:1.7,color:'#000',maxHeight:'60vh',overflowY:'auto'}}>
+        <div style={{fontSize:20,fontWeight:900,color:CB.primary,borderBottom:'2px solid #000',paddingBottom:8,marginBottom:14,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>K&K <span style={{color:CB.accent}}>advertising</span></div>
         <div style={{textAlign:'center',marginBottom:14}}>
           <div style={{fontSize:17,fontWeight:700,textTransform:'uppercase'}}>BIÊN BẢN NGHIỆM THU VÀ THANH LÝ</div>
-          <div style={{fontSize:13,fontStyle:'italic',color:'#555'}}>Hợp Đồng số: {c?.contract_code||'—'}</div>
+          <div style={{fontSize:13,fontStyle:'italic',color:'#666'}}>Hợp Đồng số: {c?.contract_code||'—'}</div>
         </div>
-        <p><em>Căn cứ Hợp đồng số: {c?.contract_code} ngày {formatDate(c?.sign_date)};</em></p>
-        <p style={{marginBottom:8}}>Hôm nay, ngày <strong>{formatDate(r.sign_date)}</strong>, chúng tôi gồm:</p>
-        <PartyBlock title="BÊN A" party={partyA} isCompany={true}/>
-        <PartyBlock title="BÊN B" party={partyB} isCompany={isClient} cccd={!isClient?c?.party_b_cccd:null}/>
-        {deliverables.length>0&&(
-          <div style={{marginTop:12}}>
-            <div style={{fontWeight:700,marginBottom:6,fontSize:12,textTransform:'uppercase'}}>Kết quả nghiệm thu:</div>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-              <thead><tr style={{background:'#f0f0f0'}}>{['STT','Tên / Kênh','Link Air','Kết quả'].map(h=><th key={h} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{h}</th>)}</tr></thead>
-              <tbody>{deliverables.map((d,i)=><tr key={i}><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{i+1}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{d.name}</td><td style={{border:'1px solid #ccc',padding:'4px 8px',fontSize:11}}>{d.link}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{d.result}</td></tr>)}</tbody>
-            </table>
-          </div>
+        <p><em>Căn cứ HĐ số: {c?.contract_code} ngày {fmtDate(c?.sign_date)}</em></p>
+        <p>Hôm nay, <strong>{fmtDate(r.sign_date)}</strong>, chúng tôi gồm:</p>
+        <div style={{marginBottom:8}}><strong>BÊN A:</strong> {pA.name} — ĐD: {pA.rep}</div>
+        <div style={{marginBottom:12}}><strong>BÊN B:</strong> {pB.name}{pB.cccd?` — CCCD: ${pB.cccd}`:''}</div>
+        {dels.length>0&&(
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,margin:'10px 0'}}>
+            <thead><tr style={{background:'#f0f0f0'}}>{['STT','Tên/Kênh','Link Air','Kết quả'].map(h=><th key={h} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{h}</th>)}</tr></thead>
+            <tbody>{dels.map((d,i)=><tr key={i}><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{i+1}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{d.name}</td><td style={{border:'1px solid #ccc',padding:'4px 8px',fontSize:11}}>{d.link}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{d.result}</td></tr>)}</tbody>
+          </table>
         )}
-        <div style={{marginTop:12,padding:'10px 14px',background:'#f8f9fa',borderRadius:8,border:'1px solid #ddd',fontSize:12}}>
-          <div>Giá trị HĐ: <strong>{fmt(r.contract_value)} VND</strong></div>
-          <div>Giá trị nghiệm thu: <strong>{fmt(r.accepted_value)} VND</strong></div>
-          <div>Đã thanh toán: <strong>{fmt(r.paid_amount)} VND</strong></div>
-          <div>Còn phải thanh toán: <strong style={{color:r.remaining_amount>0?B.warning:B.success}}>{fmt(r.remaining_amount)} VND</strong></div>
+        <div style={{background:'#f8f9fa',borderRadius:8,padding:'10px 14px',marginTop:12,fontSize:12}}>
+          <div>Giá trị HĐ: <strong>{cfmt(r.contract_value)} VND</strong></div>
+          <div>Giá trị NT: <strong>{cfmt(r.accepted_value)} VND</strong></div>
+          <div>Đã thanh toán: <strong>{cfmt(r.paid_amount)} VND</strong></div>
+          <div>Còn lại: <strong style={{color:Number(r.remaining_amount)>0?CB.warning:CB.success}}>{cfmt(r.remaining_amount)} VND</strong></div>
           <div style={{fontStyle:'italic',marginTop:4}}>Bằng chữ: {toWords(r.remaining_amount)}</div>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:32,textAlign:'center'}}>
-          <div><div style={{fontWeight:700}}>ĐẠI DIỆN BÊN A</div><div style={{fontSize:12,color:'#666'}}>{partyA.title}</div><div style={{height:50}}/><div style={{fontWeight:700}}>{partyA.rep}</div></div>
-          <div><div style={{fontWeight:700}}>{isClient?'ĐẠI DIỆN BÊN B':'BÊN B'}</div><div style={{fontSize:12,color:'#666'}}>{isClient?partyB.title:'(Ký ghi rõ họ tên)'}</div><div style={{height:50}}/><div style={{fontWeight:700}}>{isClient?partyB.rep:partyB.name}</div></div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:28,textAlign:'center'}}>
+          <div><div style={{fontWeight:700}}>ĐẠI DIỆN BÊN A</div><div style={{fontSize:12,color:'#666'}}>{pA.title}</div><div style={{height:45}}/><div style={{fontWeight:700}}>{pA.rep}</div></div>
+          <div><div style={{fontWeight:700}}>{isClient?'ĐẠI DIỆN BÊN B':'BÊN B'}</div><div style={{fontSize:12,color:'#666'}}>{isClient?pB.title:'(Ký ghi rõ họ tên)'}</div><div style={{height:45}}/><div style={{fontWeight:700}}>{isClient?pB.rep:pB.name}</div></div>
         </div>
       </div>
       <div style={{textAlign:'right',marginTop:14}}><CBtn onClick={onClose}>Đóng</CBtn></div>
     </CModal>
   )
-}
-
-// ── HELPERS ──────────────────────────────────────────────
-function generateCode(prefix) {
-  const now = new Date()
-  const d = String(now.getDate()).padStart(2,'0')
-  const m = String(now.getMonth()+1).padStart(2,'0')
-  const y = String(now.getFullYear()).slice(2)
-  return `${d}${m}${y}-${prefix}-KnK-`
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '___/___/______'
-  const d = new Date(dateStr)
-  return `ngày ${d.getDate()} tháng ${d.getMonth()+1} năm ${d.getFullYear()}`
 }
