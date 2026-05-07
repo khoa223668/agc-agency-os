@@ -192,7 +192,7 @@ export default function App(){
     </div>
   )
 
-  const P={data,add,upd,del,log}
+  const P={data,add,upd,del,log,reload:loadAll,supabase}
   const supabase_client = supabase
   return(
     <div style={{display:'flex',height:'100vh',fontFamily:"'Plus Jakarta Sans', system-ui, sans-serif",background:B.bgMesh,overflow:'hidden'}}>
@@ -257,7 +257,7 @@ export default function App(){
         </div>
         {/* Content */}
         <div style={{flex:1,overflow:'auto',padding:'20px 28px'}}>
-          {page==='dashboard'&&<Dashboard {...P} setPage={setPage}/>}
+          {page==='dashboard'&&<Dashboard {...P} setPage={setPage} currentUser={currentUser}/>}
           {page==='pipeline'&&<Pipeline {...P}/>}
           {page==='projects'&&<Projects {...P}/>}
           {page==='pricing'&&<Pricing {...P}/>}
