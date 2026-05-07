@@ -158,6 +158,7 @@ export default function App(){
   const NAV=[
     {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
     {id:'pipeline',label:'Deal Pipeline',icon:'◈',grp:'OVERVIEW'},
+    {id:'workflow',label:'Công việc',icon:'⚡',grp:'OVERVIEW'},
     {id:'projects',label:'Dự án',icon:'◉',grp:'OPERATIONS'},
     {id:'pricing',label:'Pricing Engine',icon:'◎',grp:'OPERATIONS'},
     {id:'invoices',label:'Hóa đơn',icon:'▤',grp:'OPERATIONS'},
@@ -259,6 +260,7 @@ export default function App(){
         <div style={{flex:1,overflow:'auto',padding:'20px 28px'}}>
           {page==='dashboard'&&<Dashboard {...P} setPage={setPage} currentUser={currentUser}/>}
           {page==='pipeline'&&<Pipeline {...P}/>}
+          {page==='workflow'&&<WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
           {page==='projects'&&<Projects {...P}/>}
           {page==='pricing'&&<Pricing {...P}/>}
           {page==='invoices'&&<Invoices {...P}/>}
@@ -293,188 +295,151 @@ function Dashboard({data,setPage,currentUser}){
   const pending=data.approvals.filter(a=>a.status==='Pending')
   const won=data.deals.filter(d=>d.stage==='Won').length
   const wr=data.deals.length?Math.round(won/data.deals.length*100):0
-  const svcs=['KOL/KOC','Performance','Creative','Event','PR','Consulting']
   const now=new Date()
   const hour=now.getHours()
-  const greeting=hour<12?'Chào buổi sáng':hour<18?'Chào buổi chiều':'Chào buổi tối'
-  const name=currentUser?.name?.split(' ').slice(-1)[0]||'K'
-
-  // Monthly revenue chart data
+  const greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening'
+  const firstName=currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'
   const byM=Array(12).fill(0)
   data.projects.forEach(p=>{if(p.start_date){const m=new Date(p.start_date).getMonth();byM[m]+=Number(p.revenue||0)}})
   const maxM=Math.max(...byM,1)
-
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   return(
-    <div>
-      {/* Hero greeting banner */}
-      <div style={{background:'linear-gradient(135deg,#0F172A 0%,#1A56DB 60%,#06B6D4 100%)',borderRadius:20,padding:'28px 32px',marginBottom:20,position:'relative',overflow:'hidden',boxShadow:'0 8px 40px rgba(26,86,219,0.3)'}}>
-        <div style={{position:'absolute',top:-40,right:-40,width:200,height:200,borderRadius:'50%',background:'rgba(255,255,255,0.04)'}}/>
-        <div style={{position:'absolute',bottom:-60,right:80,width:300,height:300,borderRadius:'50%',background:'rgba(6,182,212,0.08)'}}/>
-        <div style={{position:'absolute',top:20,right:200,width:100,height:100,borderRadius:'50%',background:'rgba(255,255,255,0.03)'}}/>
-        <div style={{position:'relative',zIndex:1}}>
-          <div style={{fontSize:13,color:'rgba(255,255,255,0.6)',fontWeight:500,marginBottom:6}}>{greeting},</div>
-          <div style={{fontSize:26,fontWeight:900,color:'#fff',letterSpacing:'-0.03em',marginBottom:4}}>{name} 👋</div>
-          <div style={{fontSize:12,color:'rgba(255,255,255,0.5)',fontWeight:500}}>
-            {now.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
-            {pending.length>0&&<span style={{marginLeft:12,background:'rgba(220,38,38,0.3)',color:'#fca5a5',padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>⚡ {pending.length} approval đang chờ</span>}
-            {overdue.length>0&&<span style={{marginLeft:8,background:'rgba(217,119,6,0.3)',color:'#fcd34d',padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>⚠️ {overdue.length} công nợ quá hạn</span>}
+    <div style={{minHeight:'100%',background:'linear-gradient(135deg,#0A0F1E 0%,#0F1729 40%,#0D1B3E 100%)',margin:'-20px -28px',padding:'28px 32px',position:'relative'}}>
+      <div style={{position:'fixed',top:'8%',left:'15%',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(26,86,219,0.12),transparent 70%)',pointerEvents:'none',zIndex:0}}/>
+      <div style={{position:'fixed',bottom:'15%',right:'10%',width:600,height:600,borderRadius:'50%',background:'radial-gradient(circle,rgba(6,182,212,0.08),transparent 70%)',pointerEvents:'none',zIndex:0}}/>
+      <div style={{position:'relative',zIndex:1}}>
+        {/* Greeting row */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24}}>
+          <div>
+            <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',fontWeight:500,marginBottom:5}}>{greeting},</div>
+            <div style={{fontSize:30,fontWeight:900,color:'#fff',letterSpacing:'-0.04em',lineHeight:1.1}}>{firstName} 👋</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:5}}>{now.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            {pending.length>0&&<div onClick={()=>setPage('approval')} style={{cursor:'pointer',padding:'10px 14px',borderRadius:12,background:'rgba(220,38,38,0.12)',border:'1px solid rgba(220,38,38,0.25)',display:'flex',alignItems:'center',gap:8}}>
+              <span>⚡</span><div><div style={{fontSize:11,fontWeight:700,color:'#FCA5A5'}}>{pending.length} Approvals</div><div style={{fontSize:10,color:'rgba(252,165,165,0.6)'}}>Cần xử lý</div></div>
+            </div>}
+            {overdue.length>0&&<div onClick={()=>setPage('invoices')} style={{cursor:'pointer',padding:'10px 14px',borderRadius:12,background:'rgba(217,119,6,0.12)',border:'1px solid rgba(217,119,6,0.25)',display:'flex',alignItems:'center',gap:8}}>
+              <span>⚠️</span><div><div style={{fontSize:11,fontWeight:700,color:'#FCD34D'}}>{overdue.length} Công nợ</div><div style={{fontSize:10,color:'rgba(252,211,77,0.6)'}}>Quá hạn</div></div>
+            </div>}
           </div>
         </div>
-        {/* Quick stats inline */}
-        <div style={{display:'flex',gap:24,marginTop:20,position:'relative',zIndex:1}}>
-          {[['Revenue YTD',fmtS(rev)+' VND'],['Profit',fmtS(profit)+' VND'],['Margin',margin+'%'],['Win Rate',wr+'%'],['Active Projects',active+'']].map(([l,v])=>(
-            <div key={l}>
-              <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>{l}</div>
-              <div style={{fontSize:18,fontWeight:900,color:'#fff',marginTop:2}}>{v}</div>
+        {/* 6 KPI cards */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:11,marginBottom:18}}>
+          {[{l:'REVENUE',v:fmtS(rev),s:'VND',c:'#06B6D4',e:'💹'},{l:'PROFIT',v:fmtS(profit),s:margin+'% margin',c:'#10B981',e:'📈'},{l:'ACTIVE PJ',v:active,s:data.projects.length+' tổng',c:'#8B5CF6',e:'🚀'},{l:'KOL DB',v:data.kols.length,s:'contacts',c:'#F59E0B',e:'⭐'},{l:'CLIENTS',v:data.clients.length,s:'đang HT',c:'#1A56DB',e:'🏢'},{l:'WIN RATE',v:wr+'%',s:won+'/'+data.deals.length+' deals',c:wr>=50?'#10B981':'#F59E0B',e:'🎯'}].map(({l,v,s,c,e})=>(
+            <div key={l} style={{background:'rgba(255,255,255,0.05)',backdropFilter:'blur(20px)',borderRadius:14,padding:'16px 14px',border:`1px solid ${c}20`,position:'relative',overflow:'hidden'}}>
+              <div style={{position:'absolute',top:-12,right:-12,width:50,height:50,borderRadius:'50%',background:c+'10'}}/>
+              <div style={{fontSize:18,marginBottom:6}}>{e}</div>
+              <div style={{fontSize:9,fontWeight:800,color:c,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:5}}>{l}</div>
+              <div style={{fontSize:20,fontWeight:900,color:'#fff',lineHeight:1}}>{v}</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',marginTop:4}}>{s}</div>
+              <div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${c},transparent)`}}/>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* KPI Grid — 6 cards full width */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:12,marginBottom:20}}>
-        {[
-          ['TOTAL REVENUE',fmtS(rev),'VND',B.primary,'linear-gradient(135deg,rgba(26,86,219,0.1),rgba(6,182,212,0.1))'],
-          ['TOTAL PROFIT',fmtS(profit),margin+'% margin',B.success,'rgba(5,150,105,0.08)'],
-          ['ACTIVE PROJECTS',active,data.projects.length+' tổng','#7C3AED','rgba(124,58,237,0.08)'],
-          ['KOL DATABASE',data.kols.length,'contacts',B.accent,'rgba(6,182,212,0.08)'],
-          ['CLIENTS',data.clients.length,'đang hợp tác',B.primary,'rgba(26,86,219,0.06)'],
-          ['CÔNG NỢ QH',overdue.length,overdue.length?'Cần xử lý':'Ổn ✓',overdue.length?B.danger:B.success,overdue.length?'rgba(220,38,38,0.06)':'rgba(5,150,105,0.06)'],
-        ].map(([l,v,s,c,bg])=>(
-          <div key={l} style={{background:bg,borderRadius:14,padding:'16px 18px',border:`1px solid ${c}20`,position:'relative',overflow:'hidden'}}>
-            <div style={{position:'absolute',top:-10,right:-10,width:60,height:60,borderRadius:'50%',background:c+'08'}}/>
-            <div style={{fontSize:9,fontWeight:800,color:c,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{l}</div>
-            <div style={{fontSize:24,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1}}>{v}</div>
-            <div style={{fontSize:10,color:'#94A3B8',marginTop:5,fontWeight:500}}>{s}</div>
+        {/* Charts */}
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:14,marginBottom:14}}>
+          <div style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(255,255,255,0.07)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+              <div><div style={{fontSize:13,fontWeight:800,color:'#fff'}}>Revenue Overview 2026</div><div style={{fontSize:10,color:'rgba(255,255,255,0.3)',marginTop:2}}>VND</div></div>
+              <div style={{display:'flex',gap:7}}>
+                {[['Tổng',fmtS(rev),'#06B6D4'],['Tháng này',fmtS(byM[now.getMonth()]),'#8B5CF6'],['Avg/tháng',fmtS(Math.round(rev/12)),'#10B981']].map(([l,v,c])=>(
+                  <div key={l} style={{textAlign:'center',padding:'5px 9px',borderRadius:7,background:c+'12',border:`1px solid ${c}20`}}>
+                    <div style={{fontSize:8,color:c,fontWeight:700,textTransform:'uppercase'}}>{l}</div>
+                    <div style={{fontSize:11,fontWeight:800,color:'#fff',marginTop:1}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:'flex',alignItems:'flex-end',gap:4,height:130}}>
+              {months.map((m,i)=>{
+                const h=byM[i]?Math.max(10,Math.round(byM[i]/maxM*100)):4
+                const isNow=i===now.getMonth(),isPast=i<now.getMonth()
+                return <div key={m} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                  <div style={{width:'100%',height:h+'%',background:isNow?'linear-gradient(180deg,#06B6D4,#1A56DB)':isPast&&byM[i]>0?'rgba(26,86,219,0.35)':'rgba(255,255,255,0.05)',borderRadius:'4px 4px 2px 2px',minHeight:4,boxShadow:isNow?'0 0 16px rgba(6,182,212,0.5)':'none'}}/>
+                  <div style={{fontSize:8,color:isNow?'#06B6D4':'rgba(255,255,255,0.25)',fontWeight:isNow?800:400}}>{m}</div>
+                </div>
+              })}
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Main content grid */}
-      <div style={{display:'grid',gridTemplateColumns:'2fr 1.2fr 1fr',gap:14,marginBottom:14}}>
-        {/* Revenue chart */}
-        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)',boxShadow:'0 2px 12px rgba(26,86,219,0.06)'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Revenue theo tháng — 2026</div>
-            <div style={{fontSize:11,color:'#94A3B8',fontWeight:500}}>VND</div>
-          </div>
-          <div style={{display:'flex',alignItems:'flex-end',gap:6,height:120}}>
-            {['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'].map((m,i)=>{
-              const h=byM[i]?Math.max(8,Math.round(byM[i]/maxM*100)):4
-              const isNow=i===now.getMonth()
-              return <div key={m} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-                <div style={{width:'100%',height:h+'%',background:isNow?'linear-gradient(180deg,#1A56DB,#06B6D4)':byM[i]?'rgba(26,86,219,0.25)':'rgba(26,86,219,0.08)',borderRadius:'4px 4px 0 0',minHeight:4,transition:'height 0.3s',border:isNow?'none':'none'}}/>
-                <div style={{fontSize:9,color:isNow?'#1A56DB':'#94A3B8',fontWeight:isNow?800:500}}>{m}</div>
+          <div style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)',borderRadius:16,padding:'18px 18px',border:'1px solid rgba(255,255,255,0.07)'}}>
+            <div style={{fontSize:12,fontWeight:800,color:'#fff',marginBottom:12}}>Workflow Stages</div>
+            {[['LEAD','🎯','#94A3B8'],['BRIEF','📋','#3B82F6'],['PROPOSAL','💡','#8B5CF6'],['PRICING','💰','#F59E0B'],['CONTRACT','📝','#06B6D4'],['EXECUTION','🚀','#10B981']].map(([stage,icon,c])=>{
+              const cnt=data.projects.filter(p=>(p.current_stage||'LEAD')===stage).length
+              const pct=data.projects.length?Math.round(cnt/data.projects.length*100):0
+              return <div key={stage} style={{marginBottom:8}}>
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:3}}>
+                  <span style={{color:'rgba(255,255,255,0.55)'}}>{icon} {stage}</span>
+                  <span style={{color:c,fontWeight:700}}>{cnt}</span>
+                </div>
+                <div style={{height:4,background:'rgba(255,255,255,0.06)',borderRadius:99,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:pct+'%',background:c,borderRadius:99}}/>
+                </div>
               </div>
             })}
           </div>
-          <div style={{display:'flex',justifyContent:'space-between',marginTop:12,padding:'10px 0',borderTop:'1px solid rgba(26,86,219,0.06)'}}>
-            {[['Tổng',fmtS(rev)],['Tháng này',fmtS(byM[now.getMonth()])],['Avg/tháng',fmtS(Math.round(rev/12))]].map(([l,v])=>(
-              <div key={l} style={{textAlign:'center'}}>
-                <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase'}}>{l}</div>
-                <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginTop:2}}>{v}</div>
+        </div>
+        {/* Bottom 3 */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+          <div style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)',borderRadius:16,padding:'18px 20px',border:'1px solid rgba(255,255,255,0.07)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:800,color:'#fff'}}>Active Projects</div>
+              <button onClick={()=>setPage('workflow')} style={{fontSize:10,color:'#06B6D4',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Workflow →</button>
+            </div>
+            {data.projects.filter(p=>p.status==='Active'||p.current_stage==='EXECUTION').slice(0,4).map(p=>(
+              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                <div style={{flex:1,minWidth:0,marginRight:8}}>
+                  <div style={{fontWeight:600,fontSize:11.5,color:'rgba(255,255,255,0.85)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'—'}</div>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,0.3)',marginTop:1}}>{p.client||'—'}</div>
+                </div>
+                <div style={{textAlign:'right',flexShrink:0}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#06B6D4'}}>{p.revenue?fmtS(Number(p.revenue)):'-'}</div>
+                  <div style={{fontSize:9,color:'#10B981',fontWeight:600,marginTop:1}}>{p.current_stage||p.status||'—'}</div>
+                </div>
               </div>
             ))}
+            {!data.projects.filter(p=>p.status==='Active').length&&<div style={{textAlign:'center',padding:'18px 0',color:'rgba(255,255,255,0.2)',fontSize:11}}>Chưa có dự án active</div>}
           </div>
-        </div>
-
-        {/* Service breakdown */}
-        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
-          <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>Revenue theo Service</div>
-          {svcs.map((s,i)=>{
-            const r=data.projects.filter(p=>p.service===s).reduce((a,p)=>a+Number(p.revenue||0),0)
-            const pct=rev?Math.round(r/rev*100):0
-            return <div key={s} style={{marginBottom:11}}>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:11.5,marginBottom:4}}>
-                <span style={{fontWeight:600,color:'#0F172A'}}>{s}</span>
-                <span style={{color:PALETTE[i],fontWeight:700}}>{pct}%</span>
-              </div>
-              <div style={{height:6,background:'rgba(26,86,219,0.07)',borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',width:pct+'%',background:PALETTE[i],borderRadius:99,transition:'width 0.5s ease'}}/>
-              </div>
+          <div style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)',borderRadius:16,padding:'18px 20px',border:'1px solid rgba(255,255,255,0.07)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:800,color:'#fff'}}>Công nợ quá hạn</div>
+              <button onClick={()=>setPage('invoices')} style={{fontSize:10,color:'#06B6D4',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Chi tiết →</button>
             </div>
-          })}
-        </div>
-
-        {/* Activity feed */}
-        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
-          <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>Hoạt động gần đây</div>
-          {data.projects.slice(0,6).map(p=>(
-            <div key={p.id} style={{display:'flex',gap:10,marginBottom:12,alignItems:'flex-start'}}>
-              <div style={{width:6,height:6,borderRadius:'50%',background:p.status==='Active'?B.success:p.status==='Completed'?B.primary:B.warning,marginTop:5,flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:11.5,fontWeight:600,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'—'}</div>
-                <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{p.client||'—'} · {fmtS(p.revenue)}</div>
+            {overdue.slice(0,4).map(inv=>(
+              <div key={inv.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                <span style={{fontSize:11.5,fontWeight:600,color:'rgba(255,255,255,0.75)'}}>{inv.client}</span>
+                <span style={{fontSize:11.5,fontWeight:800,color:'#FCA5A5'}}>{fmtS(Number(inv.amount)-Number(inv.paid||0))}</span>
               </div>
-            </div>
-          ))}
-          {!data.projects.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có dự án</div>}
-        </div>
-      </div>
-
-      {/* Bottom row */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}}>
-        {/* Recent projects */}
-        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Dự án gần đây</div>
-            <button onClick={()=>setPage('projects')} style={{fontSize:11,color:B.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xem tất →</button>
+            ))}
+            {!overdue.length&&<div style={{textAlign:'center',padding:'18px 0'}}>
+              <div style={{fontSize:22,marginBottom:5}}>🎉</div>
+              <div style={{color:'#10B981',fontSize:11,fontWeight:600}}>Không có công nợ quá hạn</div>
+            </div>}
           </div>
-          {data.projects.slice(0,4).map(p=>(
-            <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
-              <div style={{flex:1,minWidth:0,marginRight:8}}>
-                <div style={{fontWeight:700,fontSize:12,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'—'}</div>
-                <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{p.client||'—'}</div>
-              </div>
-              <div style={{textAlign:'right',flexShrink:0}}>
-                <div style={{fontSize:11,fontWeight:800,color:B.primary}}>{fmtS(p.revenue)}</div>
-                <div style={{marginTop:2}}>{StatusBadge(p.status)}</div>
-              </div>
+          <div style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)',borderRadius:16,padding:'18px 20px',border:'1px solid rgba(255,255,255,0.07)'}}>
+            <div style={{fontSize:12,fontWeight:800,color:'#fff',marginBottom:12}}>Quick Actions</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:12}}>
+              {[{label:'+ Dự án',page:'projects',icon:'🚀',c:'#1A56DB'},{label:'+ Báo giá',page:'quotations',icon:'💰',c:'#F59E0B'},{label:'+ KOL',page:'kols',icon:'⭐',c:'#8B5CF6'},{label:'Workflow',page:'workflow',icon:'⚡',c:'#10B981'}].map(({label,page,icon,c})=>(
+                <button key={page} onClick={()=>setPage(page)} style={{padding:'9px 6px',borderRadius:9,border:`1px solid ${c}28`,background:c+'10',color:c,cursor:'pointer',fontSize:10.5,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>{icon} {label}</button>
+              ))}
             </div>
-          ))}
-          {!data.projects.length&&<div style={{textAlign:'center',padding:'16px 0',color:'#94A3B8',fontSize:12}}>Chưa có dự án</div>}
-        </div>
-
-        {/* Overdue invoices */}
-        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Công nợ quá hạn</div>
-            <button onClick={()=>setPage('invoices')} style={{fontSize:11,color:B.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Chi tiết →</button>
-          </div>
-          {overdue.slice(0,4).map(i=>(
-            <div key={i.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
-              <span style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{i.client}</span>
-              <span style={{fontSize:12,fontWeight:800,color:B.danger}}>{fmtS(Number(i.amount)-Number(i.paid))}</span>
-            </div>
-          ))}
-          {!overdue.length&&<div style={{textAlign:'center',padding:'20px 0',color:B.success,fontSize:12,fontWeight:600}}>Không có công nợ quá hạn 🎉</div>}
-        </div>
-
-        {/* Approvals + Pipeline */}
-        <div style={{background:'rgba(255,255,255,0.92)',borderRadius:16,padding:'20px 22px',border:'1px solid rgba(26,86,219,0.1)'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Approvals & Pipeline</div>
-            <button onClick={()=>setPage('approval')} style={{fontSize:11,color:B.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xử lý →</button>
-          </div>
-          {pending.slice(0,3).map(a=>(
-            <div key={a.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
-              <div style={{flex:1,minWidth:0,marginRight:8}}>
-                <div style={{fontSize:11.5,fontWeight:600,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.title}</div>
-                <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{a.type}</div>
-              </div>
-              {StatusBadge('Pending')}
-            </div>
-          ))}
-          {!pending.length&&<div style={{fontSize:12,color:B.success,fontWeight:600,padding:'6px 0'}}>Queue trống ✓</div>}
-          <div style={{marginTop:12,padding:'10px 0',borderTop:'1px solid rgba(26,86,219,0.06)'}}>
-            <div style={{fontSize:10,color:'#94A3B8',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Deal Funnel</div>
-            <div style={{display:'flex',gap:6}}>
-              {['Lead','Pitching','Negotiation','Won'].map(stage=>{
-                const cnt=data.deals.filter(d=>d.stage===stage).length
-                const stageC={Lead:'#94A3B8',Pitching:B.primary,Negotiation:B.warning,Won:B.success}
-                return <div key={stage} style={{flex:1,textAlign:'center',padding:'6px 4px',background:stageC[stage]+'12',borderRadius:8,border:`1px solid ${stageC[stage]}20`}}>
-                  <div style={{fontSize:16,fontWeight:900,color:stageC[stage]}}>{cnt}</div>
-                  <div style={{fontSize:9,color:'#94A3B8',marginTop:1,fontWeight:600}}>{stage}</div>
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:10}}>
+              <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.25)',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.08em'}}>Team Capacity</div>
+              {data.team.slice(0,3).map((m,i)=>{
+                const pj=data.projects.filter(p=>p.pm===m.name&&p.status==='Active').length
+                const util=Math.round(pj/(m.max_projects||5)*100)
+                const cols=['#06B6D4','#8B5CF6','#10B981']
+                return <div key={m.id} style={{display:'flex',alignItems:'center',gap:7,marginBottom:6}}>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:m.avatar_color||cols[i%3],color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:800,flexShrink:0}}>
+                    {(m.avatar_initials||(m.name||'?').split(' ').map(w=>w[0]).join('')).slice(0,2).toUpperCase()}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.55)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name}</div>
+                    <div style={{height:3,background:'rgba(255,255,255,0.06)',borderRadius:99,marginTop:2,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:util+'%',background:util>=80?'#DC2626':cols[i%3],borderRadius:99}}/>
+                    </div>
+                  </div>
+                  <span style={{fontSize:9,color:'rgba(255,255,255,0.25)',fontWeight:700,flexShrink:0}}>{util}%</span>
                 </div>
               })}
             </div>
@@ -4063,6 +4028,1079 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
           </div>
           <button onClick={onClose} style={{padding:'7px 18px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.1)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Đóng</button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+
+// ════════════════════════════════════════════════════════════
+// PROJECT WORKFLOW MODULE — K&K Agency OS
+// 10-Stage flexible workflow with approvals, tasks, KPI tracking
+// ════════════════════════════════════════════════════════════
+
+const STAGES = [
+  { id:'LEAD',           label:'Lead',           icon:'🎯', color:'#94A3B8', desc:'Khách hàng tiềm năng' },
+  { id:'BRIEF',          label:'Brief',          icon:'📋', color:'#3B82F6', desc:'Tiếp nhận brief từ client' },
+  { id:'PROPOSAL',       label:'Proposal',       icon:'💡', color:'#8B5CF6', desc:'Lên ý tưởng, đề xuất' },
+  { id:'PRICING',        label:'Pricing',        icon:'💰', color:'#F59E0B', desc:'Định giá, P&L' },
+  { id:'CONTRACT',       label:'Contract',       icon:'📝', color:'#06B6D4', desc:'Ký hợp đồng' },
+  { id:'PRE_PRODUCTION', label:'Pre-Production', icon:'⚙️', color:'#6366F1', desc:'Chuẩn bị sản xuất' },
+  { id:'EXECUTION',      label:'Execution',      icon:'🚀', color:'#10B981', desc:'Triển khai' },
+  { id:'REPORTING',      label:'Reporting',      icon:'📊', color:'#0891B2', desc:'Báo cáo kết quả' },
+  { id:'PAYMENT',        label:'Payment',        icon:'💳', color:'#059669', desc:'Thanh toán' },
+  { id:'CLOSED',         label:'Closed',         icon:'✅', color:'#1A56DB', desc:'Hoàn tất' },
+]
+
+// Tasks mặc định theo từng stage
+const STAGE_TASKS = {
+  LEAD: [
+    { title:'Qualify lead', role:'AM', priority:'High', kpi_weight:3 },
+    { title:'Ghi nhận thông tin client', role:'AM', priority:'Normal', kpi_weight:1 },
+    { title:'Đưa vào Deal Pipeline', role:'AM', priority:'Normal', kpi_weight:1 },
+  ],
+  BRIEF: [
+    { title:'Nhận brief từ client', role:'AM', priority:'High', kpi_weight:3 },
+    { title:'Phân tích brief & objectives', role:'AM', priority:'High', kpi_weight:2 },
+    { title:'Họp nội bộ kick-off', role:'PM', priority:'High', kpi_weight:2 },
+    { title:'Clarify brief với client', role:'AM', priority:'Normal', kpi_weight:2 },
+  ],
+  PROPOSAL: [
+    { title:'Nghiên cứu thị trường & đối thủ', role:'Creative', priority:'Normal', kpi_weight:2 },
+    { title:'Lên concept & ý tưởng', role:'Creative', priority:'High', kpi_weight:3 },
+    { title:'Build proposal deck', role:'PM', priority:'High', kpi_weight:3 },
+    { title:'Internal review proposal', role:'Director', priority:'High', kpi_weight:2, requires_approval:true },
+    { title:'Present proposal cho client', role:'AM', priority:'High', kpi_weight:3 },
+  ],
+  PRICING: [
+    { title:'Lập danh sách KOL/resources', role:'KOL Executive', priority:'High', kpi_weight:3 },
+    { title:'Tính chi phí & P&L', role:'Finance', priority:'High', kpi_weight:3 },
+    { title:'Finance duyệt P&L', role:'Finance', priority:'High', kpi_weight:3, requires_approval:true },
+    { title:'Director duyệt pricing', role:'Director', priority:'High', kpi_weight:3, requires_approval:true },
+    { title:'Tạo báo giá', role:'AM', priority:'High', kpi_weight:2 },
+    { title:'Gửi báo giá cho client', role:'AM', priority:'High', kpi_weight:2 },
+  ],
+  CONTRACT: [
+    { title:'AM order hợp đồng', role:'AM', priority:'High', kpi_weight:2 },
+    { title:'Admin soạn hợp đồng', role:'Admin', priority:'High', kpi_weight:3 },
+    { title:'Legal review hợp đồng', role:'Director', priority:'High', kpi_weight:2, requires_approval:true },
+    { title:'Gửi hợp đồng cho client ký', role:'AM', priority:'High', kpi_weight:2 },
+    { title:'Nhận lại hợp đồng đã ký', role:'Admin', priority:'High', kpi_weight:2 },
+    { title:'Lưu trữ hợp đồng', role:'Admin', priority:'Normal', kpi_weight:1 },
+  ],
+  PRE_PRODUCTION: [
+    { title:'Assign KOL/team cho dự án', role:'KOL Executive', priority:'High', kpi_weight:3 },
+    { title:'Ký HĐ CTV với KOL', role:'Admin', priority:'High', kpi_weight:2 },
+    { title:'Briefing KOL & team', role:'PM', priority:'High', kpi_weight:2 },
+    { title:'Duyệt kịch bản/concept', role:'PM', priority:'High', kpi_weight:3, requires_approval:true },
+    { title:'Finance duyệt chi phí phát sinh', role:'Finance', priority:'High', kpi_weight:2, requires_approval:true },
+    { title:'Chuẩn bị tài liệu & assets', role:'Creative', priority:'Normal', kpi_weight:2 },
+    { title:'Setup tracking links', role:'Performance', priority:'Normal', kpi_weight:2 },
+  ],
+  EXECUTION: [
+    { title:'KOL đăng content đúng lịch', role:'KOL Executive', priority:'High', kpi_weight:3 },
+    { title:'Monitor & seeding', role:'Performance', priority:'High', kpi_weight:3 },
+    { title:'Daily check-in với KOL', role:'KOL Executive', priority:'Normal', kpi_weight:2 },
+    { title:'Report tiến độ hàng ngày', role:'PM', priority:'Normal', kpi_weight:2 },
+    { title:'Xử lý phát sinh', role:'PM', priority:'High', kpi_weight:3 },
+    { title:'Thu thập air links', role:'KOL Executive', priority:'High', kpi_weight:3 },
+  ],
+  REPORTING: [
+    { title:'Thu thập số liệu & kết quả', role:'Performance', priority:'High', kpi_weight:3 },
+    { title:'Phân tích KPIs campaign', role:'PM', priority:'High', kpi_weight:3 },
+    { title:'Tạo Biên bản nghiệm thu (BBNT)', role:'Admin', priority:'High', kpi_weight:3 },
+    { title:'Client duyệt BBNT', role:'AM', priority:'High', kpi_weight:3, requires_approval:true },
+    { title:'Build báo cáo tổng kết', role:'PM', priority:'High', kpi_weight:2 },
+    { title:'Present kết quả cho client', role:'AM', priority:'Normal', kpi_weight:2 },
+  ],
+  PAYMENT: [
+    { title:'Gửi hóa đơn VAT cho client', role:'Finance', priority:'High', kpi_weight:3 },
+    { title:'Follow up công nợ', role:'Finance', priority:'High', kpi_weight:3 },
+    { title:'Xác nhận thanh toán', role:'Finance', priority:'High', kpi_weight:2 },
+    { title:'Thanh toán cho KOL/NCC', role:'Finance', priority:'High', kpi_weight:3 },
+    { title:'Đối soát P&L thực tế', role:'Finance', priority:'High', kpi_weight:3 },
+  ],
+  CLOSED: [
+    { title:'Lưu trữ hồ sơ dự án', role:'Admin', priority:'Normal', kpi_weight:1 },
+    { title:'Cập nhật KPI team', role:'Director', priority:'Normal', kpi_weight:2 },
+    { title:'Post-mortem review', role:'PM', priority:'Normal', kpi_weight:2 },
+    { title:'Client feedback & satisfaction', role:'AM', priority:'Normal', kpi_weight:2 },
+  ],
+}
+
+const PRIORITY_COLOR = { Urgent:'#DC2626', High:'#F59E0B', Normal:'#1A56DB', Low:'#94A3B8' }
+const TASK_STATUS_COLOR = { Todo:'#94A3B8', 'In Progress':'#1A56DB', Review:'#F59E0B', Done:'#059669', Blocked:'#DC2626' }
+const APPROVAL_ROLES = { Finance:'#059669', Director:'#1A56DB', Admin:'#7C3AED', AM:'#F59E0B', PM:'#06B6D4' }
+
+// ── NOTIFICATION HELPER ──────────────────────────────────
+async function sendNotification(supabase, {recipient_email, recipient_name, type, title, message, data={}, send_email=false}) {
+  await supabase.from('notifications').insert([{
+    recipient_email, recipient_name, type, title, message, data, send_email, email_sent: false
+  }])
+}
+
+// ══════════════════════════════════════════════════════════
+// WORKFLOW PAGE — Project list với stages
+// ══════════════════════════════════════════════════════════
+function WorkflowPage({data, supabase, reload, log, currentUser}) {
+  const [view, setView] = useState('board') // board | list
+  const [filterStage, setFilterStage] = useState('')
+  const [filterMember, setFilterMember] = useState('')
+  const [selectedProject, setSelectedProject] = useState(null)
+  const [search, setSearch] = useState('')
+
+  const projects = data.projects.filter(p => {
+    if(search && !p.campaign?.toLowerCase().includes(search.toLowerCase()) && !p.client?.toLowerCase().includes(search.toLowerCase())) return false
+    if(filterStage && (p.current_stage||'LEAD') !== filterStage) return false
+    if(filterMember && p.pm !== filterMember) return false
+    return true
+  })
+
+  const stageCount = {}
+  STAGES.forEach(s => { stageCount[s.id] = data.projects.filter(p=>(p.current_stage||'LEAD')===s.id).length })
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <div>
+          <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em'}}>Project Workflow</h2>
+          <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{data.projects.length} dự án · {data.projects.filter(p=>p.current_stage==='EXECUTION').length} đang thực hiện</div>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm dự án..."
+            style={{padding:'7px 12px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',width:200}}/>
+          <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
+            style={{padding:'7px 10px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
+            <option value="">Tất cả stages</option>
+            {STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}
+          </select>
+          <div style={{display:'flex',background:'rgba(255,255,255,0.7)',borderRadius:9,border:'1px solid rgba(26,86,219,0.1)',overflow:'hidden'}}>
+            {[['board','⊞'],['list','≡']].map(([v,icon])=>(
+              <button key={v} onClick={()=>setView(v)} style={{padding:'7px 12px',border:'none',background:view===v?'linear-gradient(135deg,#1A56DB,#06B6D4)':'transparent',color:view===v?'#fff':'#94A3B8',cursor:'pointer',fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{icon}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Stage pipeline overview */}
+      <div style={{display:'flex',gap:0,marginBottom:20,background:'rgba(255,255,255,0.8)',borderRadius:14,padding:'14px 16px',border:'1px solid rgba(26,86,219,0.1)',overflowX:'auto'}}>
+        {STAGES.map((s,i)=>(
+          <div key={s.id} style={{display:'flex',alignItems:'center',flexShrink:0}}>
+            <div onClick={()=>setFilterStage(filterStage===s.id?'':s.id)} style={{
+              display:'flex',flexDirection:'column',alignItems:'center',padding:'8px 14px',borderRadius:10,cursor:'pointer',
+              background:filterStage===s.id?s.color+'20':'transparent',
+              border:filterStage===s.id?`1.5px solid ${s.color}40`:'1.5px solid transparent',
+              transition:'all 0.15s'
+            }}>
+              <div style={{fontSize:18,marginBottom:3}}>{s.icon}</div>
+              <div style={{fontSize:10,fontWeight:700,color:filterStage===s.id?s.color:'#94A3B8',whiteSpace:'nowrap'}}>{s.label}</div>
+              <div style={{fontSize:13,fontWeight:900,color:s.color,marginTop:2}}>{stageCount[s.id]||0}</div>
+            </div>
+            {i<STAGES.length-1&&<div style={{color:'#E2E8F0',fontSize:16,margin:'0 2px'}}>›</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* Board view */}
+      {view==='board'&&(
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:14}}>
+          {projects.map(p=>(
+            <ProjectCard key={p.id} project={p} data={data} onClick={()=>setSelectedProject(p)}/>
+          ))}
+          {!projects.length&&(
+            <div style={{gridColumn:'1/-1',textAlign:'center',padding:60,color:'#94A3B8',fontSize:13}}>
+              Không có dự án nào
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* List view */}
+      {view==='list'&&(
+        <div style={{background:'rgba(255,255,255,0.9)',borderRadius:16,overflow:'auto',border:'1px solid rgba(26,86,219,0.1)'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
+            <thead>
+              <tr>
+                {['Project','Client','Stage','PM','Priority','Progress','Deadline',''].map(h=>(
+                  <th key={h} style={{padding:'10px 14px',fontSize:10,fontWeight:800,color:'#94A3B8',borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'rgba(248,250,255,0.8)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map(p=>{
+                const stage = STAGES.find(s=>s.id===(p.current_stage||'LEAD'))
+                const urgentStyle = p.is_urgent?{background:'rgba(220,38,38,0.03)'}:{}
+                return <tr key={p.id} style={{borderBottom:'1px solid rgba(26,86,219,0.06)',...urgentStyle}}>
+                  <td style={{padding:'11px 14px'}}>
+                    <div style={{fontWeight:700,fontSize:12.5,color:'#0F172A'}}>{p.campaign||'—'}</div>
+                    <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{p.project_code}</div>
+                  </td>
+                  <td style={{padding:'11px 14px',fontSize:12,color:'#475569'}}>{p.client||'—'}</td>
+                  <td style={{padding:'11px 14px'}}>
+                    <span style={{background:stage?.color+'18',color:stage?.color,padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:`1px solid ${stage?.color}25`}}>
+                      {stage?.icon} {stage?.label}
+                    </span>
+                  </td>
+                  <td style={{padding:'11px 14px',fontSize:12,color:'#475569'}}>{p.pm||'—'}</td>
+                  <td style={{padding:'11px 14px'}}>
+                    {p.is_urgent&&<span style={{background:'rgba(220,38,38,0.1)',color:'#DC2626',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🔥 URGENT</span>}
+                    {!p.is_urgent&&<span style={{background:'rgba(26,86,219,0.08)',color:'#1A56DB',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{p.priority||'Normal'}</span>}
+                  </td>
+                  <td style={{padding:'11px 14px'}}>
+                    <StageProgress current={p.current_stage||'LEAD'}/>
+                  </td>
+                  <td style={{padding:'11px 14px',fontSize:11,color:'#94A3B8'}}>{p.end_date||'—'}</td>
+                  <td style={{padding:'11px 14px'}}>
+                    <button onClick={()=>setSelectedProject(p)} style={{padding:'5px 12px',borderRadius:7,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                      Quản lý →
+                    </button>
+                  </td>
+                </tr>
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Project detail modal */}
+      {selectedProject&&(
+        <ProjectWorkflowDetail
+          project={selectedProject}
+          data={data}
+          supabase={supabase}
+          reload={reload}
+          log={log}
+          currentUser={currentUser}
+          onClose={()=>setSelectedProject(null)}
+          onUpdate={(updated)=>setSelectedProject(updated)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── STAGE PROGRESS BAR ───────────────────────────────────
+function StageProgress({current}) {
+  const idx = STAGES.findIndex(s=>s.id===current)
+  const pct = Math.round((idx+1)/STAGES.length*100)
+  const stage = STAGES[idx]||STAGES[0]
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:8}}>
+      <div style={{flex:1,height:6,background:'rgba(26,86,219,0.08)',borderRadius:99,overflow:'hidden',minWidth:80}}>
+        <div style={{height:'100%',width:pct+'%',background:`linear-gradient(90deg,#1A56DB,${stage.color})`,borderRadius:99,transition:'width 0.3s'}}/>
+      </div>
+      <span style={{fontSize:10,fontWeight:700,color:'#94A3B8',minWidth:28}}>{pct}%</span>
+    </div>
+  )
+}
+
+// ── PROJECT CARD ─────────────────────────────────────────
+function ProjectCard({project:p, data, onClick}) {
+  const stage = STAGES.find(s=>s.id===(p.current_stage||'LEAD'))||STAGES[0]
+  const idx = STAGES.findIndex(s=>s.id===(p.current_stage||'LEAD'))
+  const pct = Math.round((idx+1)/STAGES.length*100)
+
+  return (
+    <div onClick={onClick} style={{
+      background:'rgba(255,255,255,0.92)',border:`1px solid ${stage.color}25`,
+      borderRadius:16,padding:'18px 20px',cursor:'pointer',
+      boxShadow:`0 2px 12px ${stage.color}12`,
+      transition:'transform 0.15s, box-shadow 0.15s',
+      position:'relative',overflow:'hidden'
+    }}>
+      {p.is_urgent&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#DC2626,#F59E0B)'}}/>}
+      {!p.is_urgent&&<div style={{position:'absolute',top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,#1A56DB,${stage.color})`}}/>}
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+        <div style={{flex:1,minWidth:0,marginRight:8}}>
+          <div style={{fontWeight:800,fontSize:13,color:'#0F172A',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'Untitled'}</div>
+          <div style={{fontSize:11,color:'#94A3B8',marginTop:2}}>{p.client||'—'} · {p.project_code||'—'}</div>
+        </div>
+        <div style={{flexShrink:0}}>
+          <span style={{background:stage.color+'18',color:stage.color,padding:'3px 9px',borderRadius:99,fontSize:10,fontWeight:700,border:`1px solid ${stage.color}25`,whiteSpace:'nowrap'}}>
+            {stage.icon} {stage.label}
+          </span>
+        </div>
+      </div>
+
+      <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+        {p.is_urgent&&<span style={{background:'rgba(220,38,38,0.1)',color:'#DC2626',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🔥 URGENT</span>}
+        {p.pm&&<span style={{background:'rgba(26,86,219,0.08)',color:'#1A56DB',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>👤 {p.pm}</span>}
+        {p.service&&<span style={{background:'rgba(124,58,237,0.08)',color:'#7C3AED',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{p.service}</span>}
+      </div>
+
+      <div style={{marginBottom:10}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#94A3B8',marginBottom:4}}>
+          <span>Progress</span><span style={{fontWeight:700,color:stage.color}}>{pct}%</span>
+        </div>
+        <div style={{height:6,background:'rgba(26,86,219,0.07)',borderRadius:99,overflow:'hidden'}}>
+          <div style={{height:'100%',width:pct+'%',background:`linear-gradient(90deg,#1A56DB,${stage.color})`,borderRadius:99}}/>
+        </div>
+      </div>
+
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:11}}>
+        <span style={{color:'#94A3B8'}}>Revenue: <strong style={{color:'#0F172A'}}>{p.revenue?Number(p.revenue).toLocaleString('vi-VN'):'—'}</strong></span>
+        {p.end_date&&<span style={{color:new Date(p.end_date)<new Date()?'#DC2626':'#94A3B8'}}>📅 {p.end_date}</span>}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════
+// PROJECT WORKFLOW DETAIL — Full management view
+// ══════════════════════════════════════════════════════════
+function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUser, onClose, onUpdate}) {
+  const [tasks, setTasks] = useState([])
+  const [approvals, setApprovals] = useState([])
+  const [activeTab, setActiveTab] = useState('overview')
+  const [loading, setLoading] = useState(false)
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [editTask, setEditTask] = useState(null)
+  const [showStageChange, setShowStageChange] = useState(false)
+  const [notifications, setNotifications] = useState([])
+
+  useEffect(()=>{ loadData() },[project.id])
+
+  async function loadData() {
+    setLoading(true)
+    const [t, a, n] = await Promise.all([
+      supabase.from('tasks').select('*').eq('project_id', project.id).order('created_at'),
+      supabase.from('stage_approvals').select('*').eq('project_id', project.id).order('created_at',{ascending:false}),
+      supabase.from('notifications').select('*').eq('data->>project_id', project.id).order('created_at',{ascending:false}).limit(20),
+    ])
+    setTasks(t.data||[])
+    setApprovals(a.data||[])
+    setNotifications(n.data||[])
+    setLoading(false)
+  }
+
+  async function initStageTasks(stage) {
+    const defaultTasks = STAGE_TASKS[stage]||[]
+    const existing = tasks.filter(t=>t.stage===stage)
+    if(existing.length > 0) return // already initialized
+
+    const newTasks = defaultTasks.map(t=>({
+      project_id: project.id,
+      stage,
+      title: t.title,
+      task_type: t.requires_approval?'approval':'task',
+      assigned_to: '', // will be assigned manually
+      priority: t.priority||'Normal',
+      status: 'Todo',
+      requires_approval: t.requires_approval||false,
+      kpi_weight: t.kpi_weight||1,
+    }))
+    if(newTasks.length) await supabase.from('tasks').insert(newTasks)
+    await loadData()
+  }
+
+  async function changeStage(newStage) {
+    // Check if required approvals are done
+    const currentStage = project.current_stage||'LEAD'
+    const pendingApprovals = approvals.filter(a=>a.stage===currentStage&&a.status==='Pending')
+    if(pendingApprovals.length > 0) {
+      alert(`⚠️ Còn ${pendingApprovals.length} approval chưa được xử lý ở stage hiện tại!`)
+      return
+    }
+
+    // Special checks
+    if(newStage==='EXECUTION') {
+      const plApproved = approvals.some(a=>a.stage==='PRICING'&&a.approval_type==='PL_FINANCE'&&a.status==='Approved')
+      const dirApproved = approvals.some(a=>a.stage==='PRICING'&&a.approval_type==='DIRECTOR'&&a.status==='Approved')
+      if(!plApproved||!dirApproved) {
+        alert('⚠️ Cần Finance duyệt P&L và Director duyệt trước khi vào EXECUTION!')
+        return
+      }
+    }
+
+    await supabase.from('projects').update({
+      current_stage: newStage,
+      stage_history: [...(project.stage_history||[]), {stage:currentStage, completed_at:new Date().toISOString(), moved_by:currentUser?.name}]
+    }).eq('id', project.id)
+
+    await initStageTasks(newStage)
+    await reload()
+    onUpdate({...project, current_stage:newStage})
+    log(`Stage: ${project.campaign} → ${newStage}`)
+    setShowStageChange(false)
+  }
+
+  async function saveTask(taskData) {
+    if(editTask) {
+      await supabase.from('tasks').update(taskData).eq('id', editTask.id)
+    } else {
+      await supabase.from('tasks').insert([{...taskData, project_id:project.id, stage:project.current_stage||'LEAD'}])
+    }
+    // Send notification if assigned
+    if(taskData.assigned_to && taskData.assigned_to !== editTask?.assigned_to) {
+      const member = data.team.find(m=>m.name===taskData.assigned_to)
+      if(member?.email) {
+        await sendNotification(supabase, {
+          recipient_email: member.email,
+          recipient_name: member.name,
+          type: 'TASK_ASSIGNED',
+          title: `Task mới được assign: ${taskData.title}`,
+          message: `Bạn được assign task "${taskData.title}" trong dự án "${project.campaign}". Deadline: ${taskData.due_date||'Chưa có'}`,
+          data: {project_id:project.id, task_title:taskData.title},
+          send_email: true
+        })
+      }
+    }
+    setEditTask(null); setShowTaskForm(false)
+    await loadData()
+    log(`Task: ${taskData.title}`)
+  }
+
+  async function updateTaskStatus(taskId, status) {
+    const updates = {status}
+    if(status==='Done') updates.completed_at = new Date().toISOString()
+    if(status==='Done') {
+      // Calculate if late
+      const task = tasks.find(t=>t.id===taskId)
+      if(task?.due_date) {
+        const due = new Date(task.due_date)
+        const now = new Date()
+        if(now > due) {
+          updates.late_minutes = Math.round((now-due)/60000)
+        }
+      }
+    }
+    await supabase.from('tasks').update(updates).eq('id', taskId)
+    await loadData()
+  }
+
+  async function requestApproval(type, stage, data_payload={}) {
+    const existing = approvals.find(a=>a.stage===stage&&a.approval_type===type&&a.status==='Pending')
+    if(existing) { alert('Approval này đang chờ xử lý!'); return }
+
+    await supabase.from('stage_approvals').insert([{
+      project_id: project.id,
+      stage, approval_type: type,
+      requested_by: currentUser?.name,
+      required_role: type==='PL_FINANCE'?'Finance':'Director',
+      status: 'Pending',
+      data: data_payload
+    }])
+    await loadData()
+    log(`Gửi approval ${type}: ${project.campaign}`)
+  }
+
+  async function resolveApproval(approvalId, approved, comment='') {
+    await supabase.from('stage_approvals').update({
+      status: approved?'Approved':'Rejected',
+      reviewed_by: currentUser?.name,
+      reviewed_at: new Date().toISOString(),
+      comment
+    }).eq('id', approvalId)
+    await loadData()
+    log(`${approved?'Approved':'Rejected'} approval: ${project.campaign}`)
+  }
+
+  const currentStageData = STAGES.find(s=>s.id===(project.current_stage||'LEAD'))||STAGES[0]
+  const currentStageIdx = STAGES.findIndex(s=>s.id===(project.current_stage||'LEAD'))
+  const stageTasks = tasks.filter(t=>t.stage===project.current_stage||'LEAD')
+  const doneTasks = stageTasks.filter(t=>t.status==='Done').length
+  const stageCompletion = stageTasks.length ? Math.round(doneTasks/stageTasks.length*100) : 0
+  const pendingApprovals = approvals.filter(a=>a.status==='Pending')
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.7)',display:'flex',alignItems:'stretch',justifyContent:'flex-end',zIndex:2000,backdropFilter:'blur(4px)'}}>
+      <div style={{width:'85vw',maxWidth:1100,background:'#F0F4FF',overflowY:'auto',display:'flex',flexDirection:'column',boxShadow:'-20px 0 60px rgba(0,0,0,0.2)'}}>
+
+        {/* Project header */}
+        <div style={{background:`linear-gradient(135deg,#0F172A,${currentStageData.color}88)`,padding:'24px 28px',position:'relative',overflow:'hidden',flexShrink:0}}>
+          <div style={{position:'absolute',top:-30,right:-30,width:150,height:150,borderRadius:'50%',background:'rgba(255,255,255,0.04)'}}/>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'relative'}}>
+            <div>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
+                <span style={{background:currentStageData.color+'30',color:currentStageData.color,padding:'4px 12px',borderRadius:99,fontSize:11,fontWeight:700,border:`1px solid ${currentStageData.color}40`}}>
+                  {currentStageData.icon} {currentStageData.label}
+                </span>
+                {project.is_urgent&&<span style={{background:'rgba(220,38,38,0.3)',color:'#FCA5A5',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>🔥 URGENT</span>}
+                {pendingApprovals.length>0&&<span style={{background:'rgba(245,158,11,0.3)',color:'#FCD34D',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>⏳ {pendingApprovals.length} pending approval</span>}
+              </div>
+              <div style={{fontSize:22,fontWeight:900,color:'#fff',letterSpacing:'-0.03em',marginBottom:4}}>{project.campaign||'Untitled Project'}</div>
+              <div style={{fontSize:13,color:'rgba(255,255,255,0.6)'}}>{project.client} · {project.project_code} · PM: {project.pm||'—'}</div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setShowStageChange(true)} style={{padding:'8px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                Chuyển Stage →
+              </button>
+              <button onClick={onClose} style={{padding:'8px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'#fff',cursor:'pointer',fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>✕ Đóng</button>
+            </div>
+          </div>
+
+          {/* Stage progress timeline */}
+          <div style={{display:'flex',alignItems:'center',marginTop:18,gap:0}}>
+            {STAGES.map((s,i)=>(
+              <div key={s.id} style={{display:'flex',alignItems:'center',flex:i<STAGES.length-1?1:'auto'}}>
+                <div style={{
+                  width:28,height:28,borderRadius:'50%',flexShrink:0,
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,
+                  background:i<currentStageIdx?'#059669':i===currentStageIdx?currentStageData.color:'rgba(255,255,255,0.15)',
+                  border:i===currentStageIdx?`2px solid ${currentStageData.color}`:'2px solid transparent',
+                  boxShadow:i===currentStageIdx?`0 0 10px ${currentStageData.color}80`:'none',
+                  cursor:'pointer',
+                }} title={s.label}>
+                  {i<currentStageIdx?'✓':s.icon}
+                </div>
+                {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<currentStageIdx?'#059669':'rgba(255,255,255,0.1)',margin:'0 2px'}}/>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{background:'rgba(255,255,255,0.7)',borderBottom:'1px solid rgba(26,86,219,0.1)',padding:'0 28px',display:'flex',gap:0,flexShrink:0}}>
+          {[['overview','📊 Tổng quan'],['tasks','✅ Tasks'],['approvals','🔐 Approvals'],['kpi','📈 KPIs'],['activity','🔔 Activity']].map(([id,label])=>(
+            <button key={id} onClick={()=>setActiveTab(id)} style={{
+              padding:'12px 18px',border:'none',background:'transparent',cursor:'pointer',
+              fontSize:12,fontWeight:activeTab===id?700:500,
+              color:activeTab===id?'#1A56DB':'#94A3B8',
+              borderBottom:activeTab===id?'2px solid #1A56DB':'2px solid transparent',
+              fontFamily:"'Plus Jakarta Sans',sans-serif",
+              position:'relative'
+            }}>
+              {label}
+              {id==='approvals'&&pendingApprovals.length>0&&(
+                <span style={{position:'absolute',top:8,right:8,background:'#DC2626',color:'#fff',fontSize:9,padding:'1px 5px',borderRadius:99,fontWeight:700}}>{pendingApprovals.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{flex:1,padding:'24px 28px',overflowY:'auto'}}>
+          {loading&&<div style={{textAlign:'center',padding:60,color:'#94A3B8'}}>Đang tải...</div>}
+
+          {/* OVERVIEW TAB */}
+          {!loading&&activeTab==='overview'&&(
+            <div>
+              {/* KPI cards */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+                {[
+                  ['Stage hiện tại',currentStageData.label+' ('+Math.round((currentStageIdx+1)/STAGES.length*100)+'%)',currentStageData.icon,currentStageData.color],
+                  ['Tasks stage này',`${doneTasks}/${stageTasks.length} done (${stageCompletion}%)`,stageTasks.filter(t=>t.status==='In Progress').length+' đang làm','#1A56DB'],
+                  ['Pending approvals',pendingApprovals.length,pendingApprovals.length?'Cần xử lý':'OK ✓',pendingApprovals.length?'#DC2626':'#059669'],
+                  ['Revenue',project.revenue?Number(project.revenue).toLocaleString('vi-VN'):'—','VND','#059669'],
+                ].map(([l,v,s,c])=>(
+                  <div key={l} style={{background:'rgba(255,255,255,0.9)',borderRadius:12,padding:'14px 16px',border:`1px solid ${c}20`}}>
+                    <div style={{fontSize:10,fontWeight:700,color:c,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6}}>{l}</div>
+                    <div style={{fontSize:16,fontWeight:900,color:'#0F172A'}}>{v}</div>
+                    <div style={{fontSize:10,color:'#94A3B8',marginTop:3}}>{s}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stage tasks summary */}
+              <div style={{background:'rgba(255,255,255,0.9)',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid rgba(26,86,219,0.1)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {currentStageData.icon} {currentStageData.label}</div>
+                  <div style={{display:'flex',gap:8}}>
+                    {stageTasks.length===0&&(
+                      <button onClick={()=>initStageTasks(project.current_stage||'LEAD')} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                        ⚡ Khởi tạo tasks cho stage này
+                      </button>
+                    )}
+                    <button onClick={()=>{setEditTask(null);setShowTaskForm(true)}} style={{padding:'6px 14px',borderRadius:8,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                      + Task
+                    </button>
+                  </div>
+                </div>
+                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={updateTaskStatus} onEdit={()=>{setEditTask(t);setShowTaskForm(true)}}/>)}
+                {stageTasks.length>5&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',marginTop:8,cursor:'pointer'}} onClick={()=>setActiveTab('tasks')}>+ {stageTasks.length-5} tasks khác → Xem tất cả</div>}
+                {!stageTasks.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có tasks. Click "Khởi tạo tasks" để tạo tự động.</div>}
+              </div>
+
+              {/* Required approvals for current stage */}
+              <ApprovalPanel
+                project={project} stage={project.current_stage||'LEAD'}
+                approvals={approvals} currentUser={currentUser}
+                onRequest={requestApproval} onResolve={resolveApproval}
+              />
+            </div>
+          )}
+
+          {/* TASKS TAB */}
+          {!loading&&activeTab==='tasks'&&(
+            <TasksTab
+              tasks={tasks} project={project} data={data}
+              onStatusChange={updateTaskStatus}
+              onEdit={(t)=>{setEditTask(t);setShowTaskForm(true)}}
+              onAdd={()=>{setEditTask(null);setShowTaskForm(true)}}
+              onInit={()=>initStageTasks(project.current_stage||'LEAD')}
+              currentStage={project.current_stage||'LEAD'}
+            />
+          )}
+
+          {/* APPROVALS TAB */}
+          {!loading&&activeTab==='approvals'&&(
+            <ApprovalsTab
+              approvals={approvals} project={project} currentUser={currentUser}
+              onRequest={requestApproval} onResolve={resolveApproval}
+            />
+          )}
+
+          {/* KPI TAB */}
+          {!loading&&activeTab==='kpi'&&(
+            <KPITab tasks={tasks} project={project} data={data}/>
+          )}
+
+          {/* ACTIVITY TAB */}
+          {!loading&&activeTab==='activity'&&(
+            <ActivityTab notifications={notifications} project={project}/>
+          )}
+        </div>
+      </div>
+
+      {/* Stage change modal */}
+      {showStageChange&&(
+        <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',zIndex:100}}>
+          <div style={{background:'#fff',borderRadius:18,padding:'24px 28px',width:480,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>
+            <div style={{fontSize:15,fontWeight:800,color:'#0F172A',marginBottom:16}}>Chuyển Stage dự án</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
+              {STAGES.map((s,i)=>{
+                const isCurrent = s.id===(project.current_stage||'LEAD')
+                const isPrev = i < STAGES.findIndex(st=>st.id===(project.current_stage||'LEAD'))
+                return <button key={s.id} onClick={()=>changeStage(s.id)}
+                  disabled={isCurrent}
+                  style={{
+                    padding:'10px 12px',borderRadius:10,border:`1.5px solid ${isCurrent?s.color:isPrev?'rgba(5,150,105,0.3)':'rgba(26,86,219,0.15)'}`,
+                    background:isCurrent?s.color+'18':isPrev?'rgba(5,150,105,0.06)':'rgba(255,255,255,0.8)',
+                    color:isCurrent?s.color:isPrev?'#059669':'#475569',
+                    cursor:isCurrent?'default':'pointer',
+                    fontSize:12,fontWeight:isCurrent?700:500,
+                    fontFamily:"'Plus Jakarta Sans',sans-serif",
+                    textAlign:'left',
+                  }}>
+                  <span style={{marginRight:6}}>{s.icon}</span>{s.label}
+                  {isCurrent&&<span style={{marginLeft:6,fontSize:10,opacity:0.7}}>(hiện tại)</span>}
+                </button>
+              })}
+            </div>
+            <div style={{padding:'10px 14px',background:'rgba(217,119,6,0.06)',borderRadius:8,border:'1px solid rgba(217,119,6,0.2)',fontSize:11,color:'#92400E',marginBottom:14}}>
+              ⚠️ Vào EXECUTION cần Finance & Director đã approve P&L. Vào PAYMENT cần có BBNT.
+            </div>
+            <button onClick={()=>setShowStageChange(false)} style={{width:'100%',padding:'9px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.15)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+          </div>
+        </div>
+      )}
+
+      {/* Task form */}
+      {showTaskForm&&(
+        <TaskForm
+          task={editTask} project={project} data={data}
+          onSave={saveTask}
+          onClose={()=>{setShowTaskForm(false);setEditTask(null)}}
+          currentStage={project.current_stage||'LEAD'}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── TASK ROW ─────────────────────────────────────────────
+function TaskRow({task:t, onStatusChange, onEdit}) {
+  const isLate = t.due_date && new Date(t.due_date)<new Date() && t.status!=='Done'
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+      <select value={t.status} onChange={e=>onStatusChange(t.id,e.target.value)}
+        style={{padding:'3px 6px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+        {['Todo','In Progress','Review','Done','Blocked'].map(s=><option key={s}>{s}</option>)}
+      </select>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:12,fontWeight:600,color:t.status==='Done'?'#94A3B8':'#0F172A',textDecoration:t.status==='Done'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          {t.requires_approval&&<span style={{marginRight:4,fontSize:10}}>🔐</span>}
+          {t.priority==='Urgent'&&<span style={{marginRight:4,fontSize:10}}>🔥</span>}
+          {t.title}
+        </div>
+        <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>
+          {t.assigned_to?`👤 ${t.assigned_to}`:'Chưa assign'}
+          {t.due_date&&<span style={{marginLeft:8,color:isLate?'#DC2626':'#94A3B8'}}>📅 {t.due_date}{isLate?' ⚠️ Trễ':''}</span>}
+        </div>
+      </div>
+      <span style={{background:(PRIORITY_COLOR[t.priority]||'#94A3B8')+'15',color:PRIORITY_COLOR[t.priority]||'#94A3B8',padding:'2px 8px',borderRadius:99,fontSize:9,fontWeight:700,flexShrink:0}}>{t.priority}</span>
+      <button onClick={onEdit} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8',fontSize:14,padding:'2px 6px',borderRadius:5}}>✎</button>
+    </div>
+  )
+}
+
+// ── TASKS TAB ────────────────────────────────────────────
+function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, currentStage}) {
+  const [filterStage, setFilterStage] = useState(currentStage)
+  const [filterAssignee, setFilterAssignee] = useState('')
+
+  const filtered = tasks.filter(t=>
+    (!filterStage||t.stage===filterStage)&&
+    (!filterAssignee||t.assigned_to===filterAssignee)
+  )
+
+  const assignees = [...new Set(tasks.map(t=>t.assigned_to).filter(Boolean))]
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{display:'flex',gap:8}}>
+          <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
+            style={{padding:'6px 10px',border:'1.5px solid rgba(26,86,219,0.12)',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
+            <option value="">Tất cả stages</option>
+            {STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}
+          </select>
+          <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)}
+            style={{padding:'6px 10px',border:'1.5px solid rgba(26,86,219,0.12)',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
+            <option value="">Tất cả assignees</option>
+            {data.team.map(m=><option key={m.id} value={m.name}>{m.name}</option>)}
+          </select>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={onInit} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>⚡ Auto-tạo tasks</button>
+          <button onClick={onAdd} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>+ Task mới</button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:16}}>
+        {['Todo','In Progress','Review','Done','Blocked'].map(s=>{
+          const cnt = filtered.filter(t=>t.status===s).length
+          return <div key={s} style={{background:'rgba(255,255,255,0.9)',borderRadius:10,padding:'10px 12px',border:`1px solid ${TASK_STATUS_COLOR[s]||'#94A3B8'}20`,textAlign:'center'}}>
+            <div style={{fontSize:18,fontWeight:900,color:TASK_STATUS_COLOR[s]||'#94A3B8'}}>{cnt}</div>
+            <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,marginTop:2}}>{s}</div>
+          </div>
+        })}
+      </div>
+
+      {/* Tasks by stage */}
+      {(filterStage?[STAGES.find(s=>s.id===filterStage)]:STAGES).filter(Boolean).map(stage=>{
+        const stageTasks = filtered.filter(t=>t.stage===stage.id)
+        if(!stageTasks.length) return null
+        return (
+          <div key={stage.id} style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:800,color:stage.color,marginBottom:8,display:'flex',alignItems:'center',gap:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>
+              {stage.icon} {stage.label}
+              <span style={{background:stage.color+'18',color:stage.color,padding:'1px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{stageTasks.length}</span>
+            </div>
+            <div style={{background:'rgba(255,255,255,0.9)',borderRadius:12,padding:'12px 16px',border:`1px solid ${stage.color}15`}}>
+              {stageTasks.map(t=><TaskRow key={t.id} task={t} onStatusChange={onStatusChange} onEdit={()=>onEdit(t)}/>)}
+            </div>
+          </div>
+        )
+      })}
+      {!filtered.length&&<div style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có tasks</div>}
+    </div>
+  )
+}
+
+// ── APPROVAL PANEL ───────────────────────────────────────
+function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onResolve}) {
+  const stageApprovals = {
+    PRICING: [
+      {type:'PL_FINANCE', label:'Finance duyệt P&L', role:'Finance', icon:'💰', desc:'Kiểm tra margin và P&L trước khi gửi báo giá'},
+      {type:'DIRECTOR', label:'Director duyệt Pricing', role:'Director', icon:'👔', desc:'Duyệt cuối trước khi gửi cho client'},
+    ],
+    CONTRACT: [
+      {type:'CONTRACT_LEGAL', label:'Director review HĐ', role:'Director', icon:'📝', desc:'Review điều khoản trước khi gửi client ký'},
+    ],
+    PRE_PRODUCTION: [
+      {type:'CONCEPT_PM', label:'PM duyệt concept/kịch bản', role:'PM', icon:'💡', desc:'Duyệt nội dung trước khi brief KOL'},
+      {type:'BUDGET_FINANCE', label:'Finance duyệt chi phí', role:'Finance', icon:'💰', desc:'Duyệt budget phát sinh'},
+    ],
+    REPORTING: [
+      {type:'BBNT_CLIENT', label:'Client duyệt BBNT', role:'AM', icon:'✅', desc:'Gửi BBNT cho client ký'},
+    ],
+  }
+
+  const needed = stageApprovals[stage]||[]
+  if(!needed.length) return null
+
+  return (
+    <div style={{background:'rgba(255,255,255,0.9)',borderRadius:14,padding:'18px 20px',border:'1px solid rgba(26,86,219,0.1)'}}>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>🔐 Approvals — Stage {stage}</div>
+      {needed.map(item=>{
+        const existing = approvals.find(a=>a.stage===stage&&a.approval_type===item.type)
+        const isPending = existing?.status==='Pending'
+        const isApproved = existing?.status==='Approved'
+        const isRejected = existing?.status==='Rejected'
+        const canResolve = currentUser?.isMaster || currentUser?.role?.includes(item.role)
+
+        return (
+          <div key={item.type} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',marginBottom:8,background:isApproved?'rgba(5,150,105,0.06)':isRejected?'rgba(220,38,38,0.06)':isPending?'rgba(245,158,11,0.06)':'rgba(248,250,255,0.8)',borderRadius:10,border:`1px solid ${isApproved?'rgba(5,150,105,0.2)':isRejected?'rgba(220,38,38,0.2)':isPending?'rgba(245,158,11,0.2)':'rgba(26,86,219,0.1)'}`}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:'#0F172A'}}>{item.icon} {item.label}</div>
+              <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{item.desc}</div>
+              {existing?.comment&&<div style={{fontSize:10,color:'#475569',marginTop:3,fontStyle:'italic'}}>"{existing.comment}"</div>}
+              {existing?.reviewed_by&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>Bởi: {existing.reviewed_by} — {existing.reviewed_at?new Date(existing.reviewed_at).toLocaleDateString('vi-VN'):''}</div>}
+            </div>
+            <div style={{flexShrink:0,marginLeft:12}}>
+              {!existing&&(
+                <button onClick={()=>onRequest(item.type, stage)} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Gửi yêu cầu</button>
+              )}
+              {isPending&&canResolve&&(
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={()=>onResolve(existing.id, true)} style={{padding:'6px 12px',borderRadius:8,border:'none',background:'rgba(5,150,105,0.1)',color:'#059669',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",border:'1px solid rgba(5,150,105,0.3)'}}>✓ Approve</button>
+                  <button onClick={()=>onResolve(existing.id, false, prompt('Lý do reject:'))} style={{padding:'6px 12px',borderRadius:8,border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.06)',color:'#DC2626',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>✗ Reject</button>
+                </div>
+              )}
+              {isPending&&!canResolve&&<span style={{background:'rgba(245,158,11,0.1)',color:'#D97706',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'1px solid rgba(245,158,11,0.2)'}}>⏳ Chờ duyệt</span>}
+              {isApproved&&<span style={{background:'rgba(5,150,105,0.1)',color:'#059669',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(5,150,105,0.2)'}}>✓ Đã duyệt</span>}
+              {isRejected&&<span style={{background:'rgba(220,38,38,0.1)',color:'#DC2626',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(220,38,38,0.2)'}}>✗ Từ chối</span>}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── APPROVALS TAB ────────────────────────────────────────
+function ApprovalsTab({approvals, project, currentUser, onRequest, onResolve}) {
+  return (
+    <div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>Toàn bộ Approvals — {project.campaign}</div>
+      {STAGES.map(stage=>{
+        const stageApprovals = approvals.filter(a=>a.stage===stage.id)
+        if(!stageApprovals.length) return null
+        return (
+          <div key={stage.id} style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:800,color:stage.color,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}}>{stage.icon} {stage.label}</div>
+            {stageApprovals.map(a=>(
+              <div key={a.id} style={{background:'rgba(255,255,255,0.9)',borderRadius:10,padding:'12px 16px',marginBottom:8,border:'1px solid rgba(26,86,219,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:'#0F172A'}}>{a.approval_type}</div>
+                  <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>Requested by {a.requested_by} · {new Date(a.requested_at).toLocaleDateString('vi-VN')}</div>
+                  {a.comment&&<div style={{fontSize:11,color:'#475569',marginTop:4,fontStyle:'italic'}}>"{a.comment}"</div>}
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  {a.status==='Pending'&&(currentUser?.isMaster)&&(
+                    <div style={{display:'flex',gap:6}}>
+                      <button onClick={()=>onResolve(a.id,true)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid rgba(5,150,105,0.3)',background:'rgba(5,150,105,0.06)',color:'#059669',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>✓</button>
+                      <button onClick={()=>onResolve(a.id,false,'')} style={{padding:'5px 10px',borderRadius:7,border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.06)',color:'#DC2626',cursor:'pointer',fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>✗</button>
+                    </div>
+                  )}
+                  <span style={{
+                    background:a.status==='Approved'?'rgba(5,150,105,0.1)':a.status==='Rejected'?'rgba(220,38,38,0.1)':'rgba(245,158,11,0.1)',
+                    color:a.status==='Approved'?'#059669':a.status==='Rejected'?'#DC2626':'#D97706',
+                    padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700,
+                    border:`1px solid ${a.status==='Approved'?'rgba(5,150,105,0.2)':a.status==='Rejected'?'rgba(220,38,38,0.2)':'rgba(245,158,11,0.2)'}`
+                  }}>{a.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      })}
+      {!approvals.length&&<div style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có approval nào</div>}
+    </div>
+  )
+}
+
+// ── KPI TAB ──────────────────────────────────────────────
+function KPITab({tasks, project, data}) {
+  const members = [...new Set(tasks.map(t=>t.assigned_to).filter(Boolean))]
+
+  function calcKPI(member) {
+    const memberTasks = tasks.filter(t=>t.assigned_to===member)
+    if(!memberTasks.length) return null
+    const total = memberTasks.length
+    const done = memberTasks.filter(t=>t.status==='Done').length
+    const late = memberTasks.filter(t=>t.late_minutes>0).length
+    const blocked = memberTasks.filter(t=>t.status==='Blocked').length
+    const completionRate = total?Math.round(done/total*100):0
+    const onTimeRate = done?Math.round((done-late)/done*100):100
+    const totalWeight = memberTasks.reduce((a,t)=>a+Number(t.kpi_weight||1),0)
+    const doneWeight = memberTasks.filter(t=>t.status==='Done').reduce((a,t)=>a+Number(t.kpi_weight||1),0)
+    const weightedScore = totalWeight?Math.round(doneWeight/totalWeight*100):0
+    const kpiScore = Math.round((completionRate*0.4)+(onTimeRate*0.4)+(weightedScore*0.2))
+    return { total, done, late, blocked, completionRate, onTimeRate, weightedScore, kpiScore }
+  }
+
+  return (
+    <div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>📈 KPI Performance — {project.campaign}</div>
+      <div style={{background:'rgba(26,86,219,0.04)',borderRadius:10,padding:'12px 16px',marginBottom:16,border:'1px solid rgba(26,86,219,0.1)',fontSize:11,color:'#475569'}}>
+        <strong>Công thức KPI:</strong> Completion Rate (40%) + On-time Rate (40%) + Weighted Task Score (20%)
+      </div>
+
+      {members.map(member=>{
+        const kpi = calcKPI(member)
+        if(!kpi) return null
+        const scoreColor = kpi.kpiScore>=80?'#059669':kpi.kpiScore>=60?'#D97706':'#DC2626'
+        return (
+          <div key={member} style={{background:'rgba(255,255,255,0.9)',borderRadius:14,padding:'18px 20px',marginBottom:12,border:'1px solid rgba(26,86,219,0.1)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13}}>
+                  {member.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:13,color:'#0F172A'}}>{member}</div>
+                  <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{data.team.find(m=>m.name===member)?.role||'—'}</div>
+                </div>
+              </div>
+              <div style={{textAlign:'center',background:scoreColor+'12',borderRadius:12,padding:'10px 18px',border:`1px solid ${scoreColor}25`}}>
+                <div style={{fontSize:28,fontWeight:900,color:scoreColor,lineHeight:1}}>{kpi.kpiScore}</div>
+                <div style={{fontSize:10,color:scoreColor,fontWeight:700,marginTop:2}}>KPI Score</div>
+              </div>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+              {[
+                ['Tasks tổng',kpi.total,'','#94A3B8'],
+                ['Hoàn thành',kpi.done+'/'+kpi.total+' ('+kpi.completionRate+'%)','',kpi.completionRate>=80?'#059669':kpi.completionRate>=50?'#D97706':'#DC2626'],
+                ['Đúng hạn',kpi.onTimeRate+'%',kpi.late+' task trễ',kpi.onTimeRate>=80?'#059669':kpi.onTimeRate>=60?'#D97706':'#DC2626'],
+                ['Bị chặn',kpi.blocked,'tasks blocked',kpi.blocked>0?'#DC2626':'#059669'],
+              ].map(([l,v,s,c])=>(
+                <div key={l} style={{background:c+'08',borderRadius:8,padding:'10px 12px',border:`1px solid ${c}15`}}>
+                  <div style={{fontSize:9,fontWeight:700,color:c,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4}}>{l}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>{v}</div>
+                  {s&&<div style={{fontSize:9,color:'#94A3B8',marginTop:2}}>{s}</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bars */}
+            <div style={{marginTop:12,display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {[['Completion',kpi.completionRate],['On-time',kpi.onTimeRate]].map(([l,v])=>(
+                <div key={l}>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#94A3B8',marginBottom:4}}>
+                    <span>{l}</span><span style={{fontWeight:700}}>{v}%</span>
+                  </div>
+                  <div style={{height:6,background:'rgba(26,86,219,0.08)',borderRadius:99,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:v+'%',background:v>=80?'#059669':v>=60?'#D97706':'#DC2626',borderRadius:99}}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+      {!members.length&&<div style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có tasks được assign</div>}
+    </div>
+  )
+}
+
+// ── ACTIVITY TAB ─────────────────────────────────────────
+function ActivityTab({notifications, project}) {
+  return (
+    <div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>🔔 Activity Log</div>
+      {notifications.map(n=>(
+        <div key={n.id} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid rgba(26,86,219,0.06)'}}>
+          <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(26,86,219,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>
+            {n.type==='TASK_ASSIGNED'?'✅':n.type==='APPROVAL'?'🔐':'🔔'}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{n.title}</div>
+            <div style={{fontSize:11,color:'#94A3B8',marginTop:2}}>{n.message}</div>
+            <div style={{fontSize:10,color:'#94A3B8',marginTop:3}}>{new Date(n.created_at).toLocaleString('vi-VN')}</div>
+          </div>
+          {n.send_email&&<span style={{fontSize:9,color:n.email_sent?'#059669':'#D97706',padding:'2px 6px',borderRadius:99,border:`1px solid ${n.email_sent?'rgba(5,150,105,0.2)':'rgba(217,119,6,0.2)'}`,alignSelf:'flex-start',fontWeight:600,flexShrink:0}}>
+            {n.email_sent?'✉️ Sent':'✉️ Pending'}
+          </span>}
+        </div>
+      ))}
+      {!notifications.length&&<div style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có activity nào</div>}
+    </div>
+  )
+}
+
+// ── TASK FORM ────────────────────────────────────────────
+function TaskForm({task, project, data, onSave, onClose, currentStage}) {
+  const [form, setForm] = useState({
+    title: task?.title||'',
+    description: task?.description||'',
+    stage: task?.stage||currentStage,
+    task_type: task?.task_type||'task',
+    assigned_to: task?.assigned_to||'',
+    priority: task?.priority||'Normal',
+    status: task?.status||'Todo',
+    due_date: task?.due_date||'',
+    requires_approval: task?.requires_approval||false,
+    kpi_weight: task?.kpi_weight||1,
+    is_urgent: task?.is_urgent||false,
+    notes: task?.notes||'',
+  })
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}))
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    onSave(form)
+  }
+
+  const INP={width:'100%',padding:'8px 11px',border:'1.5px solid rgba(26,86,219,0.12)',borderRadius:8,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#fff',color:'#0F172A',outline:'none',boxSizing:'border-box'}
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:3000,backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#fff',borderRadius:18,padding:'24px 26px',width:520,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 60px rgba(0,0,0,0.2)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
+          <span style={{fontSize:15,fontWeight:800,color:'#0F172A'}}>{task?'Sửa task':'Tạo task mới'}</span>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,color:'#94A3B8'}}>×</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div style={{marginBottom:13}}>
+            <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Tiêu đề task *</label>
+            <input value={form.title} onChange={e=>set('title',e.target.value)} style={INP} required/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:13}}>
+            <div>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Stage</label>
+              <select value={form.stage} onChange={e=>set('stage',e.target.value)} style={INP}>
+                {STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Assign cho</label>
+              <select value={form.assigned_to} onChange={e=>set('assigned_to',e.target.value)} style={INP}>
+                <option value="">— Chọn thành viên —</option>
+                {data.team.map(m=><option key={m.id} value={m.name}>{m.name} ({m.role})</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:13}}>
+            <div>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Priority</label>
+              <select value={form.priority} onChange={e=>set('priority',e.target.value)} style={INP}>
+                <option>Urgent</option><option>High</option><option>Normal</option><option>Low</option>
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Status</label>
+              <select value={form.status} onChange={e=>set('status',e.target.value)} style={INP}>
+                <option>Todo</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option>
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>KPI Weight (1-5)</label>
+              <select value={form.kpi_weight} onChange={e=>set('kpi_weight',Number(e.target.value))} style={INP}>
+                <option value={1}>1 — Nhỏ</option><option value={2}>2</option><option value={3}>3 — Vừa</option><option value={4}>4</option><option value={5}>5 — Quan trọng</option>
+              </select>
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:13}}>
+            <div>
+              <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Deadline</label>
+              <input type="date" value={form.due_date} onChange={e=>set('due_date',e.target.value)} style={INP}/>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8,justifyContent:'center'}}>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:12,color:'#475569'}}>
+                <input type="checkbox" checked={form.requires_approval} onChange={e=>set('requires_approval',e.target.checked)} style={{accentColor:'#1A56DB',width:15,height:15}}/>
+                🔐 Cần approval
+              </label>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:12,color:'#DC2626'}}>
+                <input type="checkbox" checked={form.is_urgent} onChange={e=>set('is_urgent',e.target.checked)} style={{accentColor:'#DC2626',width:15,height:15}}/>
+                🔥 Urgent
+              </label>
+            </div>
+          </div>
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Ghi chú</label>
+            <textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...INP,minHeight:70}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+            <button type="button" onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1.5px solid rgba(26,86,219,0.12)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+            <button type="submit" style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Lưu task</button>
+          </div>
+        </form>
       </div>
     </div>
   )
