@@ -485,7 +485,7 @@ function Dashboard({data,setPage,currentUser}){
   )
 }
 
-function Pipeline({data,add,upd,del,log}){
+function Pipeline({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(null)
   const stages=['Lead','Pitching','Negotiation','Won','Lost']
@@ -528,7 +528,7 @@ function Pipeline({data,add,upd,del,log}){
   )
 }
 
-function Projects({data,add,upd,del,log}){
+function Projects({data,add,upd,del,log,reload,supabase}){
   const [search,setSearch]=useState('')
   const [stF,setStF]=useState('')
   const [svF,setSvF]=useState('')
@@ -682,7 +682,7 @@ function Pricing({data,add,log}){
   )
 }
 
-function Invoices({data,add,upd,log}){
+function Invoices({data,add,upd,log,reload,supabase}){
   const [filter,setFilter]=useState('')
   const [showAdd,setShowAdd]=useState(false)
   const invs=data.invoices.filter(i=>!filter||i.status===filter)
@@ -758,7 +758,7 @@ function Approval({data,upd,log}){
   )
 }
 
-function Clients({data,add,upd,del,log}){
+function Clients({data,add,upd,del,log,reload,supabase}){
   const [search,setSearch]=useState('')
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
@@ -801,7 +801,7 @@ function Clients({data,add,upd,del,log}){
   )
 }
 
-function Kols({data,add,upd,del,log}){
+function Kols({data,add,upd,del,log,reload,supabase}){
   const [search,setSearch]=useState('')
   const [platF,setPlatF]=useState('')
   const [tierF,setTierF]=useState('')
@@ -871,7 +871,7 @@ function Kols({data,add,upd,del,log}){
   )
 }
 
-function Vendors({data,add,upd,del,log}){
+function Vendors({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),type:fd.get('type'),rating:Number(fd.get('rating')||5),contact:fd.get('contact'),total_spent:Number(fd.get('total_spent')||0),notes:fd.get('notes')};edit?await upd('vendors',edit.id,r):await add('vendors',r);log('Vendor: '+r.name);setEdit(null);setShowAdd(false)}
@@ -909,7 +909,7 @@ function Vendors({data,add,upd,del,log}){
   )
 }
 
-function Team({data,add,upd,del,log}){
+function Team({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),role:fd.get('role'),max_projects:Number(fd.get('max_projects')||5),email:fd.get('email')};edit?await upd('team',edit.id,r):await add('team',r);log('Team: '+r.name);setEdit(null);setShowAdd(false)}
