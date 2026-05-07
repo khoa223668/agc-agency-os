@@ -1,0 +1,110 @@
+diff --git a/src/App.jsx b/src/App.jsx
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,5 +1,5 @@
+ import { useState, useEffect } from 'react'
+ import { supabase } from './supabase'
+ 
+ // K&K Advertising — Futuristic Light Theme
+@@ -145,12 +145,11 @@ export default function App(){
+   async function loadAll(){
+     setLoading(true)
+     const tables=['projects','clients','kols','team','invoices','deals','deal_history','vendors','approvals']
+     const res=await Promise.all(tables.map(t=>supabase.from(t).select('*').order('created_at',{ascending:false})))
+     setData({projects:res[0].data||[],clients:res[1].data||[],kols:res[2].data||[],team:res[3].data||[],invoices:res[4].data||[],deals:res[5].data||[],dealHistory:res[6].data||[],vendors:res[7].data||[],approvals:res[8].data||[]})
+     setLoading(false)
+   }
+   async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
+   async function upd(t,id,r){const{error}=await supabase.from(t).update(r).eq('id',id);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
+   async function del(t,id){if(!confirm('Xác nhận xóa?'))return;await supabase.from(t).delete().eq('id',id);await loadAll()}
+   const log = async (msg) => { await supabase.from('audit_log').insert([{message:msg,role:'User'}]) }
+-  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
+ 
+   const NAV=[
+     {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
+@@ -211,7 +210,7 @@ export default function App(){
+         <div style={{flex:1,overflowY:'auto',padding:'8px 8px'}}>
+           {groups.map(grp=>(
+             <div key={grp}>
+               {!sidebarCollapsed&&<div style={{padding:'12px 10px 4px',fontSize:9,fontWeight:800,color:B.textTer,letterSpacing:'0.1em'}}>{grp}</div>}
+-              {NAV.filter(n=>n.grp===grp).map(n=>(
++              {visibleNAV.filter(n=>n.grp===grp).map(n=>(
+                 <div key={n.id} onClick={()=>setPage(n.id)}
+                   title={sidebarCollapsed?n.label:''}
+                   style={{padding:sidebarCollapsed?'10px':'8px 12px',cursor:'pointer',fontSize:12.5,color:page===n.id?B.primary:B.textSec,background:page===n.id?B.gradSoft:'transparent',borderRadius:10,fontWeight:page===n.id?700:500,display:'flex',alignItems:'center',justifyContent:sidebarCollapsed?'center':'space-between',transition:'all 0.15s',marginBottom:2,gap:10,border:page===n.id?`1px solid ${B.borderStrong}`:'1px solid transparent'}}>
+@@ -259,7 +258,7 @@ export default function App(){
+         </div>
+         {/* Content */}
+         <div style={{flex:1,overflow:'auto',padding:'20px 28px'}}>
+           {page==='dashboard'&&<Dashboard {...P} setPage={setPage} currentUser={currentUser}/>}
+           {page==='pipeline'&&<Pipeline {...P}/>}
+-          {page==='workflow'&&<WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
++          {page==='workflow'&&<WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser} goTo={(p)=>setPage(p)}/>}
+           {page==='projects'&&<Projects {...P}/>}
+           {page==='pricing'&&<Pricing {...P}/>}
+           {page==='invoices'&&<Invoices {...P}/>}
+@@ -4144,7 +4144,7 @@ async function sendNotification(supabase, {recipient_email, recipient_name, type,
+ // ══════════════════════════════════════════════════════════
+ // WORKFLOW PAGE — Project list với stages
+ // ══════════════════════════════════════════════════════════
+-function WorkflowPage({data, supabase, reload, log, currentUser}) {
++function WorkflowPage({data, supabase, reload, log, currentUser, goTo}) {
+   const [view, setView] = useState('board') // board | list
+   const [filterStage, setFilterStage] = useState('')
+   const [filterMember, setFilterMember] = useState('')
+   const [selectedProject, setSelectedProject] = useState(null)
+   const [search, setSearch] = useState('')
+@@ -4169,6 +4169,25 @@ function WorkflowPage({data, supabase, reload, log, currentUser, goTo}) {
+         </div>
+         <div style={{display:'flex',gap:8,alignItems:'center'}}>
++          <button
++            onClick={()=>goTo?.('projects')}
++            style={{
++              padding:'8px 12px',
++              borderRadius:10,
++              border:'none',
++              background:'linear-gradient(135deg,#1A56DB,#06B6D4)',
++              color:'#fff',
++              cursor:'pointer',
++              fontSize:12,
++              fontWeight:700,
++              fontFamily:"'Plus Jakarta Sans',sans-serif",
++              boxShadow:'0 6px 18px rgba(26,86,219,0.2)',
++            }}
++            title="Tạo dự án để bắt đầu workflow & tasks"
++          >
++            + Dự án
++          </button>
+           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm dự án..."
+             style={{padding:'7px 12px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',width:200}}/>
+           <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
+             style={{padding:'7px 10px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
+@@ -4226,9 +4245,28 @@ function WorkflowPage({data, supabase, reload, log, currentUser, goTo}) {
+           {projects.map(p=>(
+             <ProjectCard key={p.id} project={p} data={data} onClick={()=>setSelectedProject(p)}/>
+           ))}
+           {!projects.length&&(
+             <div style={{gridColumn:'1/-1',textAlign:'center',padding:60,color:'#94A3B8',fontSize:13}}>
+-              Không có dự án nào
++              <div style={{fontWeight:800,color:'#0F172A',fontSize:14,marginBottom:6}}>Chưa có dự án nào</div>
++              <div style={{marginBottom:14}}>Tạo dự án để bắt đầu workflow → mở dự án → tab Tasks/Approvals/KPIs.</div>
++              <button
++                onClick={()=>goTo?.('projects')}
++                style={{
++                  padding:'10px 14px',
++                  borderRadius:12,
++                  border:'1px solid rgba(26,86,219,0.18)',
++                  background:'rgba(26,86,219,0.06)',
++                  color:'#1A56DB',
++                  cursor:'pointer',
++                  fontSize:12,
++                  fontWeight:700,
++                  fontFamily:"'Plus Jakarta Sans',sans-serif",
++                }}
++              >
++                + Tạo dự án
++              </button>
+             </div>
+           )}
+         </div>
+       )}

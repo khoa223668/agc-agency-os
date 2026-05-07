@@ -58,7 +58,7 @@ function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6
 const INP = {style:{width:'100%',padding:'9px 12px',border:`1.5px solid ${B.border}`,borderRadius:10,fontSize:12.5,fontFamily:"'Plus Jakarta Sans', sans-serif",background:'rgba(255,255,255,0.8)',color:B.text,outline:'none',boxSizing:'border-box',backdropFilter:'blur(8px)',transition:'border-color 0.2s, box-shadow 0.2s'}}
 
 function Card({title,children,action,glow}){
-  return <div style={{background:B.gradCard,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 22px',marginBottom:16,boxShadow:glow?`0 4px 24px ${B.primaryGlow}, 0 1px 4px rgba(0,0,0,0.04)`:'0 1px 4px rgba(0,0,0,0.04)',position:'relative',overflow:'hidden'}}>
+  return <div className="glass-card" style={{border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 22px',marginBottom:16,boxShadow:glow?`0 4px 24px ${B.primaryGlow}, 0 1px 4px rgba(0,0,0,0.04)`:'0 1px 4px rgba(0,0,0,0.04)',position:'relative',overflow:'hidden'}}>
     {glow && <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:B.gradPrimary,borderRadius:'16px 16px 0 0'}}/>}
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
       <span style={{fontSize:12.5,fontWeight:700,color:B.text,letterSpacing:'-0.01em'}}>{title}</span>{action}
@@ -79,7 +79,7 @@ function Empty({children}){return <div style={{textAlign:'center',padding:'28px 
 
 function Modal({title,children,onClose}){
   return <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-    <div style={{background:'rgba(255,255,255,0.97)',backdropFilter:'blur(20px)',borderRadius:20,padding:'24px 28px',width:560,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15), 0 8px 32px rgba(0,0,0,0.1)',border:`1px solid ${B.border}`}}>
+    <div className="glass-card" style={{borderRadius:20,padding:'24px 28px',width:560,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15), 0 8px 32px rgba(0,0,0,0.1)',border:`1px solid ${B.border}`}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:16,borderBottom:`1px solid ${B.border}`}}>
         <span style={{fontSize:16,fontWeight:800,color:B.navy,letterSpacing:'-0.02em'}}>{title}</span>
         <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:B.textTer,fontSize:22,lineHeight:1,padding:'2px 6px',borderRadius:6}}>×</button>
@@ -107,7 +107,7 @@ function Logo({size=36}){
 
 // Stat card with gradient accent
 function StatCard({label,value,sub,color,icon}){
-  return <div style={{background:B.gradCard,backdropFilter:'blur(20px)',border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.04)'}}>
+  return <div className="glass-card" style={{border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.04)'}}>
     <div style={{position:'absolute',top:0,left:0,width:4,height:'100%',background:color||B.gradPrimary,borderRadius:'16px 0 0 16px'}}/>
     <div style={{paddingLeft:8}}>
       <div style={{fontSize:10,fontWeight:700,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>{label}</div>
@@ -153,7 +153,6 @@ export default function App(){
   async function upd(t,id,r){const{error}=await supabase.from(t).update(r).eq('id',id);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
   async function del(t,id){if(!confirm('Xác nhận xóa?'))return;await supabase.from(t).delete().eq('id',id);await loadAll()}
   const log = async (msg) => { await supabase.from('audit_log').insert([{message:msg,role:'User'}]) }
-  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
 
   const NAV=[
     {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
@@ -196,9 +195,9 @@ export default function App(){
   const P={data,add,upd,del,log,reload:loadAll,supabase}
   const supabase_client = supabase
   return(
-    <div style={{display:'flex',height:'100vh',fontFamily:"'Plus Jakarta Sans', system-ui, sans-serif",background:B.bgMesh,overflow:'hidden'}}>
+    <div className="bg-animated-gradient" style={{display:'flex',height:'100vh',fontFamily:"'Plus Jakarta Sans', system-ui, sans-serif",overflow:'hidden'}}>
       {/* SIDEBAR */}
-      <div style={{width:sidebarCollapsed?64:220,background:'rgba(255,255,255,0.85)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRight:`1px solid ${B.border}`,display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',boxShadow:'4px 0 24px rgba(26,86,219,0.06)'}}>
+      <div className="glass-sidebar" style={{width:sidebarCollapsed?64:220,borderRight:`1px solid ${B.border}`,display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease'}}>
         {/* Logo row */}
         <div style={{padding:'18px 16px 16px',borderBottom:`1px solid ${B.border}`,display:'flex',alignItems:'center',gap:12,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
           <Logo size={36}/>
@@ -212,12 +211,16 @@ export default function App(){
           {groups.map(grp=>(
             <div key={grp}>
               {!sidebarCollapsed&&<div style={{padding:'12px 10px 4px',fontSize:9,fontWeight:800,color:B.textTer,letterSpacing:'0.1em'}}>{grp}</div>}
-              {NAV.filter(n=>n.grp===grp).map(n=>(
-                <div key={n.id} onClick={()=>setPage(n.id)}
+              {visibleNAV.filter(n=>n.grp===grp).map(n=>(
+                <div key={n.id}
+                  onClick={()=>setPage(n.id)}
                   title={sidebarCollapsed?n.label:''}
+                  className={page===n.id?'active-indicator':''}
                   style={{padding:sidebarCollapsed?'10px':'8px 12px',cursor:'pointer',fontSize:12.5,color:page===n.id?B.primary:B.textSec,background:page===n.id?B.gradSoft:'transparent',borderRadius:10,fontWeight:page===n.id?700:500,display:'flex',alignItems:'center',justifyContent:sidebarCollapsed?'center':'space-between',transition:'all 0.15s',marginBottom:2,gap:10,border:page===n.id?`1px solid ${B.borderStrong}`:'1px solid transparent'}}>
                   <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <span style={{fontSize:14,lineHeight:1}}>{n.icon}</span>
+                    <div style={{width:34,height:34,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center'}} className={page===n.id?'icon-box-active':''}>
+                      <span style={{fontSize:14,lineHeight:1,color:page===n.id?'#fff':B.textSec}}>{n.icon}</span>
+                    </div>
                     {!sidebarCollapsed&&<span>{n.label}</span>}
                   </div>
                   {!sidebarCollapsed&&n.id==='approval'&&pending>0&&<span style={{background:B.danger,color:'#fff',fontSize:9,padding:'1px 6px',borderRadius:99,fontWeight:800}}>{pending}</span>}
@@ -238,7 +241,7 @@ export default function App(){
       {/* MAIN */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         {/* Topbar */}
-        <div style={{height:56,background:'rgba(255,255,255,0.8)',backdropFilter:'blur(20px)',borderBottom:`1px solid ${B.border}`,display:'flex',alignItems:'center',padding:'0 24px',gap:16,boxShadow:'0 1px 0 rgba(26,86,219,0.06)'}}>
+        <div className="glass-header" style={{height:56,borderBottom:`1px solid ${B.border}`,display:'flex',alignItems:'center',padding:'0 24px',gap:16}}>
           <span style={{flex:1,fontWeight:900,fontSize:16,color:B.navy,letterSpacing:'-0.02em'}}>{visibleNAV.find(n=>n.id===page)?.label||NAV.find(n=>n.id===page)?.label}</span>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <div style={{fontSize:11,color:B.textTer,background:B.gradSoft,padding:'5px 12px',borderRadius:99,border:`1px solid ${B.border}`,fontWeight:600}}>
@@ -260,7 +263,7 @@ export default function App(){
         <div style={{flex:1,overflow:'auto',padding:'20px 28px'}}>
           {page==='dashboard'&&<Dashboard {...P} setPage={setPage} currentUser={currentUser}/>}
           {page==='pipeline'&&<Pipeline {...P}/>}
-          {page==='workflow'&&<WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
+          {page==='workflow'&&<WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser} goTo={(p)=>setPage(p)}/>}
           {page==='projects'&&<Projects {...P}/>}
           {page==='pricing'&&<Pricing {...P}/>}
           {page==='invoices'&&<Invoices {...P}/>}
@@ -4142,7 +4145,7 @@ async function sendNotification(supabase, {recipient_email, recipient_name, type
 // ══════════════════════════════════════════════════════════
 // WORKFLOW PAGE — Project list với stages
 // ══════════════════════════════════════════════════════════
-function WorkflowPage({data, supabase, reload, log, currentUser}) {
+function WorkflowPage({data, supabase, reload, log, currentUser, goTo}) {
   const [view, setView] = useState('board') // board | list
   const [filterStage, setFilterStage] = useState('')
   const [filterMember, setFilterMember] = useState('')
@@ -4168,6 +4171,24 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
           <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{data.projects.length} dự án · {data.projects.filter(p=>p.current_stage==='EXECUTION').length} đang thực hiện</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button
+            onClick={()=>goTo?.('projects')}
+            style={{
+              padding:'8px 12px',
+              borderRadius:10,
+              border:'none',
+              background:'linear-gradient(135deg,#1A56DB,#06B6D4)',
+              color:'#fff',
+              cursor:'pointer',
+              fontSize:12,
+              fontWeight:700,
+              fontFamily:"'Plus Jakarta Sans',sans-serif",
+              boxShadow:'0 6px 18px rgba(26,86,219,0.2)',
+            }}
+            title="Tạo dự án để bắt đầu workflow & tasks"
+          >
+            + Dự án
+          </button>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm dự án..."
             style={{padding:'7px 12px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',width:200}}/>
           <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
@@ -4210,7 +4231,24 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
           ))}
           {!projects.length&&(
             <div style={{gridColumn:'1/-1',textAlign:'center',padding:60,color:'#94A3B8',fontSize:13}}>
-              Không có dự án nào
+              <div style={{fontWeight:800,color:'#0F172A',fontSize:14,marginBottom:6}}>Chưa có dự án nào</div>
+              <div style={{marginBottom:14}}>Tạo dự án để bắt đầu workflow → mở dự án → tab Tasks/Approvals/KPIs.</div>
+              <button
+                onClick={()=>goTo?.('projects')}
+                style={{
+                  padding:'10px 14px',
+                  borderRadius:12,
+                  border:'1px solid rgba(26,86,219,0.18)',
+                  background:'rgba(26,86,219,0.06)',
+                  color:'#1A56DB',
+                  cursor:'pointer',
+                  fontSize:12,
+                  fontWeight:700,
+                  fontFamily:"'Plus Jakarta Sans',sans-serif",
+                }}
+              >
+                + Tạo dự án
+              </button>
             </div>
           )}
         </div>

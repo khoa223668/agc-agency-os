@@ -109,3 +109,153 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ------------------------------------------------------------
+   Template "NexusFlow" glassmorphism utilities (ported)
+   ------------------------------------------------------------ */
+.glass {
+  background: linear-gradient(135deg, oklch(0.25 0.12 285 / 0.4) 0%, oklch(0.2 0.1 280 / 0.35) 100%);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid oklch(0.5 0.15 285 / 0.25);
+  box-shadow:
+    0 8px 32px oklch(0.3 0.15 285 / 0.15),
+    inset 0 1px 0 oklch(1 0 0 / 0.08);
+}
+
+.glass-card {
+  background: linear-gradient(145deg, oklch(0.28 0.12 285 / 0.45) 0%, oklch(0.22 0.1 280 / 0.4) 100%);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 1px solid oklch(0.55 0.15 285 / 0.3);
+  box-shadow:
+    0 8px 40px oklch(0.3 0.2 285 / 0.2),
+    0 0 80px oklch(0.5 0.2 285 / 0.05),
+    inset 0 1px 0 oklch(1 0 0 / 0.1),
+    inset 0 -1px 0 oklch(0.3 0.1 280 / 0.2);
+}
+
+.glass-sidebar {
+  background: linear-gradient(180deg, oklch(0.18 0.1 285 / 0.7) 0%, oklch(0.12 0.08 280 / 0.8) 100%);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border-right: 1px solid oklch(0.5 0.12 285 / 0.2);
+  box-shadow:
+    4px 0 32px oklch(0.3 0.15 285 / 0.15),
+    inset -1px 0 0 oklch(1 0 0 / 0.05);
+}
+
+.glass-header {
+  background: linear-gradient(90deg, oklch(0.22 0.1 285 / 0.5) 0%, oklch(0.2 0.08 280 / 0.45) 100%);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-bottom: 1px solid oklch(0.5 0.12 285 / 0.2);
+  box-shadow: 0 4px 24px oklch(0.3 0.15 285 / 0.1);
+}
+
+.glass-hover:hover {
+  background: linear-gradient(135deg, oklch(0.32 0.14 285 / 0.5) 0%, oklch(0.26 0.12 280 / 0.45) 100%);
+  border-color: oklch(0.6 0.18 285 / 0.4);
+  box-shadow: 0 0 30px oklch(0.5 0.2 285 / 0.15);
+}
+
+.glow-sm {
+  box-shadow:
+    0 0 15px oklch(0.65 0.25 285 / 0.3),
+    0 0 30px oklch(0.65 0.25 285 / 0.1);
+}
+
+.glow-md {
+  box-shadow:
+    0 0 25px oklch(0.65 0.25 285 / 0.35),
+    0 0 50px oklch(0.65 0.25 285 / 0.15),
+    0 0 100px oklch(0.65 0.25 285 / 0.05);
+}
+
+.glow-accent {
+  box-shadow:
+    0 0 20px oklch(0.78 0.15 200 / 0.4),
+    0 0 40px oklch(0.78 0.15 200 / 0.15);
+}
+
+.glow-pink {
+  box-shadow:
+    0 0 20px oklch(0.7 0.2 320 / 0.35),
+    0 0 40px oklch(0.7 0.2 320 / 0.15);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, oklch(0.78 0.2 285) 0%, oklch(0.78 0.15 200) 50%, oklch(0.75 0.18 320) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.bg-gradient-futuristic {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, oklch(0.35 0.15 285 / 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 80% 50%, oklch(0.3 0.12 320 / 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, oklch(0.25 0.1 200 / 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, oklch(0.18 0.08 280) 0%, oklch(0.12 0.06 275) 100%);
+}
+
+.active-indicator {
+  position: relative;
+}
+
+.active-indicator::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: linear-gradient(180deg, oklch(0.78 0.15 200), oklch(0.65 0.25 285));
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 12px oklch(0.78 0.15 200 / 0.6);
+}
+
+.progress-glow {
+  box-shadow:
+    0 0 10px oklch(0.65 0.25 285 / 0.5),
+    0 0 20px oklch(0.65 0.25 285 / 0.2);
+}
+
+.icon-box-active {
+  background: linear-gradient(135deg, oklch(0.65 0.25 285) 0%, oklch(0.55 0.22 300) 100%);
+  box-shadow:
+    0 4px 20px oklch(0.65 0.25 285 / 0.45),
+    0 0 40px oklch(0.65 0.25 285 / 0.2),
+    inset 0 1px 0 oklch(1 0 0 / 0.15);
+}
+
+.neon-border {
+  border: 1px solid oklch(0.65 0.25 285 / 0.5);
+  box-shadow:
+    0 0 5px oklch(0.65 0.25 285 / 0.3),
+    inset 0 0 5px oklch(0.65 0.25 285 / 0.1);
+}
+
+.rounded-squircle {
+  border-radius: 30%;
+}
+
+.bg-animated-gradient {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.2 0.1 280),
+    oklch(0.25 0.12 285),
+    oklch(0.2 0.08 300),
+    oklch(0.18 0.1 270)
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
