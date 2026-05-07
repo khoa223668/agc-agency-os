@@ -3243,7 +3243,7 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
             </div>
 
             <div style={{marginTop:16,padding:'10px 14px',background:'rgba(248,250,255,0.8)',borderRadius:8,border:'1px solid rgba(26,86,219,0.08)'}}>
-              <div style={{display:'flex',gap:4'}}>
+              <div style={{display:'flex',gap:4}}>
                 {duplicates.map((d,i)=>(
                   <div key={i} style={{width:12,height:12,borderRadius:3,background:i<dupIdx?'#059669':i===dupIdx?'#1A56DB':'#E2E8F0',display:'inline-block',marginRight:4}}/>
                 ))}
