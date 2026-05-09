@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { B } from '../../theme.js'
-import { cfmt, cfmtS, toWords, fmtDate, genCode, CModal, CBadge, CBtn, CFG, CRow2, CRow3, CSec, CMFoot, clausesHDDV, clausesHDCTV } from './contractHelpers.js'
+import { cfmt, cfmtS, toWords, fmtDate, genCode, CModal, CBadge, CBtn, CFG, CRow2, CRow3, CSec, CMFoot } from './contractHelpers.js'
 const KNK = {
   name:'CÔNG TY TNHH QUẢNG CÁO K&K',address:'737/7 Kha Vạn Cân, Phường Linh Xuân, TP. Hồ Chí Minh',
   taxCode:'0317776715',rep:'TÔ NGUYỄN ĐĂNG KHOA',repTitle:'Giám Đốc',
@@ -722,4 +722,3 @@ function ContractPreview({contract:c, type, onClose}) {
 // ══════════════════════════════════════════════════════════
 // BBNT PAGE
 export default Contracts
-export { AcceptanceReports }

@@ -98,7 +98,7 @@ export default function App() {
   )
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{background:'#0D0F1A'}}>
+    <div style={{display:"flex",width:"100vw",height:"100vh",overflow:"hidden",background:"#0D0F1A",position:"fixed",inset:0}}>
       {/* Starfield */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         {[...Array(50)].map((_,i) => (
