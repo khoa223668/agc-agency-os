@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
+import {
+  LayoutDashboard, TrendingUp, Workflow as WorkflowIco, Folder, Tag, FileText,
+  Shield, ScrollText, ClipboardList, Users, Star, Package, UserCheck,
+  BarChart2, Receipt, Search, Bell, LogOut, ChevronLeft, ChevronRight,
+} from 'lucide-react'
 
-// K&K Advertising — Futuristic Light Theme
+// K&K Agency OS — Premium Futuristic Dark Theme
 const B = {
   primary: '#4F8EF7',
-  primaryGlow: 'rgba(79,142,247,0.2)',
+  primaryGlow: 'rgba(79,142,247,0.25)',
   accent: '#00D4FF',
   purple: '#8B5CF6',
   navy: '#F1F5F9',
-  bg: '#0D0F1A',
+  bg: '#050816',
   bgCard: 'rgba(255,255,255,0.04)',
   glass: 'rgba(255,255,255,0.04)',
-  glassBorder: 'rgba(255,255,255,0.07)',
+  glassBorder: 'rgba(255,255,255,0.06)',
   gradPrimary: 'linear-gradient(135deg,#4F8EF7,#00D4FF)',
   gradSoft: 'rgba(79,142,247,0.08)',
   gradCard: 'rgba(255,255,255,0.04)',
@@ -20,10 +25,10 @@ const B = {
   textTer: '#475569',
   white: '#FFFFFF',
   surface: 'rgba(255,255,255,0.04)',
-  border: 'rgba(255,255,255,0.07)',
-  borderStrong: 'rgba(79,142,247,0.3)',
-  success: '#10B981',
-  successBg: 'rgba(16,185,129,0.12)',
+  border: 'rgba(255,255,255,0.06)',
+  borderStrong: 'rgba(79,142,247,0.35)',
+  success: '#22C55E',
+  successBg: 'rgba(34,197,94,0.12)',
   warning: '#F59E0B',
   warningBg: 'rgba(245,158,11,0.12)',
   danger: '#EF4444',
@@ -105,24 +110,16 @@ function Logo({size=36}){
   </div>
 }
 
-function NavIco({id,size=14,col='currentColor'}){
-  const p={width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:col,strokeWidth:1.75,strokeLinecap:'round',strokeLinejoin:'round'}
-  if(id==='dashboard')return<svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
-  if(id==='pipeline')return<svg {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-  if(id==='workflow')return<svg {...p}><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.64 5.64l2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/></svg>
-  if(id==='projects')return<svg {...p}><path d="M2 7a2 2 0 012-2h4l2 2h10a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg>
-  if(id==='pricing')return<svg {...p}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-  if(id==='invoices')return<svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
-  if(id==='approval')return<svg {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-  if(id==='contracts')return<svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
-  if(id==='bbnt')return<svg {...p}><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-  if(id==='clients')return<svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-  if(id==='kols')return<svg {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-  if(id==='vendors')return<svg {...p}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-  if(id==='team')return<svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-  if(id==='reports')return<svg {...p}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-  if(id==='quotations')return<svg {...p}><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="9" y2="15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
-  return<svg {...p}><circle cx="12" cy="12" r="4"/></svg>
+function NavIco({id,size=15,col='currentColor'}){
+  const icons={
+    dashboard:LayoutDashboard,pipeline:TrendingUp,workflow:WorkflowIco,
+    projects:Folder,pricing:Tag,invoices:FileText,approval:Shield,
+    contracts:ScrollText,bbnt:ClipboardList,clients:Users,kols:Star,
+    vendors:Package,team:UserCheck,reports:BarChart2,quotations:Receipt,
+  }
+  const Icon=icons[id]
+  if(!Icon)return null
+  return<Icon size={size} color={col} strokeWidth={1.75}/>
 }
 
 // Stat card with gradient accent
@@ -203,7 +200,7 @@ export default function App(){
   const groups=[...new Set(visibleNAV.map(n=>n.grp))]
 
   if(loading)return(
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:20,background:'#0D0F1A',fontFamily:"'Inter',system-ui,sans-serif"}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:20,background:'#050816',fontFamily:"'Inter',system-ui,sans-serif"}}>
       <div style={{position:'absolute',top:'20%',left:'30%',width:400,height:400,borderRadius:'50%',background:'radial-gradient(circle,rgba(79,142,247,0.12),transparent 70%)',pointerEvents:'none'}}/>
       <div style={{width:52,height:52,borderRadius:16,background:'linear-gradient(135deg,#4F8EF7,#00D4FF)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 30px rgba(79,142,247,0.4)'}}>
         <span style={{color:'#fff',fontWeight:900,fontSize:24}}>K</span>
@@ -219,7 +216,7 @@ export default function App(){
   )
 
   return(
-    <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden',background:'#0D0F1A',fontFamily:"'Inter',system-ui,sans-serif",position:'fixed',inset:0}}>
+    <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden',background:'#050816',fontFamily:"'Inter',system-ui,sans-serif",position:'fixed',inset:0}}>
       {/* Stars */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,overflow:'hidden'}}>
         {[...Array(50)].map((_,i)=>(
@@ -238,7 +235,7 @@ export default function App(){
       </div>
 
       {/* SIDEBAR */}
-      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'rgba(13,15,26,0.98)',backdropFilter:'blur(20px)',position:'relative',zIndex:10}}>
+      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'rgba(5,8,22,0.95)',backdropFilter:'blur(28px)',WebkitBackdropFilter:'blur(28px)',position:'relative',zIndex:10}}>
         {/* Logo */}
         <div style={{padding:'18px 14px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:10,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
           <div style={{width:36,height:36,borderRadius:11,background:'linear-gradient(135deg,#4F8EF7,#00D4FF)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 0 16px rgba(79,142,247,0.35)'}}>
@@ -253,7 +250,7 @@ export default function App(){
         {!sidebarCollapsed&&(
           <div style={{padding:'10px 10px 6px'}}>
             <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',background:'rgba(255,255,255,0.04)',borderRadius:9,border:'1px solid rgba(255,255,255,0.07)'}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <Search size={12} color="#475569" strokeWidth={2}/>
               <span style={{fontSize:11,color:'#475569'}}>Search...</span>
             </div>
           </div>
@@ -301,29 +298,29 @@ export default function App(){
               onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.04)'}>
               <div style={{width:30,height:30,borderRadius:9,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#4F8EF7'},#00D4FF)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800,flexShrink:0,position:'relative'}}>
                 {currentUser?.avatar_initials||'K'}
-                <div style={{position:'absolute',bottom:-1,right:-1,width:8,height:8,borderRadius:'50%',background:'#10B981',border:'2px solid #0D0F1A'}}/>
+                <div style={{position:'absolute',bottom:-1,right:-1,width:8,height:8,borderRadius:'50%',background:'#10B981',border:'2px solid #050816',boxShadow:'0 0 6px rgba(16,185,129,0.6)'}}/>
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:11.5,fontWeight:700,color:'#F1F5F9',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'}</div>
                 <div style={{fontSize:9,color:'#00D4FF',fontWeight:600,marginTop:1}}>{currentUser?.isMaster?'● Premium member':'● Staff'}</div>
               </div>
               <button onClick={handleLogout} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',padding:4,borderRadius:6,lineHeight:1,display:'flex',alignItems:'center'}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <LogOut size={13} strokeWidth={2}/>
               </button>
             </div>
           )}
         </div>
         {/* Collapse */}
         <button onClick={()=>setSidebarCollapsed(!sidebarCollapsed)}
-          style={{position:'absolute',right:-11,top:'50%',transform:'translateY(-50%)',width:22,height:22,borderRadius:'50%',background:'#1A1F35',border:'1px solid rgba(255,255,255,0.1)',color:'#475569',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,zIndex:20,boxShadow:'0 2px 8px rgba(0,0,0,0.4)'}}>
-          {sidebarCollapsed?'›':'‹'}
+          style={{position:'absolute',right:-11,top:'50%',transform:'translateY(-50%)',width:22,height:22,borderRadius:'50%',background:'#0F1629',border:'1px solid rgba(79,142,247,0.2)',color:'#475569',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:20,boxShadow:'0 2px 8px rgba(0,0,0,0.5)'}}>
+          {sidebarCollapsed?<ChevronRight size={12} strokeWidth={2.5}/>:<ChevronLeft size={12} strokeWidth={2.5}/>}
         </button>
       </div>
 
       {/* MAIN */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative',zIndex:1}}>
         {/* Topbar */}
-        <div style={{height:52,borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',background:'rgba(13,15,26,0.85)',backdropFilter:'blur(20px)',flexShrink:0}}>
+        <div style={{height:52,borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',background:'rgba(5,8,22,0.85)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:6}}>
             <span style={{fontSize:11,color:'#475569',cursor:'pointer',fontWeight:500}} onClick={()=>setPage('dashboard')}>Home</span>
             <span style={{fontSize:11,color:'#334155',margin:'0 4px'}}>›</span>
@@ -333,7 +330,7 @@ export default function App(){
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setPage('approval')}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <Bell size={15} color="#94A3B8" strokeWidth={2}/>
               {pending>0&&<div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:'#EF4444',boxShadow:'0 0 5px rgba(239,68,68,0.8)'}}/>}
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)'}}>
