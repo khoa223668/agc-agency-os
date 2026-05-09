@@ -52,7 +52,7 @@ function Badge({text}){
 function fmt(n){return Number(n||0).toLocaleString('vi-VN')}
 function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
 
-const INP = {style:{width:'100%',padding:'9px 12px',border:`1.5px solid ${B.border}`,borderRadius:10,fontSize:12.5,fontFamily:"'Plus Jakarta Sans', sans-serif",background:'rgba(255,255,255,0.8)',color:B.text,outline:'none',boxSizing:'border-box',backdropFilter:'blur(8px)',transition:'border-color 0.2s, box-shadow 0.2s'}}
+const INP = {style:{width:'100%',padding:'9px 12px',border:'1.5px solid rgba(255,255,255,0.1)',borderRadius:10,fontSize:12.5,fontFamily:"'Inter', system-ui, sans-serif",background:'rgba(255,255,255,0.06)',color:'#F1F5F9',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s, box-shadow 0.2s'}}
 
 function Card({title,children,action,glow}){
   return <div style={{background:B.gradCard,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 22px',marginBottom:16,boxShadow:glow?`0 4px 24px ${B.primaryGlow}, 0 1px 4px rgba(0,0,0,0.04)`:'0 1px 4px rgba(0,0,0,0.04)',position:'relative',overflow:'hidden'}}>
@@ -65,21 +65,21 @@ function Card({title,children,action,glow}){
 }
 
 function Btn({children,onClick,primary,sm,danger,ghost,type,style:s}){
-  if(primary) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'none',background:B.gradPrimary,color:'#fff',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans', sans-serif",boxShadow:`0 3px 12px ${B.primaryGlow}`,letterSpacing:'0.01em',...s}}>{children}</button>
-  if(danger) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:`1.5px solid ${B.danger}30`,background:B.dangerBg,color:B.danger,cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans', sans-serif",...s}}>{children}</button>
-  return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:`1.5px solid ${B.border}`,background:'rgba(255,255,255,0.7)',color:B.textSec,cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans', sans-serif",backdropFilter:'blur(8px)',...s}}>{children}</button>
+  if(primary) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#4F8EF7,#00D4FF)',color:'#fff',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",boxShadow:'0 3px 12px rgba(79,142,247,0.3)',letterSpacing:'0.01em',...s}}>{children}</button>
+  if(danger) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'1.5px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.1)',color:'#EF4444',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif",...s}}>{children}</button>
+  return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:9,border:'1.5px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.05)',color:'#94A3B8',cursor:'pointer',fontSize:sm?10.5:12,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif",...s}}>{children}</button>
 }
 
-function FG({label,children}){return <div style={{marginBottom:14}}><label style={{fontSize:11,fontWeight:700,color:B.textSec,marginBottom:5,display:'block',letterSpacing:'0.04em',textTransform:'uppercase'}}>{label}</label>{children}</div>}
+function FG({label,children}){return <div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:700,color:'#64748B',marginBottom:5,display:'block',letterSpacing:'0.06em',textTransform:'uppercase'}}>{label}</label>{children}</div>}
 function Row2({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
 function Empty({children}){return <div style={{textAlign:'center',padding:'28px 0',color:B.textTer,fontSize:12,fontWeight:500}}>{children}</div>}
 
 function Modal({title,children,onClose}){
-  return <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-    <div style={{background:'rgba(255,255,255,0.97)',backdropFilter:'blur(20px)',borderRadius:20,padding:'24px 28px',width:560,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15), 0 8px 32px rgba(0,0,0,0.1)',border:`1px solid ${B.border}`}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:16,borderBottom:`1px solid ${B.border}`}}>
-        <span style={{fontSize:16,fontWeight:800,color:B.navy,letterSpacing:'-0.02em'}}>{title}</span>
-        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:B.textTer,fontSize:22,lineHeight:1,padding:'2px 6px',borderRadius:6}}>×</button>
+  return <div style={{position:'fixed',inset:0,background:'rgba(5,8,20,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(8px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+    <div style={{background:'rgba(15,23,42,0.98)',backdropFilter:'blur(24px)',borderRadius:18,padding:'24px 28px',width:560,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.08)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:16,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <span style={{fontSize:15,fontWeight:700,color:'#F1F5F9',letterSpacing:'-0.02em'}}>{title}</span>
+        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',fontSize:20,lineHeight:1,padding:'2px 6px',borderRadius:6}}>×</button>
       </div>
       {children}
     </div>
@@ -87,9 +87,12 @@ function Modal({title,children,onClose}){
 }
 
 function MFoot({onClose,onDelete}){
-  return <div style={{display:'flex',justifyContent:'space-between',marginTop:18,paddingTop:16,borderTop:`1px solid ${B.border}`}}>
+  return <div style={{display:'flex',justifyContent:'space-between',marginTop:18,paddingTop:16,borderTop:'1px solid rgba(255,255,255,0.07)'}}>
     <div>{onDelete&&<Btn danger onClick={onDelete}>Xóa</Btn>}</div>
-    <div style={{display:'flex',gap:8}}><Btn onClick={onClose}>Huỷ</Btn><button type="submit" style={{padding:'8px 22px',borderRadius:9,border:'none',background:B.gradPrimary,color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans', sans-serif",boxShadow:`0 3px 12px ${B.primaryGlow}`}}>Lưu</button></div>
+    <div style={{display:'flex',gap:8}}>
+      <button type="button" onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.05)',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif"}}>Huỷ</button>
+      <button type="submit" style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#4F8EF7,#00D4FF)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",boxShadow:'0 3px 12px rgba(79,142,247,0.3)'}}>Lưu</button>
+    </div>
   </div>
 }
 
@@ -377,7 +380,7 @@ export default function App(){
 }
 
 function Dashboard({ data, setPage, currentUser }) {
-  const rev = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
+  const rev  = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
   const cost = data.projects.reduce((a,p) => a + Number(p.actual_cost||0), 0)
   const profit = rev - cost
   const margin = rev ? Math.round(profit/rev*100) : 0
@@ -387,16 +390,7 @@ function Dashboard({ data, setPage, currentUser }) {
   const won = data.deals.filter(d => d.stage==='Won').length
   const wr = data.deals.length ? Math.round(won/data.deals.length*100) : 0
   const now = new Date()
-  const hour = now.getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
   const firstName = currentUser?.name?.split(' ').slice(-1)[0] || 'Khoa'
-
-  const byM = Array(12).fill(0)
-  data.projects.forEach(p => {
-    if (p.start_date) byM[new Date(p.start_date).getMonth()] += Number(p.revenue||0)
-  })
-  const maxM = Math.max(...byM, 1)
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
   const myPending = currentUser?.isMaster ? pendingAppr :
     pendingAppr.filter(a => {
@@ -405,128 +399,115 @@ function Dashboard({ data, setPage, currentUser }) {
              (a.type==='Director' && (role.includes('director') || role.includes('giám')))
     })
 
-  const S = {
-    card: {
-      background: 'rgba(255,255,255,0.04)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: 14,
-      boxShadow: '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)',
-    },
-    text: { primary: '#F1F5F9', secondary: '#94A3B8', muted: '#475569', dim: '#334155' },
-    cyan: '#00D4FF',
-    blue: '#4F8EF7',
-    green: '#10B981',
-    yellow: '#F59E0B',
-    red: '#EF4444',
-    purple: '#8B5CF6',
+  const glass = {
+    background: 'rgba(255,255,255,0.03)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: 14,
+    boxShadow: '0 4px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
   }
 
-  const kpiCards = [
-    { label: 'Total Revenue', value: fmtS(rev), sub: 'VND', color: S.cyan },
-    { label: 'Net Profit', value: fmtS(profit), sub: margin + '% margin', color: S.green },
-    { label: 'Active Projects', value: active, sub: data.projects.length + ' total', color: S.purple },
-    { label: 'KOL Database', value: data.kols.length, sub: 'contacts', color: S.yellow },
-    { label: 'Clients', value: data.clients.length, sub: 'active', color: S.blue },
-    { label: 'Win Rate', value: wr + '%', sub: won + '/' + data.deals.length + ' deals', color: wr >= 50 ? S.green : S.yellow },
+  const kpis = [
+    { label: 'Total Revenue',    value: fmtS(rev),                sub: 'VND',                               accent: '#00D4FF' },
+    { label: 'Net Profit',       value: fmtS(profit),             sub: margin + '% margin',                 accent: '#10B981' },
+    { label: 'Active Projects',  value: active,                   sub: data.projects.length + ' total',     accent: '#4F8EF7' },
+    { label: 'Win Rate',         value: wr + '%',                 sub: won + '/' + data.deals.length + ' deals', accent: wr >= 50 ? '#10B981' : '#F59E0B' },
+    { label: 'Clients',          value: data.clients.length,      sub: 'in database',                       accent: '#8B5CF6' },
+    { label: 'KOL Database',     value: data.kols.length,         sub: 'contacts',                          accent: '#F59E0B' },
   ]
 
-  const stageData = [
-    { key: 'LEAD', color: '#64748B' },
-    { key: 'BRIEF', color: '#3B82F6' },
-    { key: 'PROPOSAL', color: '#8B5CF6' },
-    { key: 'PRICING', color: '#F59E0B' },
-    { key: 'CONTRACT', color: '#00D4FF' },
-    { key: 'EXECUTION', color: '#10B981' },
-    { key: 'PAYMENT', color: '#4F8EF7' },
+  const pipelineStages = [
+    { key:'LEAD',      color:'#64748B' },
+    { key:'BRIEF',     color:'#3B82F6' },
+    { key:'PROPOSAL',  color:'#8B5CF6' },
+    { key:'PRICING',   color:'#F59E0B' },
+    { key:'CONTRACT',  color:'#00D4FF' },
+    { key:'EXECUTION', color:'#10B981' },
+    { key:'PAYMENT',   color:'#4F8EF7' },
   ]
+
+  const byM = Array(12).fill(0)
+  data.projects.forEach(p => { if(p.start_date) byM[new Date(p.start_date).getMonth()] += Number(p.revenue||0) })
+  const maxM = Math.max(...byM, 1)
+  const months = ['J','F','M','A','M','J','J','A','S','O','N','D']
 
   return (
-    <div style={{ width: '100%', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ width: '100%', fontFamily: "'Inter', system-ui, sans-serif", color: '#F1F5F9' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
         <div>
-          <div style={{ fontSize: 11, color: S.text.muted, fontWeight: 500, marginBottom: 4, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            {greeting}
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#334155', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+            {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: S.text.primary, letterSpacing: '-0.03em', lineHeight: 1.2 }}>
-            {firstName},{' '}
-            <span style={{ background: 'linear-gradient(135deg,#4F8EF7,#00D4FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Welcome back.
-            </span>
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#F1F5F9', letterSpacing: '-0.04em', lineHeight: 1 }}>
+            {firstName}
+            <span style={{ color: '#334155', fontWeight: 400 }}> / Overview</span>
           </div>
-          <div style={{ fontSize: 11, color: S.text.dim, marginTop: 5 }}>
-            {now.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            {'  ·  '}{data.projects.filter(p => p.status === 'Active').length} active projects
+          <div style={{ fontSize: 10, color: '#475569', marginTop: 6 }}>
+            {data.projects.filter(p => p.status === 'Active').length} active projects &middot; {data.deals.filter(d=>d.stage==='Won').length} deals won
           </div>
         </div>
         {myPending.length > 0 && (
           <button onClick={() => setPage('approval')} style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 16px', borderRadius: 10, cursor: 'pointer',
-            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-            fontFamily: 'Inter, sans-serif',
+            display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, cursor: 'pointer',
+            background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)',
+            fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#FCA5A5',
           }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: S.red, boxShadow: '0 0 6px rgba(239,68,68,0.8)' }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#FCA5A5' }}>
-              {myPending.length} pending approval{myPending.length > 1 ? 's' : ''}
-            </span>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444', boxShadow: '0 0 6px rgba(239,68,68,0.8)' }} />
+            {myPending.length} pending approval{myPending.length > 1 ? 's' : ''}
           </button>
         )}
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 16 }}>
-        {kpiCards.map(({ label, value, sub, color }) => (
-          <div key={label} style={{ ...S.card, padding: '16px 14px', position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, transform 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = color+'40'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${color}18, inset 0 1px 0 rgba(255,255,255,0.05)` }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${color},transparent)` }} />
-            <div style={{ fontSize: 9, fontWeight: 700, color: S.text.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              {label}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: S.text.primary, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {value}
-            </div>
-            <div style={{ fontSize: 10, color: S.text.dim, marginTop: 6 }}>{sub}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
+        {kpis.map(({ label, value, sub, accent }) => (
+          <div key={label} style={{ ...glass, padding: '16px 14px', position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, transform 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = accent+'30'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 28px ${accent}14, inset 0 1px 0 rgba(255,255,255,0.04)` }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, background: `linear-gradient(90deg,${accent},transparent)` }} />
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 10 }}>{label}</div>
+            <div style={{ fontSize: 23, fontWeight: 800, color: '#F1F5F9', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 10, color: '#334155', marginTop: 6 }}>{sub}</div>
           </div>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 260px', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 250px', gap: 12, marginBottom: 12 }}>
 
         {/* Revenue Chart */}
-        <div style={{ ...S.card, padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ ...glass, padding: '20px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: S.text.primary }}>Revenue Overview</div>
-              <div style={{ fontSize: 10, color: S.text.dim, marginTop: 2 }}>2026 · Monthly · VND</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', letterSpacing: '-0.01em' }}>Revenue · 2026</div>
+              <div style={{ fontSize: 10, color: '#334155', marginTop: 3 }}>Monthly projection · VND</div>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[['Total', fmtS(rev), S.cyan], ['This month', fmtS(byM[now.getMonth()]), S.purple], ['Avg', fmtS(Math.round(rev/12)), S.green]].map(([l, v, c]) => (
-                <div key={l} style={{ textAlign: 'center', padding: '5px 10px', borderRadius: 7, background: c + '10', border: `1px solid ${c}20` }}>
-                  <div style={{ fontSize: 8, color: c, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: S.text.primary, marginTop: 1 }}>{v}</div>
+            <div style={{ display: 'flex', gap: 16 }}>
+              {[['Total', fmtS(rev), '#00D4FF'], ['This mo.', fmtS(byM[now.getMonth()]), '#8B5CF6'], ['Avg', fmtS(Math.round(rev/12)), '#10B981']].map(([l, v, c]) => (
+                <div key={l} style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 9, color: '#334155', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: c, marginTop: 2 }}>{v}</div>
                 </div>
               ))}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 110 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
             {months.map((m, i) => {
-              const h = byM[i] ? Math.max(8, Math.round(byM[i]/maxM*100)) : 3
+              const h = byM[i] ? Math.max(6, Math.round(byM[i]/maxM*88)) : 4
               const isNow = i === now.getMonth()
               const isPast = i < now.getMonth()
               return (
-                <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   <div style={{
-                    width: '100%', borderRadius: '3px 3px 1px 1px', minHeight: 3, height: h + '%',
-                    background: isNow ? 'linear-gradient(180deg,#00D4FF,#4F8EF7)' : isPast && byM[i] > 0 ? 'rgba(79,142,247,0.25)' : 'rgba(255,255,255,0.04)',
-                    boxShadow: isNow ? '0 0 12px rgba(0,212,255,0.35)' : 'none',
+                    width: '100%', borderRadius: '2px 2px 1px 1px', minHeight: 4, height: h + '%',
+                    background: isNow ? 'linear-gradient(180deg,#00D4FF,#4F8EF7)' : isPast && byM[i] > 0 ? 'rgba(79,142,247,0.2)' : 'rgba(255,255,255,0.04)',
+                    boxShadow: isNow ? '0 0 14px rgba(0,212,255,0.4)' : 'none',
+                    transition: 'height 0.4s ease',
                   }} />
-                  <div style={{ fontSize: 8, color: isNow ? S.cyan : '#475569', fontWeight: isNow ? 700 : 400 }}>{m}</div>
+                  <div style={{ fontSize: 8, color: isNow ? '#00D4FF' : '#334155', fontWeight: isNow ? 700 : 400 }}>{m}</div>
                 </div>
               )
             })}
@@ -534,24 +515,22 @@ function Dashboard({ data, setPage, currentUser }) {
         </div>
 
         {/* Pipeline */}
-        <div style={{ ...S.card, padding: '18px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: S.text.primary }}>Project Pipeline</div>
-            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: S.blue, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
-              View all →
-            </button>
+        <div style={{ ...glass, padding: '20px 18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>Project Pipeline</div>
+            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#4F8EF7', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>View →</button>
           </div>
-          {stageData.map(({ key, color }) => {
+          {pipelineStages.map(({ key, color }) => {
             const cnt = data.projects.filter(p => (p.current_stage || 'LEAD') === key).length
             const pct = data.projects.length ? Math.round(cnt/data.projects.length*100) : 0
             return (
-              <div key={key} style={{ marginBottom: 9 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                  <span style={{ fontSize: 10, color: S.text.muted, fontWeight: 500 }}>{key}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: cnt > 0 ? color : S.text.dim }}>{cnt}</span>
+              <div key={key} style={{ marginBottom: 11 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: '#475569', fontWeight: 500, letterSpacing: '0.02em' }}>{key}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: cnt > 0 ? color : '#334155' }}>{cnt}</span>
                 </div>
-                <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: 99, transition: 'width 0.5s ease' }} />
+                <div style={{ height: 2, background: 'rgba(255,255,255,0.05)', borderRadius: 99 }}>
+                  <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: 99 }} />
                 </div>
               </div>
             )
@@ -563,81 +542,67 @@ function Dashboard({ data, setPage, currentUser }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'start' }}>
 
         {/* Active Projects */}
-        <div style={{ ...S.card, padding: '16px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: S.text.primary }}>Active Projects</div>
-            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: S.blue, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
-              Workflow →
-            </button>
+        <div style={{ ...glass, padding: '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>Active Projects</div>
+            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#4F8EF7', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Workflow →</button>
           </div>
           {data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).slice(0, 4).map(p => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.campaign || '—'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: S.green }} />
-                  <div style={{ fontSize: 10, color: S.text.muted }}>{p.client || '—'}</div>
+                <div style={{ fontWeight: 600, fontSize: 12, color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.campaign || '—'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#10B981', flexShrink: 0 }} />
+                  <div style={{ fontSize: 10, color: '#475569' }}>{p.client || '—'}</div>
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: S.cyan }}>
-                  {p.revenue ? fmtS(Number(p.revenue)) : '-'}
-                </div>
-                <div style={{ fontSize: 9, color: S.green, fontWeight: 600, marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                  {p.current_stage || p.status || '—'}
-                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#00D4FF' }}>{p.revenue ? fmtS(Number(p.revenue)) : '—'}</div>
+                <div style={{ fontSize: 9, color: '#475569', marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.current_stage || p.status || '—'}</div>
               </div>
             </div>
           ))}
-          {!data.projects.filter(p => p.status === 'Active').length && (
-            <div style={{ textAlign: 'center', padding: '18px 0', color: S.text.dim, fontSize: 11 }}>No active projects</div>
+          {!data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).length && (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: '#334155', fontSize: 11 }}>No active projects</div>
           )}
         </div>
 
         {/* Overdue Invoices */}
-        <div style={{ ...S.card, padding: '16px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: S.text.primary }}>Outstanding Invoices</div>
-            <button onClick={() => setPage('invoices')} style={{ fontSize: 10, color: S.blue, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
-              View →
-            </button>
+        <div style={{ ...glass, padding: '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>Outstanding Invoices</div>
+            <button onClick={() => setPage('invoices')} style={{ fontSize: 10, color: '#4F8EF7', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View →</button>
           </div>
           {overdue.slice(0, 4).map(inv => (
             <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#CBD5E1' }}>{inv.client}</div>
-                <div style={{ fontSize: 10, color: S.red, marginTop: 1, fontWeight: 500 }}>Overdue</div>
+                <div style={{ fontSize: 10, color: '#EF4444', marginTop: 1, fontWeight: 500 }}>Overdue</div>
               </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>
-                {fmtS(Number(inv.amount) - Number(inv.paid||0))}
-              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>{fmtS(Number(inv.amount) - Number(inv.paid||0))}</span>
             </div>
           ))}
           {!overdue.length && (
-            <div style={{ textAlign: 'center', padding: '18px 0' }}>
-              <div style={{ fontSize: 11, color: S.green, fontWeight: 600 }}>All invoices cleared</div>
-              <div style={{ fontSize: 10, color: S.text.dim, marginTop: 2 }}>No outstanding payments</div>
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>All clear</div>
+              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>No outstanding payments</div>
             </div>
           )}
         </div>
 
         {/* Approvals */}
-        <div style={{ ...S.card, padding: '16px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: S.text.primary }}>
+        <div style={{ ...glass, padding: '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>
               {currentUser?.isMaster ? 'Approval Queue' : 'My Approvals'}
             </div>
-            <button onClick={() => setPage('approval')} style={{ fontSize: 10, color: S.blue, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
-              Review →
-            </button>
+            <button onClick={() => setPage('approval')} style={{ fontSize: 10, color: '#4F8EF7', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Review →</button>
           </div>
 
           {myPending.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '14px 0' }}>
-              <div style={{ fontSize: 11, color: S.green, fontWeight: 600 }}>Queue clear</div>
-              <div style={{ fontSize: 10, color: S.text.dim, marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>Queue clear</div>
+              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
                 {!currentUser?.isMaster && pendingAppr.length > 0 ? 'Nothing requires your action' : 'No pending approvals'}
               </div>
             </div>
@@ -648,28 +613,24 @@ function Dashboard({ data, setPage, currentUser }) {
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#CBD5E1', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.title || a.type || 'Approval'}
                   </div>
-                  <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.1)', color: S.yellow, border: '1px solid rgba(245,158,11,0.2)' }}>
+                  <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}>
                     PENDING
                   </span>
                 </div>
-                <div style={{ fontSize: 10, color: S.text.dim, marginTop: 2 }}>
-                  {a.created_at?.slice(0, 10) || '—'}
-                </div>
+                <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>{a.created_at?.slice(0, 10) || '—'}</div>
               </div>
             ))
           )}
 
-          {/* Quick actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-            {[['New Quote','quotations',S.yellow],['New KOL','kols',S.purple],['New Project','projects',S.blue],['Workflow','workflow',S.green]].map(([l, pg, c]) => (
+          {/* Quick nav */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {[['Quote','quotations','#F59E0B'],['KOL','kols','#8B5CF6'],['Project','projects','#4F8EF7'],['Workflow','workflow','#10B981']].map(([l, pg, c]) => (
               <button key={pg} onClick={() => setPage(pg)} style={{
-                padding: '7px 8px', borderRadius: 7,
+                padding: '7px 8px', borderRadius: 8,
                 border: `1px solid ${c}20`, background: c + '0A',
                 color: c, cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                fontFamily: 'Inter, sans-serif', letterSpacing: '0.01em'
-              }}>
-                {l}
-              </button>
+                fontFamily: 'Inter, system-ui, sans-serif', letterSpacing: '0.03em',
+              }}>{l}</button>
             ))}
           </div>
         </div>
@@ -748,7 +709,7 @@ function Projects({data,add,upd,del,log,reload,supabase}){
         ))}
       </div>
       <div style={{display:'flex',gap:10,marginBottom:16}}>
-        <input placeholder="🔍  Search projects..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:240}})}/>
+        <input placeholder="Search projects..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:240}})}/>
         <select value={stF} onChange={e=>setStF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option></select>
         <select value={svF} onChange={e=>setSvF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Services</option><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select>
       </div>
@@ -961,7 +922,7 @@ function Clients({data,add,upd,del,log,reload,supabase}){
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Clients</h2><div style={{display:'flex',gap:8}}><ImportBtn module="clients" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ New Client</Btn></div></div>
-      <input placeholder="🔍  Search clients..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,marginBottom:18,width:300}})}/>
+      <input placeholder="Search clients..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,marginBottom:18,width:300}})}/>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))',gap:14}}>
         {list.map((c,i)=>{
           const rev=data.projects.filter(p=>p.client===c.name).reduce((a,p)=>a+Number(p.revenue||0),0)
@@ -1010,7 +971,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>KOL / KOC Database</h2><div style={{display:'flex',gap:8}}><ImportBtn module="kols" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add KOL</Btn></div></div>
       <div style={{display:'flex',gap:10,marginBottom:16}}>
-        <input placeholder="🔍  Search..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:220}})}/>
+        <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:220}})}/>
         <select value={platF} onChange={e=>setPlatF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Platforms</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select>
         <select value={tierF} onChange={e=>setTierF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Tiers</option><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select>
       </div>
@@ -1500,7 +1461,7 @@ function Contracts({data, supabase, reload, log}) {
       </div>
 
       <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.7)',padding:4,borderRadius:10,width:'fit-content',border:'1px solid rgba(26,86,219,0.1)'}}>
-        {[['client','🏢  HĐ Dịch vụ (Client)'],['kol','👤  HĐ Cộng tác viên (KOL)']].map(([key,label])=>(
+        {[['client','HĐ Dịch vụ (Client)'],['kol','HĐ Cộng tác viên (KOL)']].map(([key,label])=>(
           <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':CB.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
         ))}
       </div>
@@ -1520,7 +1481,7 @@ function Contracts({data, supabase, reload, log}) {
       </div>
 
       <div style={{marginBottom:14}}>
-        <input placeholder="🔍  Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP_S,maxWidth:380}}/>
+        <input placeholder="Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP_S,maxWidth:380}}/>
       </div>
 
       <div style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,overflow:'auto'}}>
@@ -2009,7 +1970,7 @@ function ContractPreview({contract:c, type, onClose}) {
   return (
     <CModal title={`Preview: ${c.contract_code}`} onClose={onClose} wide>
       <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
-        <CBtn primary onClick={printDoc}>🖨️ In / Export PDF</CBtn>
+        <CBtn primary onClick={printDoc}>In / Export PDF</CBtn>
         <CBadge text={c.status}/>
         <span style={{fontSize:11,color:CB.textTer}}>Tạo lúc {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
       </div>
@@ -2104,7 +2065,7 @@ function AcceptanceReports({data, supabase, reload, log}) {
       </div>
 
       <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.7)',padding:4,borderRadius:10,width:'fit-content',border:'1px solid rgba(26,86,219,0.1)'}}>
-        {[['client','🏢  BBNT Client'],['kol','👤  BBNT KOL/CTV']].map(([key,label])=>(
+        {[['client','BBNT Client'],['kol','BBNT KOL/CTV']].map(([key,label])=>(
           <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':CB.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
         ))}
       </div>
@@ -2339,7 +2300,7 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
   return (
     <CModal title={`Preview BBNT: ${r.report_code}`} onClose={onClose} wide>
       <div style={{display:'flex',gap:8,marginBottom:14}}>
-        <CBtn primary onClick={printBBNT}>🖨️ In / Export PDF</CBtn>
+        <CBtn primary onClick={printBBNT}>In / Export PDF</CBtn>
         <CBadge text={r.status}/>
       </div>
       <div style={{background:'#fff',border:'2px solid rgba(26,86,219,0.15)',borderRadius:14,padding:'28px 32px',fontFamily:'Times New Roman,serif',fontSize:13,lineHeight:1.7,color:'#000',maxHeight:'60vh',overflowY:'auto'}}>
@@ -2382,19 +2343,19 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
 // ════════════════════════════════════════════════════════════
 
 const MODULES = [
-  {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
-  {id:'pipeline',label:'Deal Pipeline',icon:'◈',grp:'OVERVIEW'},
-  {id:'projects',label:'Dự án',icon:'◉',grp:'OPERATIONS'},
-  {id:'pricing',label:'Pricing Engine',icon:'◎',grp:'OPERATIONS'},
-  {id:'invoices',label:'Hóa đơn',icon:'▤',grp:'OPERATIONS'},
-  {id:'approval',label:'Approvals',icon:'✦',grp:'OPERATIONS'},
-  {id:'contracts',label:'Hợp đồng',icon:'📋',grp:'LEGAL'},
-  {id:'bbnt',label:'Biên bản NT',icon:'✅',grp:'LEGAL'},
-  {id:'clients',label:'Clients',icon:'◑',grp:'DATA'},
-  {id:'kols',label:'KOL / KOC',icon:'◐',grp:'DATA'},
-  {id:'vendors',label:'Vendors',icon:'◫',grp:'DATA'},
-  {id:'team',label:'Team',icon:'◒',grp:'DATA'},
-  {id:'reports',label:'Analytics',icon:'▨',grp:'INSIGHTS'},
+  {id:'dashboard',label:'Dashboard',grp:'OVERVIEW'},
+  {id:'pipeline',label:'Deal Pipeline',grp:'OVERVIEW'},
+  {id:'projects',label:'Dự án',grp:'OPERATIONS'},
+  {id:'pricing',label:'Pricing Engine',grp:'OPERATIONS'},
+  {id:'invoices',label:'Hóa đơn',grp:'OPERATIONS'},
+  {id:'approval',label:'Approvals',grp:'OPERATIONS'},
+  {id:'contracts',label:'Hợp đồng',grp:'LEGAL'},
+  {id:'bbnt',label:'Biên bản NT',grp:'LEGAL'},
+  {id:'clients',label:'Clients',grp:'DATA'},
+  {id:'kols',label:'KOL / KOC',grp:'DATA'},
+  {id:'vendors',label:'Vendors',grp:'DATA'},
+  {id:'team',label:'Team',grp:'DATA'},
+  {id:'reports',label:'Analytics',grp:'INSIGHTS'},
 ]
 
 const AVATAR_COLORS = [
@@ -4158,7 +4119,7 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
           <div style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Preview: {q.quote_code}</div>
           <div style={{display:'flex',gap:8}}>
-            <button onClick={printQuote} style={{padding:'8px 18px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(26,86,219,0.25)'}}>🖨️ In / Export PDF</button>
+            <button onClick={printQuote} style={{padding:'8px 18px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(26,86,219,0.25)'}}>In / Export PDF</button>
             <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
           </div>
         </div>
@@ -4269,16 +4230,16 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
 // ════════════════════════════════════════════════════════════
 
 const STAGES = [
-  { id:'LEAD',           label:'Lead',           icon:'🎯', color:'#94A3B8', desc:'Khách hàng tiềm năng' },
-  { id:'BRIEF',          label:'Brief',          icon:'📋', color:'#3B82F6', desc:'Tiếp nhận brief từ client' },
-  { id:'PROPOSAL',       label:'Proposal',       icon:'💡', color:'#8B5CF6', desc:'Lên ý tưởng, đề xuất' },
-  { id:'PRICING',        label:'Pricing',        icon:'💰', color:'#F59E0B', desc:'Định giá, P&L' },
-  { id:'CONTRACT',       label:'Contract',       icon:'📝', color:'#06B6D4', desc:'Ký hợp đồng' },
-  { id:'PRE_PRODUCTION', label:'Pre-Production', icon:'⚙️', color:'#6366F1', desc:'Chuẩn bị sản xuất' },
-  { id:'EXECUTION',      label:'Execution',      icon:'🚀', color:'#10B981', desc:'Triển khai' },
-  { id:'REPORTING',      label:'Reporting',      icon:'📊', color:'#0891B2', desc:'Báo cáo kết quả' },
-  { id:'PAYMENT',        label:'Payment',        icon:'💳', color:'#059669', desc:'Thanh toán' },
-  { id:'CLOSED',         label:'Closed',         icon:'✅', color:'#1A56DB', desc:'Hoàn tất' },
+  { id:'LEAD',           label:'Lead',           icon:'01', color:'#94A3B8', desc:'Khách hàng tiềm năng' },
+  { id:'BRIEF',          label:'Brief',          icon:'02', color:'#3B82F6', desc:'Tiếp nhận brief từ client' },
+  { id:'PROPOSAL',       label:'Proposal',       icon:'03', color:'#8B5CF6', desc:'Lên ý tưởng, đề xuất' },
+  { id:'PRICING',        label:'Pricing',        icon:'04', color:'#F59E0B', desc:'Định giá, P&L' },
+  { id:'CONTRACT',       label:'Contract',       icon:'05', color:'#06B6D4', desc:'Ký hợp đồng' },
+  { id:'PRE_PRODUCTION', label:'Pre-Production', icon:'06', color:'#6366F1', desc:'Chuẩn bị sản xuất' },
+  { id:'EXECUTION',      label:'Execution',      icon:'07', color:'#10B981', desc:'Triển khai' },
+  { id:'REPORTING',      label:'Reporting',      icon:'08', color:'#0891B2', desc:'Báo cáo kết quả' },
+  { id:'PAYMENT',        label:'Payment',        icon:'09', color:'#059669', desc:'Thanh toán' },
+  { id:'CLOSED',         label:'Closed',         icon:'10', color:'#1A56DB', desc:'Hoàn tất' },
 ]
 
 // Tasks mặc định theo từng stage
@@ -4397,12 +4358,12 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
           <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{data.projects.length} dự án · {data.projects.filter(p=>p.current_stage==='EXECUTION').length} đang thực hiện</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm dự án..."
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm dự án..."
             style={{padding:'7px 12px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',width:200}}/>
           <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
             style={{padding:'7px 10px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
             <option value="">Tất cả stages</option>
-            {STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}
+            {STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
           <div style={{display:'flex',background:'rgba(255,255,255,0.7)',borderRadius:9,border:'1px solid rgba(26,86,219,0.1)',overflow:'hidden'}}>
             {[['board','⊞'],['list','≡']].map(([v,icon])=>(
@@ -4747,7 +4708,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   {currentStageData.icon} {currentStageData.label}
                 </span>
                 {project.is_urgent&&<span style={{background:'rgba(220,38,38,0.3)',color:'#FCA5A5',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>🔥 URGENT</span>}
-                {pendingApprovals.length>0&&<span style={{background:'rgba(245,158,11,0.3)',color:'#FCD34D',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>⏳ {pendingApprovals.length} pending approval</span>}
+                {pendingApprovals.length>0&&<span style={{background:'rgba(245,158,11,0.3)',color:'#FCD34D',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{pendingApprovals.length} pending approval</span>}
               </div>
               <div style={{fontSize:22,fontWeight:900,color:'#fff',letterSpacing:'-0.03em',marginBottom:4}}>{project.campaign||'Untitled Project'}</div>
               <div style={{fontSize:13,color:'rgba(255,255,255,0.6)'}}>{project.client} · {project.project_code} · PM: {project.pm||'—'}</div>
@@ -4772,7 +4733,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   boxShadow:i===currentStageIdx?`0 0 10px ${currentStageData.color}80`:'none',
                   cursor:'pointer',
                 }} title={s.label}>
-                  {i<currentStageIdx?'✓':s.icon}
+                  {i<currentStageIdx?'✓':i===currentStageIdx?s.icon:''}
                 </div>
                 {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<currentStageIdx?'#059669':'rgba(255,255,255,0.1)',margin:'0 2px'}}/>}
               </div>
@@ -4782,7 +4743,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
         {/* Tabs */}
         <div style={{background:'rgba(255,255,255,0.7)',borderBottom:'1px solid rgba(26,86,219,0.1)',padding:'0 28px',display:'flex',gap:0,flexShrink:0}}>
-          {[['overview','📊 Tổng quan'],['tasks','✅ Tasks'],['approvals','🔐 Approvals'],['kpi','📈 KPIs'],['activity','🔔 Activity']].map(([id,label])=>(
+          {[['overview','Tổng quan'],['tasks','Tasks'],['approvals','Approvals'],['kpi','KPIs'],['activity','Activity']].map(([id,label])=>(
             <button key={id} onClick={()=>setActiveTab(id)} style={{
               padding:'12px 18px',border:'none',background:'transparent',cursor:'pointer',
               fontSize:12,fontWeight:activeTab===id?700:500,
@@ -4809,7 +4770,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
               {/* KPI cards */}
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
                 {[
-                  ['Stage hiện tại',currentStageData.label+' ('+Math.round((currentStageIdx+1)/STAGES.length*100)+'%)',currentStageData.icon,currentStageData.color],
+                  ['Stage hiện tại',currentStageData.label+' ('+Math.round((currentStageIdx+1)/STAGES.length*100)+'%)',currentStageData.label,currentStageData.color],
                   ['Tasks stage này',`${doneTasks}/${stageTasks.length} done (${stageCompletion}%)`,stageTasks.filter(t=>t.status==='In Progress').length+' đang làm','#1A56DB'],
                   ['Pending approvals',pendingApprovals.length,pendingApprovals.length?'Cần xử lý':'OK ✓',pendingApprovals.length?'#DC2626':'#059669'],
                   ['Revenue',project.revenue?Number(project.revenue).toLocaleString('vi-VN'):'—','VND','#059669'],
@@ -4825,7 +4786,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
               {/* Stage tasks summary */}
               <div style={{background:'rgba(255,255,255,0.9)',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid rgba(26,86,219,0.1)'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {currentStageData.icon} {currentStageData.label}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {currentStageData.label}</div>
                   <div style={{display:'flex',gap:8}}>
                     {stageTasks.length===0&&(
                       <button onClick={()=>initStageTasks(project.current_stage||'LEAD')} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
@@ -4939,14 +4900,14 @@ function TaskRow({task:t, onStatusChange, onEdit}) {
         {['Todo','In Progress','Review','Done','Blocked'].map(s=><option key={s}>{s}</option>)}
       </select>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:12,fontWeight:600,color:t.status==='Done'?'#94A3B8':'#0F172A',textDecoration:t.status==='Done'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-          {t.requires_approval&&<span style={{marginRight:4,fontSize:10}}>🔐</span>}
-          {t.priority==='Urgent'&&<span style={{marginRight:4,fontSize:10}}>🔥</span>}
+        <div style={{fontSize:12,fontWeight:600,color:t.status==='Done'?'#475569':'#CBD5E1',textDecoration:t.status==='Done'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+          {t.requires_approval&&<span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:4,background:'rgba(79,142,247,0.15)',color:'#4F8EF7',flexShrink:0}}>APR</span>}
+          {t.priority==='Urgent'&&<span style={{width:5,height:5,borderRadius:'50%',background:'#EF4444',flexShrink:0,display:'inline-block'}}/>}
           {t.title}
         </div>
-        <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>
-          {t.assigned_to?`👤 ${t.assigned_to}`:'Chưa assign'}
-          {t.due_date&&<span style={{marginLeft:8,color:isLate?'#DC2626':'#94A3B8'}}>📅 {t.due_date}{isLate?' ⚠️ Trễ':''}</span>}
+        <div style={{fontSize:10,color:'#475569',marginTop:1}}>
+          {t.assigned_to||'Unassigned'}
+          {t.due_date&&<span style={{marginLeft:8,color:isLate?'#EF4444':'#475569'}}>{t.due_date}{isLate?' · Late':''}</span>}
         </div>
       </div>
       <span style={{background:(PRIORITY_COLOR[t.priority]||'#94A3B8')+'15',color:PRIORITY_COLOR[t.priority]||'#94A3B8',padding:'2px 8px',borderRadius:99,fontSize:9,fontWeight:700,flexShrink:0}}>{t.priority}</span>
@@ -4974,7 +4935,7 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
           <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
             style={{padding:'6px 10px',border:'1.5px solid rgba(26,86,219,0.12)',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
             <option value="">Tất cả stages</option>
-            {STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}
+            {STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
           <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)}
             style={{padding:'6px 10px',border:'1.5px solid rgba(26,86,219,0.12)',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none'}}>
@@ -4983,7 +4944,7 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
           </select>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={onInit} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>⚡ Auto-tạo tasks</button>
+          <button onClick={onInit} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Auto-tạo tasks</button>
           <button onClick={onAdd} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>+ Task mới</button>
         </div>
       </div>
@@ -5044,7 +5005,7 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
 
   return (
     <div style={{background:'rgba(255,255,255,0.9)',borderRadius:14,padding:'18px 20px',border:'1px solid rgba(26,86,219,0.1)'}}>
-      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>🔐 Approvals — Stage {stage}</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>Approvals — Stage {stage}</div>
       {needed.map(item=>{
         const existing = approvals.find(a=>a.stage===stage&&a.approval_type===item.type)
         const isPending = existing?.status==='Pending'
@@ -5055,7 +5016,7 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
         return (
           <div key={item.type} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',marginBottom:8,background:isApproved?'rgba(5,150,105,0.06)':isRejected?'rgba(220,38,38,0.06)':isPending?'rgba(245,158,11,0.06)':'rgba(248,250,255,0.8)',borderRadius:10,border:`1px solid ${isApproved?'rgba(5,150,105,0.2)':isRejected?'rgba(220,38,38,0.2)':isPending?'rgba(245,158,11,0.2)':'rgba(26,86,219,0.1)'}`}}>
             <div>
-              <div style={{fontSize:12,fontWeight:700,color:'#0F172A'}}>{item.icon} {item.label}</div>
+              <div style={{fontSize:12,fontWeight:700,color:'#0F172A'}}>{item.label}</div>
               <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{item.desc}</div>
               {existing?.comment&&<div style={{fontSize:10,color:'#475569',marginTop:3,fontStyle:'italic'}}>"{existing.comment}"</div>}
               {existing?.reviewed_by&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>Bởi: {existing.reviewed_by} — {existing.reviewed_at?new Date(existing.reviewed_at).toLocaleDateString('vi-VN'):''}</div>}
@@ -5070,7 +5031,7 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
                   <button onClick={()=>onResolve(existing.id, false, prompt('Lý do reject:'))} style={{padding:'6px 12px',borderRadius:8,border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.06)',color:'#DC2626',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>✗ Reject</button>
                 </div>
               )}
-              {isPending&&!canResolve&&<span style={{background:'rgba(245,158,11,0.1)',color:'#D97706',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'1px solid rgba(245,158,11,0.2)'}}>⏳ Chờ duyệt</span>}
+              {isPending&&!canResolve&&<span style={{background:'rgba(245,158,11,0.1)',color:'#D97706',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'1px solid rgba(245,158,11,0.2)'}}>Chờ duyệt</span>}
               {isApproved&&<span style={{background:'rgba(5,150,105,0.1)',color:'#059669',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(5,150,105,0.2)'}}>✓ Đã duyệt</span>}
               {isRejected&&<span style={{background:'rgba(220,38,38,0.1)',color:'#DC2626',padding:'4px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(220,38,38,0.2)'}}>✗ Từ chối</span>}
             </div>
@@ -5274,7 +5235,7 @@ function TaskForm({task, project, data, onSave, onClose, currentStage}) {
             <div>
               <label style={{fontSize:11,fontWeight:700,color:'#475569',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Stage</label>
               <select value={form.stage} onChange={e=>set('stage',e.target.value)} style={INP}>
-                {STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}
+                {STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </div>
             <div>
