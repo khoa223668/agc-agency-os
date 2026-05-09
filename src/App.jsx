@@ -333,6 +333,26 @@ export default function App(){
             ::-webkit-scrollbar-track{background:transparent}
             ::-webkit-scrollbar-thumb{background:rgba(79,142,247,0.3);border-radius:99px}
           `}</style>
+          {page==='dashboard'  && <Dashboard data={data} setPage={setPage} currentUser={currentUser}/>}
+          {page==='pipeline'   && <Pipeline {...P}/>}
+          {page==='workflow'   && <WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
+          {page==='projects'   && <Projects {...P}/>}
+          {page==='pricing'    && <Pricing {...P}/>}
+          {page==='invoices'   && <Invoices {...P}/>}
+          {page==='approval'   && <Approval {...P} currentUser={currentUser}/>}
+          {page==='contracts'  && <Contracts data={data} supabase={supabase} reload={loadAll} log={log}/>}
+          {page==='bbnt'       && <AcceptanceReports data={data} supabase={supabase} reload={loadAll} log={log}/>}
+          {page==='clients'    && <Clients {...P}/>}
+          {page==='kols'       && <Kols {...P}/>}
+          {page==='vendors'    && <Vendors {...P}/>}
+          {page==='team'       && <TeamPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
+          {page==='reports'    && <Reports {...P}/>}
+          {page==='quotations' && <Quotations data={data} supabase={supabase} reload={loadAll} log={log}/>}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Dashboard({ data, setPage, currentUser }) {
   const rev = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
