@@ -253,7 +253,7 @@ export default function App() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-5">
+        <div className="flex-1 overflow-auto" style={{padding:"16px 20px"}}>
           {page==='dashboard'  && <Dashboard data={data} setPage={setPage} currentUser={currentUser}/>}
           {page==='pipeline'   && <Pipeline {...P}/>}
           {page==='workflow'   && <WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}

@@ -2,12 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body, #root { height: 100%; }
-  body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #0D0F1A; color: #F1F5F9; -webkit-font-smoothing: antialiased; }
+  body { font-family: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif; background: #0D0F1A; color: #F1F5F9; -webkit-font-smoothing: antialiased; }
 }
 
 @layer utilities {

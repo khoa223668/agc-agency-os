@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { B } from '../../theme.js'
 import { fmtS } from '../../lib/helpers.jsx'
 
 export default function Dashboard({ data, setPage, currentUser }) {
@@ -26,123 +25,134 @@ export default function Dashboard({ data, setPage, currentUser }) {
 
   const myPending = currentUser?.isMaster ? pendingAppr :
     pendingAppr.filter(a => {
-      const role = (currentUser?.role||'').toLowerCase()
+      const role = (currentUser?.role||''). toLowerCase()
       return (a.type==='Finance' && role.includes('finance')) ||
-             (a.type==='Director' && (role.includes('director')||role.includes('giám')))
+             (a.type==='Director' && (role.includes('director')||role.includes('gi\u00e1m')))
     })
 
   const kpiCards = [
-    { l:'REVENUE', v:fmtS(rev), s:'VND', c:'#00D4FF', e:'💹', pg:'reports' },
-    { l:'PROFIT',  v:fmtS(profit), s:margin+'% margin', c:'#10B981', e:'📈', pg:'reports' },
-    { l:'PROJECTS',v:active, s:data.projects.length+' tổng', c:'#8B5CF6', e:'🚀', pg:'workflow' },
-    { l:'KOL DB',  v:data.kols.length, s:'contacts', c:'#F59E0B', e:'⭐', pg:'kols' },
-    { l:'CLIENTS', v:data.clients.length, s:'active', c:'#4F8EF7', e:'🏢', pg:'clients' },
-    { l:'WIN RATE',v:wr+'%', s:won+'/'+data.deals.length+' deals', c:wr>=50?'#10B981':'#F59E0B', e:'🎯', pg:'pipeline' },
+    { label:'Total Revenue', value:fmtS(rev), sub:'VND', color:'#00D4FF', trend:'+0%' },
+    { label:'Net Profit', value:fmtS(profit), sub:margin+'% margin', color:'#10B981', trend:'+0%' },
+    { label:'Active Projects', value:active, sub:data.projects.length+' total', color:'#8B5CF6', trend:'' },
+    { label:'KOL Database', value:data.kols.length, sub:'contacts', color:'#F59E0B', trend:'' },
+    { label:'Clients', value:data.clients.length, sub:'active', color:'#4F8EF7', trend:'' },
+    { label:'Win Rate', value:wr+'%', sub:won+'/'+data.deals.length+' deals', color:wr>=50?'#10B981':'#F59E0B', trend:'' },
   ]
 
-  const stages = [
-    ['LEAD','🎯','#64748B'],['BRIEF','📋','#3B82F6'],['PROPOSAL','💡','#8B5CF6'],
-    ['PRICING','💰','#F59E0B'],['CONTRACT','📝','#00D4FF'],['EXECUTION','🚀','#10B981'],['PAYMENT','💳','#4F8EF7'],
+  const stageData = [
+    ['LEAD','#64748B'],['BRIEF','#3B82F6'],['PROPOSAL','#8B5CF6'],
+    ['PRICING','#F59E0B'],['CONTRACT','#00D4FF'],['EXECUTION','#10B981'],['PAYMENT','#4F8EF7'],
   ]
 
   return (
-    <div className="animate-fade-in">
-      {/* Greeting */}
-      <div className="flex justify-between items-start mb-6">
+    <div style={{width:'100%',fontFamily:"'Inter','Plus Jakarta Sans',sans-serif"}}>
+
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
         <div>
-          <p className="text-slate-500 text-sm font-medium mb-1">{greeting},</p>
-          <h1 className="text-3xl font-black text-slate-100 tracking-tight">
-            {firstName} <span className="gradient-text">Make Things Simple!</span>
-          </h1>
-          <p className="text-slate-600 text-xs mt-2">
+          <div style={{fontSize:11,color:'#475569',fontWeight:500,marginBottom:4,letterSpacing:'0.04em',textTransform:'uppercase'}}>{greeting}</div>
+          <div style={{fontSize:26,fontWeight:800,color:'#F1F5F9',letterSpacing:'-0.03em',lineHeight:1.2}}>
+            {firstName},{' '}
+            <span style={{background:'linear-gradient(135deg,#4F8EF7,#00D4FF)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+              Welcome back.
+            </span>
+          </div>
+          <div style={{fontSize:11,color:'#334155',marginTop:5}}>
             {now.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
-          </p>
+            {'  ·  '}{data.projects.filter(p=>p.status==='Active').length} active projects
+          </div>
         </div>
         {myPending.length > 0 && (
-          <button onClick={() => setPage('approval')}
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/15 transition-all cursor-pointer">
-            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center text-lg">⚡</div>
-            <div className="text-left">
-              <div className="text-red-300 font-bold text-sm">{myPending.length} Approvals pending</div>
-              <div className="text-red-400/60 text-xs mt-0.5">Click để xử lý ngay</div>
-            </div>
+          <button onClick={() => setPage('approval')} style={{
+            display:'flex',alignItems:'center',gap:10,
+            padding:'10px 16px',borderRadius:10,cursor:'pointer',
+            background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',
+            fontFamily:"'Inter',sans-serif",transition:'all 0.15s'
+          }}>
+            <div style={{width:6,height:6,borderRadius:'50%',background:'#EF4444',boxShadow:'0 0 6px rgba(239,68,68,0.8)'}}/>
+            <span style={{fontSize:12,fontWeight:600,color:'#FCA5A5'}}>{myPending.length} pending approval{myPending.length>1?'s':''}</span>
           </button>
         )}
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-6 gap-3 mb-5">
-        {kpiCards.map(({l,v,s,c,e,pg}) => (
-          <div key={l} onClick={() => setPage(pg)}
-            className="glass rounded-2xl p-4 cursor-pointer hover:scale-[1.02] transition-all relative overflow-hidden group"
-            style={{borderColor: c+'20'}}>
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{background:`radial-gradient(circle at 80% 20%,${c}08,transparent 60%)`}}/>
-            <div className="absolute top-0 left-0 right-0 h-0.5"
-              style={{background:`linear-gradient(90deg,${c},transparent)`}}/>
-            <div className="text-xl mb-2">{e}</div>
-            <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{color:c}}>{l}</div>
-            <div className="text-2xl font-black text-slate-100">{v}</div>
-            <div className="text-xs text-slate-600 mt-1">{s}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:10,marginBottom:16}}>
+        {kpiCards.map(({label,value,sub,color,trend}) => (
+          <div key={label} style={{
+            background:'rgba(255,255,255,0.03)',
+            border:'1px solid rgba(255,255,255,0.06)',
+            borderRadius:12,padding:'16px 14px',
+            position:'relative',overflow:'hidden',
+            transition:'border-color 0.2s,transform 0.2s',cursor:'default'
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=color+'40';e.currentTarget.style.transform='translateY(-1px)'}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.06)';e.currentTarget.style.transform='translateY(0)'}}>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${color},transparent)`}}/>
+            <div style={{fontSize:9,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{label}</div>
+            <div style={{fontSize:22,fontWeight:800,color:'#F1F5F9',letterSpacing:'-0.02em',lineHeight:1}}>{value}</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:6}}>
+              <span style={{fontSize:10,color:'#475569'}}>{sub}</span>
+              {trend&&<span style={{fontSize:9,color:'#10B981',fontWeight:600}}>{trend}</span>}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        {/* Revenue Chart - 2/3 width */}
-        <div className="col-span-2 glass rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-5">
+      <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:12,marginBottom:12}}>
+        {/* Revenue Chart */}
+        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:12,padding:'18px 20px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
             <div>
-              <h3 className="font-black text-slate-100">Revenue Overview 2026</h3>
-              <p className="text-slate-600 text-xs mt-0.5">Monthly breakdown · VND</p>
+              <div style={{fontSize:13,fontWeight:700,color:'#F1F5F9',letterSpacing:'-0.01em'}}>Revenue Overview</div>
+              <div style={{fontSize:10,color:'#334155',marginTop:2}}>2026 · Monthly · VND</div>
             </div>
-            <div className="flex gap-2">
-              {[['Total',fmtS(rev),'#00D4FF'],['This month',fmtS(byM[now.getMonth()]),'#8B5CF6'],['Avg',fmtS(Math.round(rev/12)),'#10B981']].map(([l,v,c]) => (
-                <div key={l} className="text-center px-3 py-1.5 rounded-lg" style={{background:c+'12',border:`1px solid ${c}20`}}>
-                  <div className="text-xs font-bold uppercase tracking-wider" style={{color:c}}>{l}</div>
-                  <div className="text-xs font-black text-slate-200 mt-0.5">{v}</div>
+            <div style={{display:'flex',gap:6}}>
+              {[['Total',fmtS(rev),'#00D4FF'],['This month',fmtS(byM[now.getMonth()]),'#8B5CF6'],['Avg',fmtS(Math.round(rev/12)),'#10B981']].map(([l,v,c])=>(
+                <div key={l} style={{textAlign:'center',padding:'5px 10px',borderRadius:7,background:c+'10',border:`1px solid ${c}20`}}>
+                  <div style={{fontSize:8,color:c,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em'}}>{l}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#F1F5F9',marginTop:1}}>{v}</div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="flex items-end gap-1.5 h-32">
+          <div style={{display:'flex',alignItems:'flex-end',gap:3,height:110}}>
             {months.map((m,i) => {
-              const h = byM[i] ? Math.max(10, Math.round(byM[i]/maxM*100)) : 4
+              const h = byM[i] ? Math.max(8, Math.round(byM[i]/maxM*100)) : 3
               const isNow = i === now.getMonth()
               const isPast = i < now.getMonth()
               return (
-                <div key={m} className="flex-1 flex flex-col items-center gap-1.5">
-                  <div className="w-full rounded-t-md transition-all" style={{
-                    height: h+'%', minHeight:4,
-                    background: isNow ? 'linear-gradient(180deg,#00D4FF,#4F8EF7)' : isPast && byM[i]>0 ? 'rgba(79,142,247,0.3)' : 'rgba(255,255,255,0.04)',
-                    boxShadow: isNow ? '0 0 16px rgba(0,212,255,0.4)' : 'none',
-                    border: isNow ? '1px solid rgba(0,212,255,0.3)' : 'none',
+                <div key={m} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                  <div style={{
+                    width:'100%',borderRadius:'3px 3px 1px 1px',minHeight:3,
+                    height:h+'%',
+                    background: isNow ? 'linear-gradient(180deg,#00D4FF,#4F8EF7)' : isPast&&byM[i]>0 ? 'rgba(79,142,247,0.25)' : 'rgba(255,255,255,0.04)',
+                    boxShadow: isNow ? '0 0 12px rgba(0,212,255,0.35)' : 'none',
                   }}/>
-                  <div className="text-xs font-medium" style={{color: isNow ? '#00D4FF' : '#334155', fontSize:'0.55rem'}}>{m}</div>
+                  <div style={{fontSize:8,color:isNow?'#00D4FF':'#2D3748',fontWeight:isNow?700:400}}>{m}</div>
                 </div>
               )
             })}
           </div>
         </div>
 
-        {/* Pipeline Stages */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-slate-100 text-sm">Project Pipeline</h3>
-            <button onClick={() => setPage('workflow')} className="text-xs font-semibold" style={{color:'#00D4FF',background:'none',border:'none',cursor:'pointer'}}>View all →</button>
+        {/* Pipeline */}
+        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:12,padding:'18px 18px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#F1F5F9'}}>Project Pipeline</div>
+            <button onClick={()=>setPage('workflow')} style={{fontSize:10,color:'#4F8EF7',background:'none',border:'none',cursor:'pointer',fontFamily:"'Inter',sans-serif",fontWeight:500}}>View all →</button>
           </div>
-          {stages.map(([stage,icon,c]) => {
+          {stageData.map(([stage,c]) => {
             const cnt = data.projects.filter(p => (p.current_stage||'LEAD')===stage).length
             const pct = data.projects.length ? Math.round(cnt/data.projects.length*100) : 0
             return (
-              <div key={stage} className="mb-2.5">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-500">{icon} {stage}</span>
-                  <span className="font-bold" style={{color:c}}>{cnt}</span>
+              <div key={stage} style={{marginBottom:9}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                  <span style={{fontSize:10,color:'#475569',fontWeight:500,letterSpacing:'0.02em'}}>{stage}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:cnt>0?c:'#334155'}}>{cnt}</span>
                 </div>
-                <div className="h-1 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.05)'}}>
-                  <div className="h-full rounded-full transition-all" style={{width:pct+'%',background:c,boxShadow:cnt>0?`0 0 6px ${c}60`:'none'}}/>
+                <div style={{height:3,background:'rgba(255,255,255,0.05)',borderRadius:99,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:pct+'%',background:c,borderRadius:99,transition:'width 0.5s ease'}}/>
                 </div>
               </div>
             )
@@ -151,87 +161,90 @@ export default function Dashboard({ data, setPage, currentUser }) {
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
         {/* Active Projects */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-slate-100 text-sm">Active Projects</h3>
-            <button onClick={() => setPage('workflow')} className="text-xs font-semibold" style={{color:'#00D4FF',background:'none',border:'none',cursor:'pointer'}}>Workflow →</button>
+        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:12,padding:'16px 18px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#F1F5F9'}}>Active Projects</div>
+            <button onClick={()=>setPage('workflow')} style={{fontSize:10,color:'#4F8EF7',background:'none',border:'none',cursor:'pointer',fontWeight:500,fontFamily:"'Inter',sans-serif"}}>Workflow →</button>
           </div>
           {data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status||p.current_stage||'')).slice(0,4).map(p => (
-            <div key={p.id} className="flex justify-between items-center py-2" style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-              <div className="flex-1 min-w-0 mr-3">
-                <div className="font-semibold text-xs text-slate-300 truncate">{p.campaign||'—'}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"/>
-                  <div className="text-slate-500" style={{fontSize:'0.6rem'}}>{p.client||'—'}</div>
+            <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+              <div style={{flex:1,minWidth:0,marginRight:8}}>
+                <div style={{fontWeight:600,fontSize:12,color:'#CBD5E1',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'—'}</div>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginTop:2}}>
+                  <div style={{width:4,height:4,borderRadius:'50%',background:'#10B981'}}/>
+                  <div style={{fontSize:10,color:'#475569'}}>{p.client||'—'}</div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-xs font-bold" style={{color:'#00D4FF'}}>{p.revenue ? fmtS(Number(p.revenue)) : '-'}</div>
-                <div className="text-emerald-500 font-semibold mt-0.5" style={{fontSize:'0.6rem'}}>{p.current_stage||p.status||'—'}</div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#00D4FF'}}>{p.revenue?fmtS(Number(p.revenue)):'-'}</div>
+                <div style={{fontSize:9,color:'#10B981',fontWeight:600,marginTop:1,textTransform:'uppercase',letterSpacing:'0.03em'}}>{p.current_stage||p.status||'—'}</div>
               </div>
             </div>
           ))}
           {!data.projects.filter(p => p.status==='Active').length &&
-            <p className="text-slate-600 text-xs text-center py-5">Chưa có dự án active</p>}
+            <div style={{textAlign:'center',padding:'18px 0',color:'#2D3748',fontSize:11}}>No active projects</div>}
         </div>
 
-        {/* Overdue */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-slate-100 text-sm">Công nợ quá hạn</h3>
-            <button onClick={() => setPage('invoices')} className="text-xs font-semibold" style={{color:'#00D4FF',background:'none',border:'none',cursor:'pointer'}}>Chi tiết →</button>
+        {/* Overdue Invoices */}
+        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:12,padding:'16px 18px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#F1F5F9'}}>Outstanding Invoices</div>
+            <button onClick={()=>setPage('invoices')} style={{fontSize:10,color:'#4F8EF7',background:'none',border:'none',cursor:'pointer',fontWeight:500,fontFamily:"'Inter',sans-serif"}}>View →</button>
           </div>
           {overdue.slice(0,4).map(inv => (
-            <div key={inv.id} className="flex justify-between items-center py-2" style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+            <div key={inv.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
               <div>
-                <div className="text-xs font-semibold text-slate-300">{inv.client}</div>
-                <div className="text-red-400 mt-0.5" style={{fontSize:'0.6rem'}}>Quá hạn</div>
+                <div style={{fontSize:12,fontWeight:600,color:'#CBD5E1'}}>{inv.client}</div>
+                <div style={{fontSize:10,color:'#EF4444',marginTop:1,fontWeight:500}}>Overdue</div>
               </div>
-              <span className="text-sm font-black text-red-300">{fmtS(Number(inv.amount)-Number(inv.paid||0))}</span>
+              <span style={{fontSize:12,fontWeight:700,color:'#FCA5A5'}}>{fmtS(Number(inv.amount)-Number(inv.paid||0))}</span>
             </div>
           ))}
           {!overdue.length && (
-            <div className="text-center py-5">
-              <div className="text-2xl mb-2">🎉</div>
-              <p className="text-emerald-500 text-xs font-semibold">Không có công nợ quá hạn</p>
+            <div style={{textAlign:'center',padding:'18px 0'}}>
+              <div style={{fontSize:11,color:'#10B981',fontWeight:600'}}>All invoices cleared</div>
+              <div style={{fontSize:10,color:'#334155',marginTop:2}}>No outstanding payments</div>
             </div>
           )}
         </div>
 
-        {/* Pending Approvals */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-slate-100 text-sm">
-              {currentUser?.isMaster ? 'All Approvals' : 'Approvals của bạn'}
-            </h3>
-            <button onClick={() => setPage('approval')} className="text-xs font-semibold" style={{color:'#00D4FF',background:'none',border:'none',cursor:'pointer'}}>Xử lý →</button>
+        {/* Approvals & Actions */}
+        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:12,padding:'16px 18px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#F1F5F9'}}>{currentUser?.isMaster ? 'Approval Queue' : 'My Approvals'}</div>
+            <button onClick={()=>setPage('approval')} style={{fontSize:10,color:'#4F8EF7',background:'none',border:'none',cursor:'pointer',fontWeight:500,fontFamily:"'Inter',sans-serif"}}>Review →</button>
           </div>
-          {myPending.length === 0 && (
-            <div className="text-center py-5">
-              <div className="text-2xl mb-2">✅</div>
-              <p className="text-emerald-500 text-xs font-semibold">Queue trống</p>
-              {!currentUser?.isMaster && pendingAppr.length > 0 &&
-                <p className="text-slate-600 text-xs mt-1">Không có approval nào cần bạn xử lý</p>}
-            </div>
-          )}
-          {myPending.slice(0,4).map(a => (
-            <div key={a.id} className="py-2" style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-              <div className="text-xs font-semibold text-slate-300 truncate">{a.title||a.type||'Approval'}</div>
-              <div className="flex justify-between items-center mt-1">
-                <span className="text-slate-600" style={{fontSize:'0.6rem'}}>{a.created_at?.slice(0,10)||'—'}</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Pending</span>
+
+          {myPending.length === 0 ? (
+            <div style={{textAlign:'center',padding:'14px 0'}}>
+              <div style={{fontSize:11,color:'#10B981',fontWeight:600'}}>Queue clear</div>
+              <div style={{fontSize:10,color:'#334155',marginTop:2}}>
+                {!currentUser?.isMaster && pendingAppr.length > 0 ? 'Nothing requires your action' : 'No pending approvals'}
               </div>
             </div>
-          ))}
-          <div className="grid grid-cols-2 gap-2 mt-4 pt-3" style={{borderTop:'1px solid rgba(255,255,255,0.04)'}}>
-            {[{l:'+ Báo giá',p:'quotations',c:'#F59E0B'},{l:'Workflow',p:'workflow',c:'#10B981'}].map(({l,p,c}) => (
-              <button key={p} onClick={() => setPage(p)}
-                className="py-2 rounded-lg text-xs font-bold transition-all"
-                style={{border:`1px solid ${c}25`,background:c+'10',color:c,fontFamily:"'Plus Jakarta Sans',sans-serif",cursor:'pointer'}}>
-                {l}
-              </button>
+          ) : (
+            myPending.slice(0,3).map(a => (
+              <div key={a.id} style={{padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+                  <div style={{fontSize:11,fontWeight:600,color:'#CBD5E1',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.title||a.type||'Approval'}</div>
+                  <span style={{flexShrink:0,fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:99,background:'rgba(245,158,11,0.1)',color:'#F59E0B',border:'1px solid rgba(245,158,11,0.2)'}}>PENDING</span>
+                </div>
+                <div style={{fontSize:10,color:'#334155',marginTop:2}}>{a.created_at?.slice(0,10)||'—'}</div>
+              </div>
+            ))
+          )}
+
+          {/* Quick actions */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginTop:12,paddingTop:10,borderTop:'1px solid rgba(255,255,255,0.04)'}}>
+            {[['New Quote','quotations','#F59E0B'],['New KOL','kols','#8B5CF6'],['New Project','projects','#4F8EF7'],['Workflow','workflow','#10B981']].map(([l,pg,c]) => (
+              <button key={pg} onClick={() => setPage(pg)} style={{
+                padding:'7px 8px',borderRadius:7,
+                border:`1px solid ${c}20`,background:c+'0A',
+                color:c,cursor:'pointer',fontSize:10,fontWeight:600,
+                fontFamily:"'Inter',sans-serif",letterSpacing:'0.01em'
+              }}>{l}</button>
             ))}
           </div>
         </div>
