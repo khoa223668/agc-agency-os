@@ -324,7 +324,7 @@ export default function App(){
         </div>
         {/* Content */}
         <div style={{flex:1,overflow:'auto',padding:'18px 22px'}}>
-          <style>{\`
+          <style>{`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
             * { box-sizing: border-box; }
             body { margin:0; padding:0; font-family:'Inter',system-ui,sans-serif; }
@@ -332,11 +332,9 @@ export default function App(){
             ::-webkit-scrollbar{width:4px;height:4px}
             ::-webkit-scrollbar-track{background:transparent}
             ::-webkit-scrollbar-thumb{background:rgba(79,142,247,0.3);border-radius:99px}
-          \`}</style>
+          `}</style>
 
-import { fmtS } from '../../lib/helpers.jsx'
-
-export default function Dashboard({ data, setPage, currentUser }) {
+function Dashboard({ data, setPage, currentUser }) {
   const rev = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
   const cost = data.projects.reduce((a,p) => a + Number(p.actual_cost||0), 0)
   const profit = rev - cost
