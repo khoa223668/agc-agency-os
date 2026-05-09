@@ -14,6 +14,7 @@ const B = {
   glassBorder: 'rgba(255,255,255,0.07)',
   gradPrimary: 'linear-gradient(135deg,#4F8EF7,#00D4FF)',
   gradSoft: 'rgba(79,142,247,0.08)',
+  gradCard: 'rgba(255,255,255,0.04)',
   text: '#F1F5F9',
   textSec: '#94A3B8',
   textTer: '#475569',
@@ -101,6 +102,26 @@ function Logo({size=36}){
   </div>
 }
 
+function NavIco({id,size=14,col='currentColor'}){
+  const p={width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:col,strokeWidth:1.75,strokeLinecap:'round',strokeLinejoin:'round'}
+  if(id==='dashboard')return<svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+  if(id==='pipeline')return<svg {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  if(id==='workflow')return<svg {...p}><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.64 5.64l2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/></svg>
+  if(id==='projects')return<svg {...p}><path d="M2 7a2 2 0 012-2h4l2 2h10a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg>
+  if(id==='pricing')return<svg {...p}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+  if(id==='invoices')return<svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+  if(id==='approval')return<svg {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+  if(id==='contracts')return<svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+  if(id==='bbnt')return<svg {...p}><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+  if(id==='clients')return<svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+  if(id==='kols')return<svg {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+  if(id==='vendors')return<svg {...p}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  if(id==='team')return<svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+  if(id==='reports')return<svg {...p}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  if(id==='quotations')return<svg {...p}><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="9" y2="15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
+  return<svg {...p}><circle cx="12" cy="12" r="4"/></svg>
+}
+
 // Stat card with gradient accent
 function StatCard({label,value,sub,color,icon}){
   return <div style={{background:B.gradCard,backdropFilter:'blur(20px)',border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.04)'}}>
@@ -152,21 +173,21 @@ export default function App(){
   async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
 
   const NAV=[
-    {id:'dashboard',label:'Dashboard',icon:'⬡',grp:'OVERVIEW'},
-    {id:'pipeline',label:'Deal Pipeline',icon:'◈',grp:'OVERVIEW'},
-    {id:'workflow',label:'Công việc',icon:'⚡',grp:'OVERVIEW'},
-    {id:'projects',label:'Dự án',icon:'◉',grp:'OPERATIONS'},
-    {id:'pricing',label:'Pricing Engine',icon:'◎',grp:'OPERATIONS'},
-    {id:'invoices',label:'Hóa đơn',icon:'▤',grp:'OPERATIONS'},
-    {id:'approval',label:'Approvals',icon:'✦',grp:'OPERATIONS'},
-    {id:'contracts',label:'Hợp đồng',icon:'📋',grp:'LEGAL'},
-    {id:'bbnt',label:'Biên bản NT',icon:'✅',grp:'LEGAL'},
-    {id:'clients',label:'Clients',icon:'◑',grp:'DATA'},
-    {id:'kols',label:'KOL / KOC',icon:'◐',grp:'DATA'},
-    {id:'vendors',label:'Vendors',icon:'◫',grp:'DATA'},
-    {id:'team',label:'Team',icon:'◒',grp:'DATA'},
-    {id:'reports',label:'Analytics',icon:'▨',grp:'INSIGHTS'},
-    {id:'quotations',label:'Báo giá',icon:'💰',grp:'INSIGHTS'},
+    {id:'dashboard',label:'Dashboard',grp:'OVERVIEW'},
+    {id:'pipeline',label:'Deal Pipeline',grp:'OVERVIEW'},
+    {id:'workflow',label:'Công việc',grp:'OVERVIEW'},
+    {id:'projects',label:'Dự án',grp:'OPERATIONS'},
+    {id:'pricing',label:'Pricing Engine',grp:'OPERATIONS'},
+    {id:'invoices',label:'Hóa đơn',grp:'OPERATIONS'},
+    {id:'approval',label:'Approvals',grp:'OPERATIONS'},
+    {id:'contracts',label:'Hợp đồng',grp:'LEGAL'},
+    {id:'bbnt',label:'Biên bản NT',grp:'LEGAL'},
+    {id:'clients',label:'Clients',grp:'DATA'},
+    {id:'kols',label:'KOL / KOC',grp:'DATA'},
+    {id:'vendors',label:'Vendors',grp:'DATA'},
+    {id:'team',label:'Team',grp:'DATA'},
+    {id:'reports',label:'Analytics',grp:'INSIGHTS'},
+    {id:'quotations',label:'Báo giá',grp:'INSIGHTS'},
   ]
   const pending=data.approvals.filter(a=>a.status==='Pending').length
   const overdue=data.invoices.filter(i=>i.status==='Overdue').length
@@ -177,7 +198,6 @@ export default function App(){
   const P={data,add,upd,del,log,reload:loadAll,supabase}
   const visibleNAV = currentUser?.isMaster ? NAV : NAV.filter(n=>canAccess(n.id))
   const groups=[...new Set(visibleNAV.map(n=>n.grp))]
-  const pending=data.approvals.filter(a=>a.status==='Pending').length
 
   if(loading)return(
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:20,background:'#0D0F1A',fontFamily:"'Inter',system-ui,sans-serif"}}>
@@ -230,7 +250,7 @@ export default function App(){
         {!sidebarCollapsed&&(
           <div style={{padding:'10px 10px 6px'}}>
             <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',background:'rgba(255,255,255,0.04)',borderRadius:9,border:'1px solid rgba(255,255,255,0.07)'}}>
-              <span style={{fontSize:12,color:'#475569'}}>🔍</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <span style={{fontSize:11,color:'#475569'}}>Search...</span>
             </div>
           </div>
@@ -250,11 +270,11 @@ export default function App(){
                     onMouseEnter={e=>{if(!active)e.currentTarget.style.background='rgba(255,255,255,0.05)'}}
                     onMouseLeave={e=>{if(!active)e.currentTarget.style.background='transparent'}}>
                     {active&&<div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:'linear-gradient(180deg,#4F8EF7,#00D4FF)',borderRadius:'0 3px 3px 0',boxShadow:'0 0 8px rgba(0,212,255,0.5)'}}/>}
-                    <div style={{width:30,height:30,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:14,
-                      background:active?'linear-gradient(135deg,rgba(79,142,247,0.25),rgba(0,212,255,0.15))':'transparent',
-                      border:active?'1px solid rgba(79,142,247,0.3)':'1px solid transparent',
-                      boxShadow:active?'0 0 10px rgba(79,142,247,0.2)':'none'}}>
-                      {n.icon}
+                    <div style={{width:30,height:30,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
+                      background:active?'linear-gradient(135deg,rgba(79,142,247,0.18),rgba(0,212,255,0.1))':'transparent',
+                      border:active?'1px solid rgba(79,142,247,0.25)':'1px solid transparent',
+                      boxShadow:active?'0 0 10px rgba(79,142,247,0.15)':'none'}}>
+                      <NavIco id={n.id} size={14} col={active?'#4F8EF7':'#475569'}/>
                     </div>
                     {!sidebarCollapsed&&<span style={{fontSize:11.5,fontWeight:active?700:500,color:active?'#F1F5F9':'#475569',whiteSpace:'nowrap'}}>{n.label}</span>}
                     {!sidebarCollapsed&&n.id==='approval'&&pending>0&&(
@@ -284,7 +304,9 @@ export default function App(){
                 <div style={{fontSize:11.5,fontWeight:700,color:'#F1F5F9',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'}</div>
                 <div style={{fontSize:9,color:'#00D4FF',fontWeight:600,marginTop:1}}>{currentUser?.isMaster?'● Premium member':'● Staff'}</div>
               </div>
-              <button onClick={handleLogout} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',fontSize:15,padding:3,borderRadius:5,lineHeight:1}}>⏏</button>
+              <button onClick={handleLogout} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',padding:4,borderRadius:6,lineHeight:1,display:'flex',alignItems:'center'}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              </button>
             </div>
           )}
         </div>
@@ -300,16 +322,16 @@ export default function App(){
         {/* Topbar */}
         <div style={{height:52,borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',background:'rgba(13,15,26,0.85)',backdropFilter:'blur(20px)',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:11,color:'#334155',cursor:'pointer'}} onClick={()=>setPage('dashboard')}>🏠 Home</span>
-            <span style={{fontSize:11,color:'#334155'}}>›</span>
+            <span style={{fontSize:11,color:'#475569',cursor:'pointer',fontWeight:500}} onClick={()=>setPage('dashboard')}>Home</span>
+            <span style={{fontSize:11,color:'#334155',margin:'0 4px'}}>›</span>
             <span style={{fontSize:11,fontWeight:700,color:'#4F8EF7'}}>{visibleNAV.find(n=>n.id===page)?.label||NAV.find(n=>n.id===page)?.label||'Dashboard'}</span>
-            <span style={{fontSize:11,color:'#334155'}}>›</span>
-            <span style={{fontSize:11,color:'#475569'}}>📅 {new Date().toLocaleDateString('vi-VN',{day:'numeric',month:'short',year:'numeric'})}</span>
+            <span style={{fontSize:11,color:'#334155',margin:'0 4px'}}>›</span>
+            <span style={{fontSize:11,color:'#334155'}}>{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15}} onClick={()=>setPage('approval')}>
-              🔔
-              {pending>0&&<div style={{position:'absolute',top:5,right:5,width:7,height:7,borderRadius:'50%',background:'#EF4444',boxShadow:'0 0 5px rgba(239,68,68,0.8)'}}/>}
+            <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setPage('approval')}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              {pending>0&&<div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:'#EF4444',boxShadow:'0 0 5px rgba(239,68,68,0.8)'}}/>}
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)'}}>
               <div style={{width:24,height:24,borderRadius:7,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#4F8EF7'},#00D4FF)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:800}}>
@@ -323,7 +345,7 @@ export default function App(){
           </div>
         </div>
         {/* Content */}
-        <div style={{flex:1,overflow:'auto',padding:'18px 22px'}}>
+        <div style={{flex:1,overflow:'auto',padding:'16px 20px'}}>
           <style>{`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
             * { box-sizing: border-box; }
@@ -385,17 +407,20 @@ function Dashboard({ data, setPage, currentUser }) {
 
   const S = {
     card: {
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: 12,
+      background: 'rgba(255,255,255,0.04)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 14,
+      boxShadow: '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)',
     },
-    text: { primary: '#F1F5F9, secondary: '#94A3B8, muted: '#475569, dim: '#334155' },
+    text: { primary: '#F1F5F9', secondary: '#94A3B8', muted: '#475569', dim: '#334155' },
     cyan: '#00D4FF',
-    blue: '#4F8EF7,
-    green: '#10B981,
+    blue: '#4F8EF7',
+    green: '#10B981',
     yellow: '#F59E0B',
-    red: '#EF4444,
-    purple: '#8B5CF6,
+    red: '#EF4444',
+    purple: '#8B5CF6',
   }
 
   const kpiCards = [
@@ -456,8 +481,8 @@ function Dashboard({ data, setPage, currentUser }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 16 }}>
         {kpiCards.map(({ label, value, sub, color }) => (
           <div key={label} style={{ ...S.card, padding: '16px 14px', position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, transform 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = color + '40'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)' }}>
+            onMouseEnter={e => { e.currentTarget.style.borderColor = color+'40'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${color}18, inset 0 1px 0 rgba(255,255,255,0.05)` }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${color},transparent)` }} />
             <div style={{ fontSize: 9, fontWeight: 700, color: S.text.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               {label}
@@ -471,7 +496,7 @@ function Dashboard({ data, setPage, currentUser }) {
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 260px', gap: 12, marginBottom: 12 }}>
 
         {/* Revenue Chart */}
         <div style={{ ...S.card, padding: '18px 20px' }}>
@@ -482,7 +507,7 @@ function Dashboard({ data, setPage, currentUser }) {
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {[['Total', fmtS(rev), S.cyan], ['This month', fmtS(byM[now.getMonth()]), S.purple], ['Avg', fmtS(Math.round(rev/12)), S.green]].map(([l, v, c]) => (
-                <div key={l} style={{ textAlign: 'center', padding: '5px 10px', borderRadius: 7, background: c + '10, border: `1px solid ${c}20` }}>
+                <div key={l} style={{ textAlign: 'center', padding: '5px 10px', borderRadius: 7, background: c + '10', border: `1px solid ${c}20` }}>
                   <div style={{ fontSize: 8, color: c, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: S.text.primary, marginTop: 1 }}>{v}</div>
                 </div>
@@ -501,7 +526,7 @@ function Dashboard({ data, setPage, currentUser }) {
                     background: isNow ? 'linear-gradient(180deg,#00D4FF,#4F8EF7)' : isPast && byM[i] > 0 ? 'rgba(79,142,247,0.25)' : 'rgba(255,255,255,0.04)',
                     boxShadow: isNow ? '0 0 12px rgba(0,212,255,0.35)' : 'none',
                   }} />
-                  <div style={{ fontSize: 8, color: isNow ? S.cyan : '#2D3748, fontWeight: isNow ? 700 : 400 }}>{m}</div>
+                  <div style={{ fontSize: 8, color: isNow ? S.cyan : '#475569', fontWeight: isNow ? 700 : 400 }}>{m}</div>
                 </div>
               )
             })}
@@ -535,7 +560,7 @@ function Dashboard({ data, setPage, currentUser }) {
       </div>
 
       {/* Bottom Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'start' }}>
 
         {/* Active Projects */}
         <div style={{ ...S.card, padding: '16px 18px' }}>
@@ -546,9 +571,9 @@ function Dashboard({ data, setPage, currentUser }) {
             </button>
           </div>
           {data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).slice(0, 4).map(p => (
-            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: '#CBD5E1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontWeight: 600, fontSize: 12, color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.campaign || '—'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
@@ -567,7 +592,7 @@ function Dashboard({ data, setPage, currentUser }) {
             </div>
           ))}
           {!data.projects.filter(p => p.status === 'Active').length && (
-            <div style={{ textAlign: 'center', padding: '18px 0, color: S.text.dim, fontSize: 11 }}>No active projects</div>
+            <div style={{ textAlign: 'center', padding: '18px 0', color: S.text.dim, fontSize: 11 }}>No active projects</div>
           )}
         </div>
 
@@ -580,7 +605,7 @@ function Dashboard({ data, setPage, currentUser }) {
             </button>
           </div>
           {overdue.slice(0, 4).map(inv => (
-            <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#CBD5E1' }}>{inv.client}</div>
                 <div style={{ fontSize: 10, color: S.red, marginTop: 1, fontWeight: 500 }}>Overdue</div>
@@ -618,9 +643,9 @@ function Dashboard({ data, setPage, currentUser }) {
             </div>
           ) : (
             myPending.slice(0, 3).map(a => (
-              <div key={a.id} style={{ padding: '8px 0, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#CBD5E1, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#CBD5E1', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.title || a.type || 'Approval'}
                   </div>
                   <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.1)', color: S.yellow, border: '1px solid rgba(245,158,11,0.2)' }}>
