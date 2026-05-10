@@ -130,6 +130,71 @@ function StatCard({label,value,sub,color,icon}){
   </div>
 }
 
+// ── Date filter & sort shared utilities ──────────────────────
+function applyDateFilter(items, dateField, from, to) {
+  if (!from && !to) return items
+  const f = from ? new Date(from) : null
+  const t = to ? new Date(to + 'T23:59:59') : null
+  return items.filter(item => {
+    const raw = item[dateField]; if (!raw) return false
+    const d = new Date(raw)
+    if (f && d < f) return false
+    if (t && d > t) return false
+    return true
+  })
+}
+
+function getPresetDates(key) {
+  const now = new Date(), today = now.toISOString().slice(0,10)
+  if (key==='today') return {from:today,to:today}
+  if (key==='7d') {const d=new Date(now);d.setDate(d.getDate()-6);return{from:d.toISOString().slice(0,10),to:today}}
+  if (key==='30d') {const d=new Date(now);d.setDate(d.getDate()-29);return{from:d.toISOString().slice(0,10),to:today}}
+  if (key==='month') return{from:new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10),to:today}
+  if (key==='quarter') {const q=Math.floor(now.getMonth()/3);return{from:new Date(now.getFullYear(),q*3,1).toISOString().slice(0,10),to:today}}
+  if (key==='year') return{from:now.getFullYear()+'-01-01',to:today}
+  return {from:'',to:''}
+}
+
+function applySortDate(items, sort) {
+  if (!sort?.field) return items
+  return [...items].sort((a,b)=>{
+    const av=a[sort.field]||'', bv=b[sort.field]||''
+    const cmp=av<bv?-1:av>bv?1:0
+    return sort.dir==='asc'?cmp:-cmp
+  })
+}
+
+function DateFilterBar({from,setFrom,to,setTo,extra}) {
+  const [active,setActive]=useState('')
+  const presets=[['Hôm nay','today'],['7 ngày','7d'],['30 ngày','30d'],['Tháng này','month'],['Quý này','quarter'],['Năm nay','year']]
+  function applyPreset(key){setActive(key);const{from:f,to:t}=getPresetDates(key);setFrom(f);setTo(t)}
+  function clear(){setActive('');setFrom('');setTo('')}
+  const ds={...INP.style,padding:'5px 10px',fontSize:12,width:130}
+  const as={border:`1px solid ${B.primary}`,background:B.primary,color:'#fff'}
+  const is={border:`1px solid ${B.border}`,background:'transparent',color:B.textSec}
+  return(
+    <div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
+      {extra}
+      <input type="date" value={from} onChange={e=>{setFrom(e.target.value);setActive('')}} style={ds}/>
+      <span style={{fontSize:10,color:B.textTer,fontWeight:700}}>–</span>
+      <input type="date" value={to} onChange={e=>{setTo(e.target.value);setActive('')}} style={ds}/>
+      {presets.map(([label,key])=>(
+        <button key={key} onClick={()=>applyPreset(key)} style={{padding:'5px 10px',borderRadius:7,cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Inter',sans-serif",transition:'all 0.15s',...(active===key?as:is)}}>{label}</button>
+      ))}
+      {(from||to)&&<button onClick={clear} style={{padding:'5px 10px',borderRadius:7,border:`1px solid ${B.border}`,background:'rgba(239,68,68,0.06)',color:B.danger,cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>× Tất cả</button>}
+    </div>
+  )
+}
+
+function SortHdr({children,field,sort,setSort,thStyle}){
+  const active=sort?.field===field, dir=sort?.dir||'desc'
+  return(
+    <th onClick={()=>setSort({field,dir:active&&dir==='desc'?'asc':'desc'})} style={{...thStyle,cursor:'pointer',userSelect:'none'}}>
+      <span style={{display:'inline-flex',alignItems:'center',gap:3}}>{children}<span style={{fontSize:8,color:active?B.primary:B.textTer}}>{active?(dir==='desc'?'↓':'↑'):'↕'}</span></span>
+    </th>
+  )
+}
+
 export default function App(){
   const [page,setPage]=useState('dashboard')
   const [data,setData]=useState({projects:[],clients:[],kols:[],team:[],invoices:[],deals:[],dealHistory:[],vendors:[],approvals:[]})
@@ -614,6 +679,8 @@ function Dashboard({ data, setPage, currentUser }) {
 function Pipeline({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(null)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
   const stages=['Lead','Pitching','Negotiation','Won','Lost']
   const stageColor={Lead:B.textTer,Pitching:B.primary,Negotiation:B.warning,Won:B.success,Lost:B.danger}
   async function save(e){
@@ -622,12 +689,14 @@ function Pipeline({data,add,upd,del,log,reload,supabase}){
     edit?await upd('deals',edit.id,r):await add('deals',r)
     setEdit(null);setShowAdd(null)
   }
+  const allDeals = applyDateFilter(data.deals,'created_at',dateFrom,dateTo)
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:20}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Deal Pipeline</h2><div style={{display:'flex',gap:8}}><ImportBtn module="deals" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd('Lead')}>+ New Deal</Btn></div></div>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Deal Pipeline</h2><div style={{display:'flex',gap:8}}><ImportBtn module="deals" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd('Lead')}>+ New Deal</Btn></div></div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12}}>
         {stages.map(stage=>{
-          const deals=data.deals.filter(d=>d.stage===stage),tot=deals.reduce((a,d)=>a+Number(d.value||0),0)
+          const deals=allDeals.filter(d=>d.stage===stage),tot=deals.reduce((a,d)=>a+Number(d.value||0),0)
           return <div key={stage} style={{background:'#F8FAFF',borderRadius:14,padding:12,border:`1px solid #E2E8F0`,borderTop:`3px solid ${stageColor[stage]}`}}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
               <span style={{fontSize:11,fontWeight:800,color:stageColor[stage],textTransform:'uppercase',letterSpacing:'0.04em'}}>{stage}</span>
@@ -662,7 +731,10 @@ function Projects({data,add,upd,del,log,reload,supabase}){
   const [svF,setSvF]=useState('')
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
-  const filtered=data.projects.filter(p=>(!search||(p.client+''+p.campaign).toLowerCase().includes(search.toLowerCase()))&&(!stF||p.status===stF)&&(!svF||p.service===svF))
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'start_date',dir:'desc'})
+  const filtered=applySortDate(applyDateFilter(data.projects.filter(p=>(!search||(p.client+''+p.campaign).toLowerCase().includes(search.toLowerCase()))&&(!stF||p.status===stF)&&(!svF||p.service===svF)),'start_date',dateFrom,dateTo),sort)
   async function save(e){
     e.preventDefault();const fd=new FormData(e.target)
     const r={project_code:fd.get('code'),client:fd.get('client'),campaign:fd.get('campaign'),service:fd.get('service'),pm:fd.get('pm'),budget_plan:Number(fd.get('budget_plan')||0),actual_cost:Number(fd.get('actual_cost')||0),revenue:Number(fd.get('revenue')||0),start_date:fd.get('start_date')||null,end_date:fd.get('end_date')||null,status:fd.get('status'),kols:fd.get('kols').split(',').map(s=>s.trim()).filter(Boolean),vendors:fd.get('vendors').split(',').map(s=>s.trim()).filter(Boolean),notes:fd.get('notes')}
@@ -681,14 +753,20 @@ function Projects({data,add,upd,del,log,reload,supabase}){
           <StatCard key={l} label={l} value={v} sub={s} color={c}/>
         ))}
       </div>
-      <div style={{display:'flex',gap:10,marginBottom:16}}>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap'}}>
         <input placeholder="Search projects..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:240}})}/>
         <select value={stF} onChange={e=>setStF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option></select>
         <select value={svF} onChange={e=>setSvF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Services</option><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select>
       </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:950}}>
-          <thead><tr>{['ID','Client','Campaign','Service','PM','Budget','Actual','Revenue','Margin','Status','Deadline',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>
+            {['ID','Client','Campaign','Service','PM','Budget','Actual','Revenue','Margin','Status'].map(h=><th key={h} style={TH}>{h}</th>)}
+            <SortHdr field="start_date" sort={sort} setSort={setSort} thStyle={TH}>Start</SortHdr>
+            <SortHdr field="end_date" sort={sort} setSort={setSort} thStyle={TH}>Deadline</SortHdr>
+            <th style={TH}></th>
+          </tr></thead>
           <tbody>
             {filtered.map(p=>{
               const m=Number(p.revenue)?Math.round((Number(p.revenue)-Number(p.actual_cost))/Number(p.revenue)*100):0
@@ -704,11 +782,12 @@ function Projects({data,add,upd,del,log,reload,supabase}){
                 <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{fmtS(p.revenue)}</td>
                 <td style={{...TD,fontWeight:800,color:m>=30?B.success:m>=15?B.warning:B.danger}}>{Number(p.revenue)?m+'%':'—'}</td>
                 <td style={TD}><Badge text={p.status}/></td>
+                <td style={{...TD,fontSize:10,color:B.textTer}}>{p.start_date||'—'}</td>
                 <td style={{...TD,fontSize:10,color:B.textTer}}>{p.end_date||'—'}</td>
                 <td style={TD}><Btn sm onClick={()=>setEdit(p)}>Edit</Btn></td>
               </tr>
             })}
-            {!filtered.length&&<tr><td colSpan={12} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No projects found</td></tr>}
+            {!filtered.length&&<tr><td colSpan={13} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No projects found</td></tr>}
           </tbody>
         </table>
       </div>
@@ -813,7 +892,10 @@ function Pricing({data,add,log}){
 function Invoices({data,add,upd,log,reload,supabase}){
   const [filter,setFilter]=useState('')
   const [showAdd,setShowAdd]=useState(false)
-  const invs=data.invoices.filter(i=>!filter||i.status===filter)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'due_date',dir:'asc'})
+  const invs=applySortDate(applyDateFilter(data.invoices.filter(i=>!filter||i.status===filter),'due_date',dateFrom,dateTo),sort)
   const tA=data.invoices.reduce((a,i)=>a+Number(i.amount||0),0)
   const tP=data.invoices.reduce((a,i)=>a+Number(i.paid||0),0)
   const ov=data.invoices.filter(i=>i.status==='Overdue').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
@@ -830,10 +912,17 @@ function Invoices({data,add,upd,log,reload,supabase}){
         <StatCard label="Còn phải thu" value={fmtS(tA-tP)} color={B.warning}/>
         <StatCard label="Quá hạn" value={fmtS(ov)} color={B.danger}/>
       </div>
-      <div style={{marginBottom:14}}><select value={filter} onChange={e=>setFilter(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Overdue">Overdue</option></select></div>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
+        <select value={filter} onChange={e=>setFilter(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Overdue">Overdue</option></select>
+      </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
-          <thead><tr>{['Invoice','Client','Project','Amount','Paid','Remaining','Due','Status',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>
+            {['Invoice','Client','Project','Amount','Paid','Remaining'].map(h=><th key={h} style={TH}>{h}</th>)}
+            <SortHdr field="due_date" sort={sort} setSort={setSort} thStyle={TH}>Due</SortHdr>
+            {['Status',''].map(h=><th key={h} style={TH}>{h}</th>)}
+          </tr></thead>
           <tbody>
             {invs.map(i=><tr key={i.id}>
               <td style={{...TD,fontSize:10,color:B.textTer,fontWeight:700}}>{i.invoice_code}</td>
@@ -863,11 +952,23 @@ function Invoices({data,add,upd,log,reload,supabase}){
 }
 
 function Approval({data,upd,log}){
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'approval_date',dir:'desc'})
+  const list=applySortDate(applyDateFilter(data.approvals,'approval_date',dateFrom,dateTo),sort)
   async function resolve(a,ok){const note=document.getElementById('n-'+a.id)?.value||'';await upd('approvals',a.id,{status:ok?'Approved':'Rejected',notes:note,resolved_by:'CEO'});log((ok?'Approved':'Rejected')+': '+a.title)}
   return(
     <div>
-      <h2 style={{margin:'0 0 20px',fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Approval Queue</h2>
-      {data.approvals.length?data.approvals.map(a=>(
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Approval Queue</h2>
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          <button onClick={()=>setSort(s=>({field:'approval_date',dir:s.dir==='desc'?'asc':'desc'}))} style={{padding:'5px 12px',borderRadius:7,border:`1px solid ${B.border}`,background:'transparent',color:B.textSec,cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>
+            Date {sort.dir==='desc'?'↓':'↑'}
+          </button>
+        </div>
+      </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
+      {list.length?list.map(a=>(
         <div key={a.id} style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,padding:'18px 22px',marginBottom:12}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
             <div><div style={{fontWeight:800,fontSize:14,color:B.navy,letterSpacing:'-0.01em'}}>{a.title}</div><div style={{fontSize:11,color:B.textTer,marginTop:3,fontWeight:500}}>{a.type} · {a.submitted_by} · {a.approval_date}</div></div>
@@ -881,7 +982,7 @@ function Approval({data,upd,log}){
           </div>}
           {a.status!=='Pending'&&<div style={{fontSize:11,color:B.textTer,fontWeight:600}}>Resolved by {a.resolved_by||'—'}</div>}
         </div>
-      )):<div style={{textAlign:'center',padding:80,color:B.textTer,fontSize:13,fontWeight:600}}>Queue is empty — all clear ✓</div>}
+      )):<div style={{textAlign:'center',padding:80,color:B.textTer,fontSize:13,fontWeight:600}}>{data.approvals.length?'No approvals in range':'Queue is empty — all clear ✓'}</div>}
     </div>
   )
 }
@@ -890,12 +991,19 @@ function Clients({data,add,upd,del,log,reload,supabase}){
   const [search,setSearch]=useState('')
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'created_at',dir:'desc'})
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),industry:fd.get('industry'),size:fd.get('size'),contact:fd.get('contact'),email:fd.get('email'),phone:fd.get('phone'),notes:fd.get('notes'),since:new Date().toLocaleDateString('vi-VN')};edit?await upd('clients',edit.id,r):await add('clients',r);log('Client: '+r.name);setEdit(null);setShowAdd(false)}
-  const list=data.clients.filter(c=>!search||(c.name||'').toLowerCase().includes(search.toLowerCase()))
+  const list=applySortDate(applyDateFilter(data.clients.filter(c=>!search||(c.name||'').toLowerCase().includes(search.toLowerCase())),'created_at',dateFrom,dateTo),sort)
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Clients</h2><div style={{display:'flex',gap:8}}><ImportBtn module="clients" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ New Client</Btn></div></div>
-      <input placeholder="Search clients..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,marginBottom:18,width:300}})}/>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Clients</h2><div style={{display:'flex',gap:8}}><ImportBtn module="clients" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ New Client</Btn></div></div>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
+        <input placeholder="Search clients..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,width:260}})}/>
+        <button onClick={()=>setSort(s=>({field:'created_at',dir:s.dir==='desc'?'asc':'desc'}))} style={{padding:'5px 12px',borderRadius:7,border:`1px solid ${B.border}`,background:'transparent',color:B.textSec,cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>Added {sort.dir==='desc'?'↓':'↑'}</button>
+      </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))',gap:14}}>
         {list.map((c,i)=>{
           const rev=data.projects.filter(p=>p.client===c.name).reduce((a,p)=>a+Number(p.revenue||0),0)
@@ -938,21 +1046,29 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
   const [hist,setHist]=useState(null)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'created_at',dir:'desc'})
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:Number(fd.get('rate')||0),avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes')};edit?await upd('kols',edit.id,r):await add('kols',r);log('KOL: '+r.name);setEdit(null);setShowAdd(false)}
-  const list=data.kols.filter(k=>(!search||(k.name||'').toLowerCase().includes(search.toLowerCase()))&&(!platF||k.platform===platF)&&(!tierF||k.tier===tierF))
+  const list=applySortDate(applyDateFilter(data.kols.filter(k=>(!search||(k.name||'').toLowerCase().includes(search.toLowerCase()))&&(!platF||k.platform===platF)&&(!tierF||k.tier===tierF)),'created_at',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>KOL / KOC Database</h2><div style={{display:'flex',gap:8}}><ImportBtn module="kols" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add KOL</Btn></div></div>
-      <div style={{display:'flex',gap:10,marginBottom:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>KOL / KOC Database</h2><div style={{display:'flex',gap:8}}><ImportBtn module="kols" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add KOL</Btn></div></div>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap'}}>
         <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:220}})}/>
         <select value={platF} onChange={e=>setPlatF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Platforms</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select>
         <select value={tierF} onChange={e=>setTierF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Tiers</option><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select>
       </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:950}}>
-          <thead><tr>{['ID','Name','Platform','Tier','Followers','Eng%','Rate/post','Campaigns','Stars','Status',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>
+            {['ID','Name','Platform','Tier','Followers','Eng%','Rate/post','Campaigns','Stars','Status'].map(h=><th key={h} style={TH}>{h}</th>)}
+            <SortHdr field="created_at" sort={sort} setSort={setSort} thStyle={TH}>Added</SortHdr>
+            <th style={TH}></th>
+          </tr></thead>
           <tbody>
             {list.map((k,i)=>{const used=data.projects.filter(p=>(p.kols||[]).includes(k.name)).length;const stars='★'.repeat(Math.min(5,Number(k.reliability||0)))+'☆'.repeat(Math.max(0,5-Number(k.reliability||0)));return <tr key={k.id}>
               <td style={{...TD,fontSize:10,color:B.textTer,fontWeight:600}}>KOL-{String(i+1).padStart(3,'0')}</td>
@@ -965,9 +1081,10 @@ function Kols({data,add,upd,del,log,reload,supabase}){
               <td style={{...TD,textAlign:'center',fontSize:12,fontWeight:800,color:B.accent}}>{used}</td>
               <td style={{...TD,fontSize:13,color:'#F59E0B',letterSpacing:'-1px'}}>{stars}</td>
               <td style={TD}><Badge text={k.available?'Active':'Booked'}/></td>
+              <td style={{...TD,fontSize:10,color:B.textTer}}>{k.created_at?.slice(0,10)||'—'}</td>
               <td style={{...TD,display:'flex',gap:6}}><Btn sm onClick={()=>setEdit(k)}>Edit</Btn><Btn sm onClick={()=>setHist(k)}>History</Btn></td>
             </tr>})}
-            {!list.length&&<tr><td colSpan={11} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No KOLs found</td></tr>}
+            {!list.length&&<tr><td colSpan={12} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No KOLs found</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1004,26 +1121,40 @@ function Kols({data,add,upd,del,log,reload,supabase}){
 function Vendors({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
+  const [search,setSearch]=useState('')
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'created_at',dir:'desc'})
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),type:fd.get('type'),rating:Number(fd.get('rating')||5),contact:fd.get('contact'),total_spent:Number(fd.get('total_spent')||0),notes:fd.get('notes')};edit?await upd('vendors',edit.id,r):await add('vendors',r);log('Vendor: '+r.name);setEdit(null);setShowAdd(false)}
+  const vendorList=applySortDate(applyDateFilter(data.vendors.filter(v=>!search||(v.name||'').toLowerCase().includes(search.toLowerCase())),'created_at',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Vendors & Suppliers</h2><div style={{display:'flex',gap:8}}><ImportBtn module="vendors" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add Vendor</Btn></div></div>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Vendors & Suppliers</h2><div style={{display:'flex',gap:8}}><ImportBtn module="vendors" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add Vendor</Btn></div></div>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap'}}>
+        <input placeholder="Search vendors..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:260}})}/>
+      </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
-          <thead><tr>{['Name','Type','Contact','Rating','Total Spent','Notes',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>
+            {['Name','Type','Contact','Rating','Total Spent','Notes'].map(h=><th key={h} style={TH}>{h}</th>)}
+            <SortHdr field="created_at" sort={sort} setSort={setSort} thStyle={TH}>Added</SortHdr>
+            <th style={TH}></th>
+          </tr></thead>
           <tbody>
-            {data.vendors.map(v=><tr key={v.id}>
+            {vendorList.map(v=><tr key={v.id}>
               <td style={{...TD,fontWeight:800,color:B.text}}>{v.name}</td>
               <td style={TD}><span style={{background:B.infoBg,color:B.info,padding:'3px 9px',borderRadius:6,fontSize:10,fontWeight:700,border:`1px solid ${B.borderStrong}`}}>{v.type||'—'}</span></td>
               <td style={{...TD,fontSize:11,color:B.textSec}}>{v.contact||'—'}</td>
               <td style={{...TD,fontSize:14,color:'#F59E0B',letterSpacing:'-1px'}}>{'★'.repeat(Number(v.rating||0))+'☆'.repeat(Math.max(0,5-Number(v.rating||0)))}</td>
               <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{fmtS(v.total_spent)}</td>
               <td style={{...TD,fontSize:11,color:B.textTer}}>{v.notes||'—'}</td>
+              <td style={{...TD,fontSize:10,color:B.textTer}}>{v.created_at?.slice(0,10)||'—'}</td>
               <td style={TD}><Btn sm onClick={()=>setEdit(v)}>Edit</Btn></td>
             </tr>)}
-            {!data.vendors.length&&<tr><td colSpan={7} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No vendors yet</td></tr>}
+            {!vendorList.length&&<tr><td colSpan={8} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No vendors found</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1407,6 +1538,9 @@ function Contracts({data, supabase, reload, log}) {
   const [viewItem, setViewItem] = useState(null)
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(false)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'sign_date',dir:'desc'})
 
   useEffect(() => { loadContracts() }, [tab])
 
@@ -1418,12 +1552,12 @@ function Contracts({data, supabase, reload, log}) {
     setLoading(false)
   }
 
-  const filtered = contracts.filter(c =>
+  const filtered = applySortDate(applyDateFilter(contracts.filter(c =>
     !filter ||
     (c.contract_code||'').toLowerCase().includes(filter.toLowerCase()) ||
     (c.party_a_name||'').toLowerCase().includes(filter.toLowerCase()) ||
     (c.party_b_name||'').toLowerCase().includes(filter.toLowerCase())
-  )
+  ),'sign_date',dateFrom,dateTo),sort)
 
   const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'10px 14px',borderBottom:'1px solid #F1F5F9',verticalAlign:'middle',color:'#1F2937'}
@@ -1455,17 +1589,18 @@ function Contracts({data, supabase, reload, log}) {
         ))}
       </div>
 
-      <div style={{marginBottom:14}}>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
         <input placeholder="Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP_S,maxWidth:380}}/>
       </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
 
       <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
           <thead>
             <tr>
-              {['Số HĐ','Bên đối tác','Dự án','Giá trị (VND)','Ngày ký','Trạng thái',''].map(h=>(
-                <th key={h} style={TH}>{h}</th>
-              ))}
+              {['Số HĐ','Bên đối tác','Dự án','Giá trị (VND)'].map(h=><th key={h} style={TH}>{h}</th>)}
+              <SortHdr field="sign_date" sort={sort} setSort={setSort} thStyle={TH}>Ngày ký</SortHdr>
+              {['Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -2014,6 +2149,9 @@ function AcceptanceReports({data, supabase, reload, log}) {
   const [editItem, setEditItem] = useState(null)
   const [viewItem, setViewItem] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'sign_date',dir:'desc'})
 
   useEffect(()=>{ loadData() },[tab])
 
@@ -2028,7 +2166,7 @@ function AcceptanceReports({data, supabase, reload, log}) {
     setLoading(false)
   }
 
-  const filtered = reports.filter(r => contracts.some(c=>c.id===r.contract_id))
+  const filtered = applySortDate(applyDateFilter(reports.filter(r => contracts.some(c=>c.id===r.contract_id)),'sign_date',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em'}
   const TD={padding:'10px 14px',borderBottom:'1px solid #F1F5F9',verticalAlign:'middle',color:'#1F2937'}
 
@@ -2039,15 +2177,21 @@ function AcceptanceReports({data, supabase, reload, log}) {
         <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo BBNT</CBtn>
       </div>
 
-      <div style={{display:'flex',gap:4,marginBottom:16,background:'#F1F5F9',padding:4,borderRadius:10,width:'fit-content',border:'1px solid #E2E8F0'}}>
+      <div style={{display:'flex',gap:4,marginBottom:12,background:'#F1F5F9',padding:4,borderRadius:10,width:'fit-content',border:'1px solid #E2E8F0'}}>
         {[['client','BBNT Client'],['kol','BBNT KOL/CTV']].map(([key,label])=>(
           <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':'#64748B',cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Inter',sans-serif"}}>{label}</button>
         ))}
       </div>
 
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
+
       <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:700}}>
-          <thead><tr>{['Số BBNT','HĐ tham chiếu','Giá trị NT','Còn lại','Ngày ký','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>
+            {['Số BBNT','HĐ tham chiếu','Giá trị NT','Còn lại'].map(h=><th key={h} style={TH}>{h}</th>)}
+            <SortHdr field="sign_date" sort={sort} setSort={setSort} thStyle={TH}>Ngày ký</SortHdr>
+            {['Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}
+          </tr></thead>
           <tbody>
             {loading&&<tr><td colSpan={7} style={{textAlign:'center',padding:32,color:CB.textTer}}>Đang tải...</td></tr>}
             {!loading&&filtered.map(r=>{
@@ -3427,6 +3571,10 @@ function Quotations({data, supabase, reload, log}) {
   const [editItem, setEditItem] = useState(null)
   const [viewItem, setViewItem] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
+  const [sort,setSort]=useState({field:'created_at',dir:'desc'})
 
   useEffect(()=>{ loadQuotes() },[])
 
@@ -3438,19 +3586,20 @@ function Quotations({data, supabase, reload, log}) {
   }
 
   const total = quotes.reduce((a,q)=>a+Number(q.total||0),0)
+  const filteredQuotes = applySortDate(applyDateFilter(quotes.filter(q=>!search||(q.client_name||'').toLowerCase().includes(search.toLowerCase())||(q.quote_code||'').toLowerCase().includes(search.toLowerCase())),'created_at',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#94A3B8',borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'10px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)',verticalAlign:'middle'}
 
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
         <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A'}}>Báo giá</h2>
         <button onClick={()=>{setEditItem(null);setShowForm(true)}} style={{padding:'7px 16px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(26,86,219,0.25)'}}>
           + Tạo báo giá
         </button>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:18}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:14}}>
         {[['Tổng báo giá',quotes.length,'',B.primary],['Draft',quotes.filter(q=>q.status==='Draft').length,'',B.textTer],['Đã gửi',quotes.filter(q=>q.status==='Sent').length,'',B.warning],['Tổng giá trị',cfmtS(total)+' VND','',B.success]].map(([l,v,s,c])=>(
           <div key={l} style={{background:'rgba(255,255,255,0.9)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(26,86,219,0.1)'}}>
             <div style={{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</div>
@@ -3459,12 +3608,21 @@ function Quotations({data, supabase, reload, log}) {
         ))}
       </div>
 
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap'}}>
+        <input placeholder="Tìm báo giá..." value={search} onChange={e=>setSearch(e.target.value)} style={{...INP.style,maxWidth:260}}/>
+      </div>
+      <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
+
       <div style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(26,86,219,0.1)',borderRadius:16,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
-          <thead><tr>{['Mã BG','Client','Campaign','Loại DV','Tổng (VND)','Hiệu lực','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>
+            {['Mã BG','Client','Campaign','Loại DV','Tổng (VND)','Hiệu lực','Trạng thái'].map(h=><th key={h} style={TH}>{h}</th>)}
+            <SortHdr field="created_at" sort={sort} setSort={setSort} thStyle={TH}>Ngày tạo</SortHdr>
+            <th style={TH}></th>
+          </tr></thead>
           <tbody>
-            {loading&&<tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#94A3B8'}}>Đang tải...</td></tr>}
-            {!loading&&quotes.map(q=>(
+            {loading&&<tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#94A3B8'}}>Đang tải...</td></tr>}
+            {!loading&&filteredQuotes.map(q=>(
               <tr key={q.id}>
                 <td style={{...TD,fontWeight:800,color:'#1A56DB',fontSize:12}}>{q.quote_code}</td>
                 <td style={{...TD,fontWeight:600}}>{q.client_name||'—'}</td>
@@ -3473,13 +3631,14 @@ function Quotations({data, supabase, reload, log}) {
                 <td style={{...TD,fontWeight:800,color:'#0F172A'}}>{cfmt(q.total)}</td>
                 <td style={{...TD,fontSize:11,color:'#94A3B8'}}>{q.valid_days} ngày</td>
                 <td style={TD}><QBadge text={q.status}/></td>
+                <td style={{...TD,fontSize:10,color:'#94A3B8'}}>{q.created_at?.slice(0,10)||'—'}</td>
                 <td style={{...TD,display:'flex',gap:6}}>
                   <button onClick={()=>setViewItem(q)} style={{padding:'4px 10px',borderRadius:7,border:'1px solid rgba(26,86,219,0.2)',background:'rgba(26,86,219,0.06)',color:'#1A56DB',cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xem & In</button>
                   <button onClick={()=>{setEditItem(q);setShowForm(true)}} style={{padding:'4px 10px',borderRadius:7,border:'1px solid rgba(26,86,219,0.1)',background:'transparent',color:'#475569',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Sửa</button>
                 </td>
               </tr>
             ))}
-            {!loading&&!quotes.length&&<tr><td colSpan={8} style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có báo giá nào</td></tr>}
+            {!loading&&!filteredQuotes.length&&<tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có báo giá nào</td></tr>}
           </tbody>
         </table>
       </div>
