@@ -53,6 +53,7 @@ function fmt(n){return Number(n||0).toLocaleString('vi-VN')}
 function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
 function vnd(n){return Number(n||0).toLocaleString('vi-VN')+' đ'}
 const fmtNum = fmt
+const parseNum = (v) => String(v||'').replace(/\./g,'').replace(/[^\d]/g,'')
 
 const INP = {style:{width:'100%',padding:'8px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
 
@@ -1007,13 +1008,13 @@ function Pricing({data,add,log}){
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
         <div>
           <Card title="Input Parameters" glow>
-            <Row2><FG label="Client Budget (VND)"><input type="number" value={I.budget} onChange={e=>s('budget',e.target.value)} {...inp()}/></FG><FG label="Target Margin (%)"><input type="number" value={I.margin} onChange={e=>s('margin',e.target.value)} {...inp()}/></FG></Row2>
+            <Row2><FG label="Client Budget (VND)"><input type="text" value={fmtNum(I.budget)} onChange={e=>s('budget',parseNum(e.target.value))} {...inp()}/></FG><FG label="Target Margin (%)"><input type="number" value={I.margin} onChange={e=>s('margin',e.target.value)} {...inp()}/></FG></Row2>
             <FG label="Service Type"><select value={I.service} onChange={e=>s('service',e.target.value)} {...inp()}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select></FG>
             <FG label="Client Name"><input type="text" value={I.client} onChange={e=>s('client',e.target.value)} placeholder="Tên client..." {...inp()}/></FG>
             <div style={{height:1,background:B.border,margin:'10px 0'}}/>
-            <Row2><FG label="Số KOL/KOC"><input type="number" value={I.kolNum||0} onChange={e=>s('kolNum',e.target.value)} {...inp()}/></FG><FG label="Avg Cost/KOL"><input type="number" value={I.kolCost||0} onChange={e=>s('kolCost',e.target.value)} {...inp()}/></FG></Row2>
-            <Row2><FG label="Production"><input type="number" value={I.prod||0} onChange={e=>s('prod',e.target.value)} {...inp()}/></FG><FG label="Ads/Seeding"><input type="number" value={I.ads||0} onChange={e=>s('ads',e.target.value)} {...inp()}/></FG></Row2>
-            <Row2><FG label="Agency Ops"><input type="number" value={I.ops||0} onChange={e=>s('ops',e.target.value)} {...inp()}/></FG><FG label="Other"><input type="number" value={I.other||0} onChange={e=>s('other',e.target.value)} {...inp()}/></FG></Row2>
+            <Row2><FG label="Số KOL/KOC"><input type="number" value={I.kolNum||0} onChange={e=>s('kolNum',e.target.value)} {...inp()}/></FG><FG label="Avg Cost/KOL"><input type="text" value={fmtNum(I.kolCost)} onChange={e=>s('kolCost',parseNum(e.target.value))} {...inp()}/></FG></Row2>
+            <Row2><FG label="Production"><input type="text" value={fmtNum(I.prod)} onChange={e=>s('prod',parseNum(e.target.value))} {...inp()}/></FG><FG label="Ads/Seeding"><input type="text" value={fmtNum(I.ads)} onChange={e=>s('ads',parseNum(e.target.value))} {...inp()}/></FG></Row2>
+            <Row2><FG label="Agency Ops"><input type="text" value={fmtNum(I.ops)} onChange={e=>s('ops',parseNum(e.target.value))} {...inp()}/></FG><FG label="Other"><input type="text" value={fmtNum(I.other)} onChange={e=>s('other',parseNum(e.target.value))} {...inp()}/></FG></Row2>
           </Card>
           <Card title="KOL Scenario Planner" action={<Btn sm onClick={()=>setSc(p=>[...p,{tier:'Micro',platform:'TikTok',num:0,cost:0}])}>+ Tier</Btn>}>
             <table style={{width:'100%',borderCollapse:'collapse'}}>
@@ -1024,7 +1025,7 @@ function Pricing({data,add,log}){
                     <td style={{padding:'5px 6px'}}><input value={s.tier} onChange={e=>{const n=[...sc];n[i]={...n[i],tier:e.target.value};setSc(n)}} style={{width:70,...INP.style,padding:'5px 8px'}}/></td>
                     <td style={{padding:'5px 6px'}}><select value={s.platform} onChange={e=>{const n=[...sc];n[i]={...n[i],platform:e.target.value};setSc(n)}} style={{width:100,...INP.style,padding:'5px 8px'}}><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select></td>
                     <td style={{padding:'5px 6px'}}><input type="number" value={s.num} onChange={e=>{const n=[...sc];n[i]={...n[i],num:e.target.value};setSc(n)}} style={{width:55,...INP.style,padding:'5px 8px'}}/></td>
-                    <td style={{padding:'5px 6px'}}><input type="number" value={s.cost} onChange={e=>{const n=[...sc];n[i]={...n[i],cost:e.target.value};setSc(n)}} style={{width:95,...INP.style,padding:'5px 8px'}}/></td>
+                    <td style={{padding:'5px 6px'}}><input type="text" value={fmtNum(s.cost)} onChange={e=>{const n=[...sc];n[i]={...n[i],cost:parseNum(e.target.value)};setSc(n)}} style={{width:95,...INP.style,padding:'5px 8px'}}/></td>
                     <td style={{padding:'5px 6px',fontWeight:800,fontSize:11,color:B.primary}}>{vnd(Number(s.num||0)*Number(s.cost||0))}</td>
                     <td><button onClick={()=>setSc(p=>p.filter((_,j)=>j!==i))} style={{background:'none',border:'none',cursor:'pointer',color:B.danger,fontSize:18,lineHeight:1}}>×</button></td>
                   </tr>
@@ -2109,7 +2110,7 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
                   <td style={{padding:'5px 4px'}}><input value={k.name} onChange={e=>updKol(i,'name',e.target.value)} list="kol-hddv" style={{...CINP_S,padding:'5px 8px',fontSize:12}}/><datalist id="kol-hddv">{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist></td>
                   <td style={{padding:'5px 4px'}}><input value={k.tiktok} onChange={e=>updKol(i,'tiktok',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}} placeholder="@username"/></td>
                   <td style={{padding:'5px 4px'}}><input value={k.work} onChange={e=>updKol(i,'work',e.target.value)} style={{...CINP_S,padding:'5px 8px',fontSize:12}}/></td>
-                  <td style={{padding:'5px 4px'}}><input type="number" value={k.fee} onChange={e=>updKol(i,'fee',Number(e.target.value))} style={{...CINP_S,padding:'5px 8px',fontSize:12,width:110}}/></td>
+                  <td style={{padding:'5px 4px'}}><input type="text" value={fmtNum(k.fee)} onChange={e=>updKol(i,'fee',Number(parseNum(e.target.value)))} style={{...CINP_S,padding:'5px 8px',fontSize:12,width:130}}/></td>
                   <td style={{padding:'5px 4px'}}><button type="button" onClick={()=>delKol(i)} style={{background:'none',border:'none',cursor:'pointer',color:CB.danger,fontSize:18,lineHeight:1}}>×</button></td>
                 </tr>
               ))}
@@ -2121,7 +2122,7 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
         <CSec title="Giá trị hợp đồng">
           <CRow3>
             <CFG label="Phí dịch vụ (VND)">
-              <input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} style={CINP_S}/>
+              <input type="text" value={fmtNum(form.total_fee)} onChange={e=>set('total_fee',Number(parseNum(e.target.value)))} style={CINP_S}/>
             </CFG>
             <CFG label="Thuế GTGT (%)">
               <input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} style={CINP_S}/>
@@ -2290,7 +2291,7 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
 
         <CSec title="Thù lao">
           <CRow3>
-            <CFG label="Thù lao gốc (VND)"><input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} style={CINP_S}/></CFG>
+            <CFG label="Thù lao gốc (VND)"><input type="text" value={fmtNum(form.total_fee)} onChange={e=>set('total_fee',Number(parseNum(e.target.value)))} style={CINP_S}/></CFG>
             <CFG label="Thuế TNCN (%)"><input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} style={CINP_S}/></CFG>
             <CFG label="Thù lao thực nhận">
               <div style={{padding:'9px 12px',background:'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:'#059669',border:'1px solid rgba(5,150,105,0.2)'}}>{vnd(form.total_with_vat)}</div>
@@ -2639,11 +2640,11 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
 
         <CSec title="Điều khoản thanh toán">
           <CRow2>
-            <CFG label="Giá trị theo HĐ (VND)"><input type="number" value={form.contract_value} onChange={e=>set('contract_value',Number(e.target.value))} style={CINP_S}/></CFG>
-            <CFG label="Giá trị nghiệm thu (VND)"><input type="number" value={form.accepted_value} onChange={e=>set('accepted_value',Number(e.target.value))} style={CINP_S}/></CFG>
+            <CFG label="Giá trị theo HĐ (VND)"><input type="text" value={fmtNum(form.contract_value)} onChange={e=>set('contract_value',Number(parseNum(e.target.value)))} style={CINP_S}/></CFG>
+            <CFG label="Giá trị nghiệm thu (VND)"><input type="text" value={fmtNum(form.accepted_value)} onChange={e=>set('accepted_value',Number(parseNum(e.target.value)))} style={CINP_S}/></CFG>
           </CRow2>
           <CRow3>
-            <CFG label="Đã thanh toán (VND)"><input type="number" value={form.paid_amount} onChange={e=>set('paid_amount',Number(e.target.value))} style={CINP_S}/></CFG>
+            <CFG label="Đã thanh toán (VND)"><input type="text" value={fmtNum(form.paid_amount)} onChange={e=>set('paid_amount',Number(parseNum(e.target.value)))} style={CINP_S}/></CFG>
             <CFG label="Còn phải thanh toán">
               <div style={{padding:'9px 12px',background:Number(form.remaining_amount)>0?'rgba(217,119,6,0.08)':'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:Number(form.remaining_amount)>0?CB.warning:CB.success,border:`1px solid ${Number(form.remaining_amount)>0?CB.warning:CB.success}30`}}>{vnd(form.remaining_amount)}</div>
               <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.remaining_amount)}</div>
@@ -4279,7 +4280,7 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
 
                   {/* Giá gốc - LOCKED */}
                   <div style={{position:'relative'}}>
-                    <input type="number" value={item.base_price} onChange={e=>updItem(i,'base_price',Number(e.target.value))}
+                    <input type="text" value={fmtNum(item.base_price)} onChange={e=>updItem(i,'base_price',Number(parseNum(e.target.value)))}
                       style={{...INP_S,fontSize:11,padding:'6px 7px',textAlign:'right',
                         background: item.item_type==='KOL'&&item.source_name?'rgba(5,150,105,0.06)':'#fff',
                         borderColor: item.item_type==='KOL'&&item.source_name?'rgba(5,150,105,0.3)':'rgba(26,86,219,0.12)',
