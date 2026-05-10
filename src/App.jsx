@@ -52,6 +52,7 @@ function Badge({text}){
 function fmt(n){return Number(n||0).toLocaleString('vi-VN')}
 function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
 function vnd(n){return Number(n||0).toLocaleString('vi-VN')+' đ'}
+const fmtNum = fmt
 
 const INP = {style:{width:'100%',padding:'8px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
 
@@ -800,7 +801,7 @@ function Dashboard({ data, setPage, currentUser }) {
             <div key={i.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{i.client}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#EF4444' }}>{fmtS(Number(i.amount)-Number(i.paid||0))}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#EF4444' }}>{vnd(Number(i.amount)-Number(i.paid||0))}</span>
               </div>
               <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>Hạn: {i.due_date||'—'}</div>
             </div>
@@ -890,7 +891,7 @@ function Pipeline({data,add,upd,del,log,reload,supabase}){
               onMouseLeave={e=>e.currentTarget.style.borderColor='#E2E8F0'}>
               <div style={{fontWeight:700,fontSize:11.5,marginBottom:3,color:B.text}}>{d.client||'—'}</div>
               <div style={{fontSize:10,color:B.textTer,marginBottom:6}}>{d.service||'—'}</div>
-              <div style={{fontWeight:800,fontSize:12,color:B.primary}}>{fmtS(d.value)}</div>
+              <div style={{fontWeight:800,fontSize:12,color:B.primary}}>{vnd(d.value)}</div>
             </div>)}
             <button onClick={()=>setShowAdd(stage)} style={{width:'100%',padding:'7px',border:`1.5px dashed ${B.borderStrong}`,borderRadius:9,background:'none',cursor:'pointer',fontSize:11,color:B.textTer,fontFamily:"'Plus Jakarta Sans', sans-serif",fontWeight:600}}>+ Add</button>
           </div>
@@ -959,9 +960,9 @@ function Projects({data,add,upd,del,log,reload,supabase}){
                 <td style={{...TD,fontSize:12}}>{p.campaign||'—'}</td>
                 <td style={TD}><span style={{background:B.infoBg,color:B.info,padding:'3px 9px',borderRadius:6,fontSize:10,fontWeight:700,border:`1px solid ${B.borderStrong}`}}>{p.service||'—'}</span></td>
                 <td style={{...TD,fontSize:11,color:B.textSec}}>{p.pm||'—'}</td>
-                <td style={{...TD,fontSize:11}}>{fmtS(p.budget_plan)}</td>
-                <td style={{...TD,fontSize:11,fontWeight:600,color:bv>10?B.danger:bv>0?B.warning:B.success}}>{fmtS(p.actual_cost)}{p.budget_plan?<span style={{fontSize:9,marginLeft:3}}>({bv}%)</span>:''}</td>
-                <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{fmtS(p.revenue)}</td>
+                <td style={{...TD,fontSize:11}}>{vnd(p.budget_plan)}</td>
+                <td style={{...TD,fontSize:11,fontWeight:600,color:bv>10?B.danger:bv>0?B.warning:B.success}}>{vnd(p.actual_cost)}{p.budget_plan?<span style={{fontSize:9,marginLeft:3}}>({bv}%)</span>:''}</td>
+                <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{vnd(p.revenue)}</td>
                 <td style={{...TD,fontWeight:800,color:m>=30?B.success:m>=15?B.warning:B.danger}}>{Number(p.revenue)?m+'%':'—'}</td>
                 <td style={TD}><Badge text={p.status}/></td>
                 <td style={{...TD,fontSize:10,color:B.textTer}}>{p.start_date||'—'}</td>
@@ -1024,11 +1025,11 @@ function Pricing({data,add,log}){
                     <td style={{padding:'5px 6px'}}><select value={s.platform} onChange={e=>{const n=[...sc];n[i]={...n[i],platform:e.target.value};setSc(n)}} style={{width:100,...INP.style,padding:'5px 8px'}}><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select></td>
                     <td style={{padding:'5px 6px'}}><input type="number" value={s.num} onChange={e=>{const n=[...sc];n[i]={...n[i],num:e.target.value};setSc(n)}} style={{width:55,...INP.style,padding:'5px 8px'}}/></td>
                     <td style={{padding:'5px 6px'}}><input type="number" value={s.cost} onChange={e=>{const n=[...sc];n[i]={...n[i],cost:e.target.value};setSc(n)}} style={{width:95,...INP.style,padding:'5px 8px'}}/></td>
-                    <td style={{padding:'5px 6px',fontWeight:800,fontSize:11,color:B.primary}}>{fmtS(Number(s.num||0)*Number(s.cost||0))}</td>
+                    <td style={{padding:'5px 6px',fontWeight:800,fontSize:11,color:B.primary}}>{vnd(Number(s.num||0)*Number(s.cost||0))}</td>
                     <td><button onClick={()=>setSc(p=>p.filter((_,j)=>j!==i))} style={{background:'none',border:'none',cursor:'pointer',color:B.danger,fontSize:18,lineHeight:1}}>×</button></td>
                   </tr>
                 ))}
-                <tr style={{background:B.gradSoft}}><td colSpan={4} style={{padding:'8px',fontWeight:800,fontSize:11,color:B.textSec}}>Total KOL Cost</td><td style={{padding:'8px',fontWeight:900,color:B.primary,fontSize:13}}>{fmtS(kt)}</td><td/></tr>
+                <tr style={{background:B.gradSoft}}><td colSpan={4} style={{padding:'8px',fontWeight:800,fontSize:11,color:B.textSec}}>Total KOL Cost</td><td style={{padding:'8px',fontWeight:900,color:B.primary,fontSize:13}}>{vnd(kt)}</td><td/></tr>
               </tbody>
             </table>
           </Card>
@@ -1036,8 +1037,8 @@ function Pricing({data,add,log}){
         <div>
           <Card title="Pricing Output" glow>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
-              <div style={{background:B.gradSoft,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>KOL COST</div><div style={{fontSize:18,fontWeight:900,color:B.text}}>{fmtS(kt)}</div></div>
-              <div style={{background:B.gradSoft,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>TOTAL COST</div><div style={{fontSize:18,fontWeight:900,color:B.text}}>{fmtS(tc)}</div></div>
+              <div style={{background:B.gradSoft,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>KOL COST</div><div style={{fontSize:18,fontWeight:900,color:B.text}}>{vnd(kt)}</div></div>
+              <div style={{background:B.gradSoft,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>TOTAL COST</div><div style={{fontSize:18,fontWeight:900,color:B.text}}>{vnd(tc)}</div></div>
             </div>
             <div style={{background:B.gradPrimary,borderRadius:16,padding:'20px 24px',textAlign:'center',marginBottom:16,boxShadow:`0 8px 32px ${B.primaryGlow}`,position:'relative',overflow:'hidden'}}>
               <div style={{position:'absolute',top:-15,right:-15,width:80,height:80,borderRadius:'50%',background:'rgba(255,255,255,0.08)'}}/>
@@ -1046,7 +1047,7 @@ function Pricing({data,add,log}){
               <div style={{fontSize:11,color:'rgba(255,255,255,0.6)',marginTop:4,fontWeight:600}}>VND</div>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
-              <div style={{background:B.successBg,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.success}25`}}><div style={{fontSize:9,fontWeight:800,color:B.success,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>PROFIT</div><div style={{fontSize:18,fontWeight:900,color:B.success}}>{fmtS(pr)}</div></div>
+              <div style={{background:B.successBg,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.success}25`}}><div style={{fontSize:9,fontWeight:800,color:B.success,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>PROFIT</div><div style={{fontSize:18,fontWeight:900,color:B.success}}>{vnd(pr)}</div></div>
               <div style={{background:B.successBg,borderRadius:12,padding:'14px 16px',border:`1px solid ${B.success}25`}}><div style={{fontSize:9,fontWeight:800,color:B.success,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>MARGIN</div><div style={{fontSize:18,fontWeight:900,color:B.success}}>{am}%</div></div>
             </div>
             <div style={{background:ok?B.successBg:B.dangerBg,border:`1.5px solid ${ok?B.success:B.danger}30`,borderRadius:12,padding:'14px',textAlign:'center'}}>
@@ -1059,7 +1060,7 @@ function Pricing({data,add,log}){
               <table style={{width:'100%',borderCollapse:'collapse'}}>
                 <thead><tr>{['Date','Client','Price','Margin','Decision'].map(h=><th key={h} style={{padding:'7px 8px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {data.dealHistory.map(d=><tr key={d.id} style={{borderBottom:`1px solid ${B.border}`}}><td style={{padding:'7px 8px',fontSize:10,color:B.textTer}}>{d.deal_date}</td><td style={{padding:'7px 8px',fontSize:11,fontWeight:700}}>{d.client}</td><td style={{padding:'7px 8px',fontSize:11,fontWeight:800,color:B.primary}}>{fmtS(d.price)}</td><td style={{padding:'7px 8px',fontSize:11}}>{d.margin}%</td><td style={{padding:'7px 8px'}}><Badge text={d.decision}/></td></tr>)}
+                  {data.dealHistory.map(d=><tr key={d.id} style={{borderBottom:`1px solid ${B.border}`}}><td style={{padding:'7px 8px',fontSize:10,color:B.textTer}}>{d.deal_date}</td><td style={{padding:'7px 8px',fontSize:11,fontWeight:700}}>{d.client}</td><td style={{padding:'7px 8px',fontSize:11,fontWeight:800,color:B.primary}}>{vnd(d.price)}</td><td style={{padding:'7px 8px',fontSize:11}}>{d.margin}%</td><td style={{padding:'7px 8px'}}><Badge text={d.decision}/></td></tr>)}
                   {!data.dealHistory.length&&<tr><td colSpan={5} style={{textAlign:'center',padding:20,color:B.textTer,fontSize:12}}>No deals yet</td></tr>}
                 </tbody>
               </table>
@@ -1110,9 +1111,9 @@ function Invoices({data,add,upd,log,reload,supabase}){
               <td style={{...TD,fontSize:10,color:B.textTer,fontWeight:700}}>{i.invoice_code}</td>
               <td style={{...TD,fontWeight:800,color:B.text}}>{i.client}</td>
               <td style={{...TD,fontSize:11,color:B.textSec}}>{i.project||'—'}</td>
-              <td style={{...TD,fontSize:12,fontWeight:800}}>{fmtS(i.amount)}</td>
-              <td style={{...TD,fontSize:11,fontWeight:700,color:B.success}}>{fmtS(i.paid)}</td>
-              <td style={{...TD,fontSize:11,fontWeight:700,color:Number(i.amount)-Number(i.paid)>0?B.warning:B.success}}>{fmtS(Number(i.amount)-Number(i.paid))}</td>
+              <td style={{...TD,fontSize:12,fontWeight:800}}>{vnd(i.amount)}</td>
+              <td style={{...TD,fontSize:11,fontWeight:700,color:B.success}}>{vnd(i.paid)}</td>
+              <td style={{...TD,fontSize:11,fontWeight:700,color:Number(i.amount)-Number(i.paid)>0?B.warning:B.success}}>{vnd(Number(i.amount)-Number(i.paid))}</td>
               <td style={{...TD,fontSize:10,color:B.textTer}}>{i.due_date||'—'}</td>
               <td style={TD}><Badge text={i.status}/></td>
               <td style={TD}><Btn sm onClick={()=>markPaid(i)}>Thu tiền</Btn></td>
@@ -1308,7 +1309,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
 </Modal>}
       {hist&&<Modal title={'History: '+hist.name} onClose={()=>setHist(null)}>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:18}}>
-          {[['Campaigns',data.projects.filter(p=>(p.kols||[]).includes(hist.name)).length],['Rate',fmtS(hist.rate)+' VND'],['Stars',hist.reliability+'/5']].map(([l,v])=>(
+          {[['Campaigns',data.projects.filter(p=>(p.kols||[]).includes(hist.name)).length],['Rate',vnd(hist.rate)],['Stars',hist.reliability+'/5']].map(([l,v])=>(
             <div key={l} style={{background:B.gradSoft,borderRadius:12,padding:'12px 14px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',marginBottom:5}}>{l}</div><div style={{fontSize:17,fontWeight:900,color:B.navy}}>{v}</div></div>
           ))}
         </div>
@@ -1335,7 +1336,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
           </div>
           <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
-              {[['Followers',fmtS(kolDetail.followers)],['Engagement',kolDetail.engagement+'%'],['Rate/post',fmtS(kolDetail.rate)+' đ'],['Reliability',(kolDetail.reliability||0)+'/5']].map(([l,v])=>(
+              {[['Followers',fmtS(kolDetail.followers)],['Engagement',kolDetail.engagement+'%'],['Rate/post',vnd(kolDetail.rate)],['Reliability',(kolDetail.reliability||0)+'/5']].map(([l,v])=>(
                 <div key={l} style={{background:'#F8FAFF',borderRadius:10,padding:'12px 14px',border:'1px solid #E2E8F0'}}>
                   <div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}}>{l}</div>
                   <div style={{fontSize:20,fontWeight:900,color:'#0F172A'}}>{v}</div>
@@ -1885,7 +1886,7 @@ function Contracts({data, supabase, reload, log}) {
                 <td style={{...TD,fontWeight:800,color:'#6366F1',fontSize:12}}>{c.contract_code}</td>
                 <td style={{...TD,fontWeight:600}}>{tab==='client'?c.party_a_name:c.party_b_name}</td>
                 <td style={{...TD,fontSize:11,color:'#94A3B8'}}>{data.projects.find(p=>p.id===c.project_id)?.campaign||'—'}</td>
-                <td style={{...TD,fontWeight:700}}>{cfmt(c.total_with_vat)}</td>
+                <td style={{...TD,fontWeight:700}}>{vnd(c.total_with_vat)}</td>
                 <td style={{...TD,fontSize:11,color:'#475569'}}>{c.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={c.status}/></td>
                 <td style={{...TD,display:'flex',gap:6}}>
@@ -2126,7 +2127,7 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
               <input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} style={CINP_S}/>
             </CFG>
             <CFG label="Tổng giá trị (VND)">
-              <div style={{padding:'9px 12px',background:'rgba(26,86,219,0.06)',borderRadius:8,fontSize:15,fontWeight:800,color:CB.primary,border:'1px solid rgba(26,86,219,0.15)'}}>{cfmt(form.total_with_vat)}</div>
+              <div style={{padding:'9px 12px',background:'rgba(26,86,219,0.06)',borderRadius:8,fontSize:15,fontWeight:800,color:CB.primary,border:'1px solid rgba(26,86,219,0.15)'}}>{vnd(form.total_with_vat)}</div>
               <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
             </CFG>
           </CRow3>
@@ -2292,7 +2293,7 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
             <CFG label="Thù lao gốc (VND)"><input type="number" value={form.total_fee} onChange={e=>set('total_fee',Number(e.target.value))} style={CINP_S}/></CFG>
             <CFG label="Thuế TNCN (%)"><input type="number" value={form.vat_rate} onChange={e=>set('vat_rate',Number(e.target.value))} style={CINP_S}/></CFG>
             <CFG label="Thù lao thực nhận">
-              <div style={{padding:'9px 12px',background:'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:'#059669',border:'1px solid rgba(5,150,105,0.2)'}}>{cfmt(form.total_with_vat)}</div>
+              <div style={{padding:'9px 12px',background:'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:'#059669',border:'1px solid rgba(5,150,105,0.2)'}}>{vnd(form.total_with_vat)}</div>
               <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.total_with_vat)}</div>
             </CFG>
           </CRow3>
@@ -2423,14 +2424,14 @@ function ContractPreview({contract:c, type, onClose}) {
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
               <thead><tr style={{background:'#f0f0f0'}}>{['STT','Tên KOL','Link TikTok','Nội dung','Chi phí'].map(h=><th key={h} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{h}</th>)}</tr></thead>
               <tbody>
-                {kolList.map((k,i)=><tr key={i}><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{i+1}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.name}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.tiktok}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.work}</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right'}}>{cfmt(k.fee)}</td></tr>)}
-                <tr style={{background:'#f0f0f0'}}><td colSpan={4} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>TOTAL + VAT ({c.vat_rate}%)</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>{cfmt(total)}</td></tr>
+                {kolList.map((k,i)=><tr key={i}><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'center'}}>{i+1}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.name}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.tiktok}</td><td style={{border:'1px solid #ccc',padding:'4px 8px'}}>{k.work}</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right'}}>{vnd(k.fee)}</td></tr>)}
+                <tr style={{background:'#f0f0f0'}}><td colSpan={4} style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>TOTAL + VAT ({c.vat_rate}%)</td><td style={{border:'1px solid #ccc',padding:'4px 8px',textAlign:'right',fontWeight:700}}>{vnd(total)}</td></tr>
               </tbody>
             </table>
           </div>
         )}
         <div style={{marginTop:12,padding:'10px 14px',background:'#f8f9fa',borderRadius:8,fontSize:12}}>
-          <div><strong>Giá trị HĐ:</strong> {cfmt(total)} VNĐ</div>
+          <div><strong>Giá trị HĐ:</strong> {vnd(total)}</div>
           <div style={{fontStyle:'italic',marginTop:2}}>Bằng chữ: {toWords(total)}</div>
           <div style={{marginTop:6}}><strong>Thanh toán:</strong> {c.payment_terms}</div>
         </div>
@@ -2508,8 +2509,8 @@ function AcceptanceReports({data, supabase, reload, log}) {
               return <tr key={r.id}>
                 <td style={{...TD,fontWeight:800,color:'#3B82F6'}}>{r.report_code}</td>
                 <td style={{...TD,fontWeight:600}}>{ct?.contract_code||'—'}</td>
-                <td style={{...TD,fontWeight:700}}>{cfmt(r.accepted_value)}</td>
-                <td style={{...TD,fontWeight:700,color:Number(r.remaining_amount)>0?'#F59E0B':'#10B981'}}>{cfmt(r.remaining_amount)}</td>
+                <td style={{...TD,fontWeight:700}}>{vnd(r.accepted_value)}</td>
+                <td style={{...TD,fontWeight:700,color:Number(r.remaining_amount)>0?'#F59E0B':'#10B981'}}>{vnd(r.remaining_amount)}</td>
                 <td style={{...TD,fontSize:11,color:'#475569'}}>{r.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={r.status}/></td>
                 <td style={{...TD,display:'flex',gap:6}}>
@@ -2614,7 +2615,7 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
 
         {selectedContract&&(
           <div style={{background:'rgba(26,86,219,0.05)',borderRadius:10,padding:'12px 16px',marginBottom:16,border:'1px solid rgba(26,86,219,0.1)',fontSize:12}}>
-            <strong>{selectedContract.contract_code}</strong> — {type==='client'?selectedContract.party_a_name:selectedContract.party_b_name} — <span style={{color:CB.primary,fontWeight:700}}>{cfmt(selectedContract.total_with_vat)} VND</span>
+            <strong>{selectedContract.contract_code}</strong> — {type==='client'?selectedContract.party_a_name:selectedContract.party_b_name} — <span style={{color:CB.primary,fontWeight:700}}>{vnd(selectedContract.total_with_vat)}</span>
           </div>
         )}
 
@@ -2644,7 +2645,7 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
           <CRow3>
             <CFG label="Đã thanh toán (VND)"><input type="number" value={form.paid_amount} onChange={e=>set('paid_amount',Number(e.target.value))} style={CINP_S}/></CFG>
             <CFG label="Còn phải thanh toán">
-              <div style={{padding:'9px 12px',background:Number(form.remaining_amount)>0?'rgba(217,119,6,0.08)':'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:Number(form.remaining_amount)>0?CB.warning:CB.success,border:`1px solid ${Number(form.remaining_amount)>0?CB.warning:CB.success}30`}}>{cfmt(form.remaining_amount)}</div>
+              <div style={{padding:'9px 12px',background:Number(form.remaining_amount)>0?'rgba(217,119,6,0.08)':'rgba(5,150,105,0.08)',borderRadius:8,fontSize:15,fontWeight:800,color:Number(form.remaining_amount)>0?CB.warning:CB.success,border:`1px solid ${Number(form.remaining_amount)>0?CB.warning:CB.success}30`}}>{vnd(form.remaining_amount)}</div>
               <div style={{fontSize:10,color:CB.textTer,marginTop:3,fontStyle:'italic'}}>{toWords(form.remaining_amount)}</div>
             </CFG>
             <CFG label="TT trong (ngày làm việc)"><input type="number" value={form.payment_deadline} onChange={e=>set('payment_deadline',Number(e.target.value))} style={CINP_S}/></CFG>
@@ -2748,10 +2749,10 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
           </table>
         )}
         <div style={{background:'#f8f9fa',borderRadius:8,padding:'10px 14px',marginTop:12,fontSize:12}}>
-          <div>Giá trị HĐ: <strong>{cfmt(r.contract_value)} VND</strong></div>
-          <div>Giá trị NT: <strong>{cfmt(r.accepted_value)} VND</strong></div>
-          <div>Đã thanh toán: <strong>{cfmt(r.paid_amount)} VND</strong></div>
-          <div>Còn lại: <strong style={{color:Number(r.remaining_amount)>0?CB.warning:CB.success}}>{cfmt(r.remaining_amount)} VND</strong></div>
+          <div>Giá trị HĐ: <strong>{vnd(r.contract_value)}</strong></div>
+          <div>Giá trị NT: <strong>{vnd(r.accepted_value)}</strong></div>
+          <div>Đã thanh toán: <strong>{vnd(r.paid_amount)}</strong></div>
+          <div>Còn lại: <strong style={{color:Number(r.remaining_amount)>0?CB.warning:CB.success}}>{vnd(r.remaining_amount)}</strong></div>
           <div style={{fontStyle:'italic',marginTop:4}}>Bằng chữ: {toWords(r.remaining_amount)}</div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:28,textAlign:'center'}}>
@@ -3937,7 +3938,7 @@ function Quotations({data, supabase, reload, log}) {
                 <td style={{...TD,fontWeight:600}}>{q.client_name||'—'}</td>
                 <td style={{...TD,fontSize:11,color:'#475569'}}>{q.campaign_name||'—'}</td>
                 <td style={TD}><span style={{background:'rgba(26,86,219,0.08)',color:'#1A56DB',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:600}}>{q.service_type||'—'}</span></td>
-                <td style={{...TD,fontWeight:800,color:'#0F172A'}}>{cfmt(q.total)}</td>
+                <td style={{...TD,fontWeight:800,color:'#0F172A'}}>{vnd(q.total)}</td>
                 <td style={{...TD,fontSize:11,color:'#94A3B8'}}>{q.valid_days} ngày</td>
                 <td style={TD}><QBadge text={q.status}/></td>
                 <td style={{...TD,fontSize:10,color:'#94A3B8'}}>{q.created_at?.slice(0,10)||'—'}</td>
@@ -4305,7 +4306,7 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
                   <div style={{padding:'6px 7px',fontSize:11,fontWeight:600,color:'#475569',textAlign:'right',
                     background:'rgba(248,250,252,0.8)',borderRadius:7,border:'1px solid rgba(26,86,219,0.08)',
                     display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                    {cfmt(Math.round(calc.priceAfterTax))}
+                    {vnd(Math.round(calc.priceAfterTax))}
                   </div>
 
                   {/* Markup % - REQUIRED */}
@@ -4325,7 +4326,7 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
                   <div style={{padding:'6px 7px',fontSize:12,fontWeight:800,color:'#1A56DB',textAlign:'right',
                     background:'rgba(26,86,219,0.06)',borderRadius:7,border:'1px solid rgba(26,86,219,0.15)',
                     display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                    {item.markup!==''?cfmt(Math.round(calc.lineBeforeVAT)):'—'}
+                    {item.markup!==''?vnd(Math.round(calc.lineBeforeVAT)):'—'}
                   </div>
 
                   {/* VAT amount */}
@@ -4334,7 +4335,7 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
                     background:item.tax_type==='VAT'&&item.tax_rate>0?'rgba(124,58,237,0.06)':'rgba(248,250,252,0.5)',
                     borderRadius:7,border:'1px solid rgba(26,86,219,0.06)',
                     display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                    {item.tax_type==='VAT'&&item.tax_rate>0&&item.markup!==''?cfmt(Math.round(calc.lineVAT)):'—'}
+                    {item.tax_type==='VAT'&&item.tax_rate>0&&item.markup!==''?vnd(Math.round(calc.lineVAT)):'—'}
                   </div>
 
                   {/* Delete */}
@@ -4368,7 +4369,7 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
                 if(item.markup===''||!item.description&&!item.source_name) return null
                 return <div key={i} style={{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:11}}>
                   <span style={{color:'#475569',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.source_name||item.description||`Hạng mục ${i+1}`}</span>
-                  <span style={{fontWeight:600,color:'#0F172A'}}>{cfmt(Math.round(c.lineBeforeVAT))}</span>
+                  <span style={{fontWeight:600,color:'#0F172A'}}>{vnd(Math.round(c.lineBeforeVAT))}</span>
                 </div>
               })}
 
@@ -4377,26 +4378,26 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
               {/* 3 main rows */}
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
                 <span style={{fontSize:13,color:'#475569',fontWeight:500}}>Tổng tiền trước thuế VAT</span>
-                <span style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>{cfmt(Math.round(subtotalBeforeVAT))} VND</span>
+                <span style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>{vnd(Math.round(subtotalBeforeVAT))}</span>
               </div>
 
               {form.discount>0&&(
                 <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
                   <span style={{fontSize:12,color:'#D97706',fontWeight:500}}>Chiết khấu ({form.discount}%)</span>
-                  <span style={{fontSize:13,fontWeight:700,color:'#D97706'}}>- {cfmt(Math.round(discountAmt))} VND</span>
+                  <span style={{fontSize:13,fontWeight:700,color:'#D97706'}}>- {vnd(Math.round(discountAmt))}</span>
                 </div>
               )}
 
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
                 <span style={{fontSize:13,color:'#7C3AED',fontWeight:500}}>Thuế VAT</span>
-                <span style={{fontSize:14,fontWeight:800,color:'#7C3AED'}}>{cfmt(Math.round(totalVAT))} VND</span>
+                <span style={{fontSize:14,fontWeight:800,color:'#7C3AED'}}>{vnd(Math.round(totalVAT))}</span>
               </div>
 
               <div style={{height:2,background:'linear-gradient(90deg,#1A56DB,#06B6D4)',borderRadius:99,margin:'12px 0'}}/>
 
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span style={{fontSize:15,fontWeight:900,color:'#0F172A'}}>Tổng tiền sau thuế VAT</span>
-                <span style={{fontSize:18,fontWeight:900,color:'#1A56DB'}}>{cfmt(Math.round(grandTotal))} VND</span>
+                <span style={{fontSize:18,fontWeight:900,color:'#1A56DB'}}>{vnd(Math.round(grandTotal))}</span>
               </div>
               <div style={{fontSize:10,color:'#94A3B8',marginTop:5,fontStyle:'italic',textAlign:'right'}}>
                 {numWords(Math.round(grandTotal))}
@@ -4691,12 +4692,12 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
                   </td>
                   <td style={{padding:'7px 8px'}}>{item.unit}</td>
                   <td style={{padding:'7px 8px',textAlign:'right'}}>{item.qty}</td>
-                  <td style={{padding:'7px 8px',textAlign:'right'}}>{cfmt(Math.round(Number(item.base_price||0)))}</td>
+                  <td style={{padding:'7px 8px',textAlign:'right'}}>{vnd(Math.round(Number(item.base_price||0)))}</td>
                   <td style={{padding:'7px 8px',textAlign:'center',fontSize:9,color:item.tax_type==='PIT'?'#92400E':'#6D28D9'}}>{item.tax_type} {item.tax_rate}%</td>
                   <td style={{padding:'7px 8px',textAlign:'right',fontWeight:700,color:'#059669'}}>{item.markup!==''?item.markup+'%':'—'}</td>
-                  <td style={{padding:'7px 8px',textAlign:'right',fontWeight:700,color:'#1A56DB'}}>{cfmt(Math.round(c.lineBeforeVAT))}</td>
-                  <td style={{padding:'7px 8px',textAlign:'right',color:'#7C3AED'}}>{item.tax_type==='VAT'&&item.tax_rate>0?cfmt(Math.round(c.lineVAT)):'—'}</td>
-                  <td style={{padding:'7px 8px',textAlign:'right',fontWeight:800}}>{cfmt(Math.round(c.lineTotal))}</td>
+                  <td style={{padding:'7px 8px',textAlign:'right',fontWeight:700,color:'#1A56DB'}}>{vnd(Math.round(c.lineBeforeVAT))}</td>
+                  <td style={{padding:'7px 8px',textAlign:'right',color:'#7C3AED'}}>{item.tax_type==='VAT'&&item.tax_rate>0?vnd(Math.round(c.lineVAT)):'—'}</td>
+                  <td style={{padding:'7px 8px',textAlign:'right',fontWeight:800}}>{vnd(Math.round(c.lineTotal))}</td>
                 </tr>
               })}
             </tbody>
@@ -4707,22 +4708,22 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
             <div style={{width:360,background:'#F8FAFF',borderRadius:10,padding:'16px 18px',border:'1px solid #E2E8F0'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
                 <span style={{fontSize:13,color:'#475569',fontWeight:500}}>Tổng tiền trước thuế VAT</span>
-                <span style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>{cfmt(Math.round(subtotalBeforeVAT))} VND</span>
+                <span style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>{vnd(Math.round(subtotalBeforeVAT))}</span>
               </div>
               {q.discount>0&&(
                 <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
                   <span style={{fontSize:12,color:'#D97706',fontWeight:500}}>Chiết khấu ({q.discount}%)</span>
-                  <span style={{fontSize:13,fontWeight:700,color:'#D97706'}}>- {cfmt(Math.round(discountAmt))} VND</span>
+                  <span style={{fontSize:13,fontWeight:700,color:'#D97706'}}>- {vnd(Math.round(discountAmt))}</span>
                 </div>
               )}
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
                 <span style={{fontSize:13,color:'#7C3AED',fontWeight:500}}>Thuế VAT</span>
-                <span style={{fontSize:14,fontWeight:800,color:'#7C3AED'}}>{cfmt(Math.round(totalVAT))} VND</span>
+                <span style={{fontSize:14,fontWeight:800,color:'#7C3AED'}}>{vnd(Math.round(totalVAT))}</span>
               </div>
               <div style={{height:2,background:'linear-gradient(90deg,#1A56DB,#06B6D4)',borderRadius:99,margin:'10px 0'}}/>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span style={{fontSize:14,fontWeight:900,color:'#0F172A'}}>Tổng tiền sau thuế VAT</span>
-                <span style={{fontSize:18,fontWeight:900,color:'#1A56DB'}}>{cfmt(Math.round(grandTotal))} VND</span>
+                <span style={{fontSize:18,fontWeight:900,color:'#1A56DB'}}>{vnd(Math.round(grandTotal))}</span>
               </div>
               <div style={{fontSize:10,color:'#94A3B8',marginTop:5,fontStyle:'italic',textAlign:'right'}}>{numWords(Math.round(grandTotal))}</div>
               {items.some(it=>it.tax_type==='PIT'&&it.tax_rate>0)&&(
