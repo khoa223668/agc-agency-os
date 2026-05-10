@@ -1,40 +1,35 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
-import {
-  LayoutDashboard, TrendingUp, Workflow as WorkflowIco, Folder, Tag, FileText,
-  Shield, ScrollText, ClipboardList, Users, Star, Package, UserCheck,
-  BarChart2, Receipt, Search, Bell, LogOut, ChevronLeft, ChevronRight,
-} from 'lucide-react'
 
-// K&K Agency OS — Enterprise Creative UI
+// K&K Agency OS — Light Professional UI
 const B = {
-  primary: '#6366F1',
-  primaryGlow: 'rgba(99,102,241,0.25)',
-  accent: '#06B6D4',
+  primary: '#3B82F6',
+  primaryGlow: 'rgba(59,130,246,0.2)',
+  accent: '#0EA5E9',
   purple: '#8B5CF6',
-  navy: '#F8FAFC',
-  bg: '#0F1117',
-  bgCard: '#1A1D2E',
-  glass: '#1A1D2E',
-  glassBorder: 'rgba(255,255,255,0.08)',
-  gradPrimary: 'linear-gradient(135deg,#6366F1,#06B6D4)',
-  gradSoft: 'rgba(99,102,241,0.08)',
-  gradCard: '#1A1D2E',
-  text: '#F8FAFC',
-  textSec: '#94A3B8',
-  textTer: '#475569',
+  navy: '#0F172A',
+  bg: '#F8FAFF',
+  bgCard: '#FFFFFF',
+  glass: '#FFFFFF',
+  glassBorder: '#E2E8F0',
+  gradPrimary: 'linear-gradient(135deg,#3B82F6,#0EA5E9)',
+  gradSoft: 'rgba(59,130,246,0.06)',
+  gradCard: '#FFFFFF',
+  text: '#0F172A',
+  textSec: '#64748B',
+  textTer: '#94A3B8',
   white: '#FFFFFF',
-  surface: '#1A1D2E',
-  border: 'rgba(255,255,255,0.08)',
-  borderStrong: 'rgba(99,102,241,0.35)',
+  surface: '#FFFFFF',
+  border: '#E2E8F0',
+  borderStrong: 'rgba(59,130,246,0.4)',
   success: '#10B981',
-  successBg: 'rgba(16,185,129,0.12)',
+  successBg: 'rgba(16,185,129,0.1)',
   warning: '#F59E0B',
-  warningBg: 'rgba(245,158,11,0.12)',
+  warningBg: 'rgba(245,158,11,0.1)',
   danger: '#EF4444',
-  dangerBg: 'rgba(239,68,68,0.12)',
-  info: '#6366F1',
-  infoBg: 'rgba(99,102,241,0.12)',
+  dangerBg: 'rgba(239,68,68,0.1)',
+  info: '#3B82F6',
+  infoBg: 'rgba(59,130,246,0.1)',
 }
 
 const STATUS = {
@@ -57,47 +52,49 @@ function Badge({text}){
 function fmt(n){return Number(n||0).toLocaleString('vi-VN')}
 function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
 
-const INP = {style:{width:'100%',padding:'9px 12px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
+const INP = {style:{width:'100%',padding:'8px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
 
 function Card({title,children,action,glow}){
-  return <div style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,padding:'18px 22px',marginBottom:16,position:'relative',overflow:'hidden'}}>
-    {glow && <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(135deg,#6366F1,#06B6D4)',borderRadius:'14px 14px 0 0'}}/>}
+  return <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 22px',marginBottom:16,position:'relative',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
+    {glow && <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',borderRadius:'14px 14px 0 0'}}/>}
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-      <span style={{fontSize:12.5,fontWeight:700,color:'#F8FAFC',letterSpacing:'-0.01em'}}>{title}</span>{action}
+      <span style={{fontSize:12.5,fontWeight:700,color:'#0F172A',letterSpacing:'-0.01em'}}>{title}</span>{action}
     </div>
     {children}
   </div>
 }
 
 function Btn({children,onClick,primary,sm,danger,ghost,type,style:s}){
-  if(primary) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:sm?11:12.5,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",...s}}>{children}</button>
-  if(danger) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)',background:'rgba(239,68,68,0.1)',color:'#EF4444',cursor:'pointer',fontSize:sm?11:12.5,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",...s}}>{children}</button>
-  if(ghost) return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:sm?11:12.5,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",...s}}>{children}</button>
-  return <button type={type||'button'} onClick={onClick} style={{display:'inline-flex',alignItems:'center',gap:6,padding:sm?'5px 12px':'7px 16px',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.05)',color:'#94A3B8',cursor:'pointer',fontSize:sm?11:12.5,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",...s}}>{children}</button>
+  const base={cursor:'pointer',borderRadius:8,fontSize:sm?11:12.5,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif",display:'inline-flex',alignItems:'center',gap:5,lineHeight:1,transition:'opacity 0.15s',padding:sm?'5px 10px':'7px 14px',...s}
+  if(primary)return<button type={type||'button'} onClick={onClick} style={{...base,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',border:'none',boxShadow:'0 1px 3px rgba(59,130,246,0.3)'}}>{children}</button>
+  if(danger)return<button type={type||'button'} onClick={onClick} style={{...base,background:'rgba(239,68,68,0.08)',color:'#EF4444',border:'1px solid rgba(239,68,68,0.2)'}}>{children}</button>
+  if(ghost)return<button type={type||'button'} onClick={onClick} style={{...base,background:'transparent',color:'#64748B',border:'1px solid #E2E8F0'}}>{children}</button>
+  return<button type={type||'button'} onClick={onClick} style={{...base,background:'#F8FAFC',color:'#374151',border:'1px solid #E2E8F0'}}>{children}</button>
 }
 
-function FG({label,children}){return <div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:700,color:'#475569',marginBottom:5,display:'block',letterSpacing:'0.07em',textTransform:'uppercase'}}>{label}</label>{children}</div>}
+function FG({label,children}){return<div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:700,color:'#94A3B8',marginBottom:5,display:'block',letterSpacing:'0.07em',textTransform:'uppercase'}}>{label}</label>{children}</div>}
 function Row2({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
 function Empty({children}){return <div style={{textAlign:'center',padding:'28px 0',color:B.textTer,fontSize:12,fontWeight:500}}>{children}</div>}
 
 function Modal({title,children,onClose}){
-  return <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(8px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-    <div style={{background:'#1A1D2E',backdropFilter:'blur(24px)',borderRadius:16,padding:'24px 28px',width:560,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:16,borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
-        <span style={{fontSize:15,fontWeight:700,color:'#F8FAFC',letterSpacing:'-0.02em'}}>{title}</span>
-        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',fontSize:20,lineHeight:1,padding:'2px 6px',borderRadius:6}}>×</button>
+  return<div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose?.()}}>
+    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:520,maxHeight:'90vh',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
+      <div style={{padding:'18px 22px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+        <span style={{fontSize:15,fontWeight:700,color:'#0F172A'}}>{title}</span>
+        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8',fontSize:18,lineHeight:1,padding:4,borderRadius:6}}>×</button>
       </div>
-      {children}
+      <div style={{padding:'18px 22px',overflowY:'auto',flex:1}}>{children}</div>
     </div>
   </div>
 }
 
-function MFoot({onClose,onDelete}){
-  return <div style={{display:'flex',justifyContent:'space-between',marginTop:18,paddingTop:16,borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+function MFoot({onClose,onDelete,children}){
+  if(children)return<div style={{padding:'14px 22px',borderTop:'1px solid #F1F5F9',display:'flex',gap:8,justifyContent:'flex-end',background:'#FAFAFA',flexShrink:0}}>{children}</div>
+  return<div style={{padding:'14px 22px',borderTop:'1px solid #F1F5F9',display:'flex',justifyContent:'space-between',background:'#FAFAFA',flexShrink:0}}>
     <div>{onDelete&&<Btn danger onClick={onDelete}>Xóa</Btn>}</div>
     <div style={{display:'flex',gap:8}}>
-      <button type="button" onClick={onClose} style={{padding:'8px 18px',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.05)',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif"}}>Huỷ</button>
-      <button type="submit" style={{padding:'8px 22px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>Lưu</button>
+      <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:8,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#374151',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif"}}>Huỷ</button>
+      <button type="submit" style={{padding:'7px 20px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>Lưu</button>
     </div>
   </div>
 }
@@ -112,25 +109,23 @@ function Logo({size=36}){
 }
 
 function NavIco({id,size=15,col='currentColor'}){
-  const icons={
-    dashboard:LayoutDashboard,pipeline:TrendingUp,workflow:WorkflowIco,
-    projects:Folder,pricing:Tag,invoices:FileText,approval:Shield,
-    contracts:ScrollText,bbnt:ClipboardList,clients:Users,kols:Star,
-    vendors:Package,team:UserCheck,reports:BarChart2,quotations:Receipt,
+  const sym={
+    dashboard:'▣',pipeline:'◈',workflow:'◎',projects:'▤',
+    pricing:'◊',invoices:'≡',approval:'✓',contracts:'⊟',
+    bbnt:'☐',clients:'◉',kols:'◆',vendors:'⬡',
+    team:'◑',reports:'▦',quotations:'≈',
   }
-  const Icon=icons[id]
-  if(!Icon)return null
-  return<Icon size={size} color={col} strokeWidth={1.75}/>
+  return<span style={{fontSize:size-1,color:col,lineHeight:1,display:'inline-flex',alignItems:'center',justifyContent:'center',fontStyle:'normal'}}>{sym[id]||'·'}</span>
 }
 
-// Stat card with gradient accent
+// Stat card with accent bar
 function StatCard({label,value,sub,color,icon}){
-  return <div style={{background:B.gradCard,backdropFilter:'blur(20px)',border:`1px solid ${B.border}`,borderRadius:16,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.04)'}}>
-    <div style={{position:'absolute',top:0,left:0,width:4,height:'100%',background:color||B.gradPrimary,borderRadius:'16px 0 0 16px'}}/>
+  return <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
+    <div style={{position:'absolute',top:0,left:0,width:4,height:'100%',background:color||B.gradPrimary,borderRadius:'14px 0 0 14px'}}/>
     <div style={{paddingLeft:8}}>
-      <div style={{fontSize:10,fontWeight:700,color:B.textTer,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>{label}</div>
-      <div style={{fontSize:24,fontWeight:900,color:B.text,letterSpacing:'-0.03em',lineHeight:1}}>{value}</div>
-      {sub&&<div style={{fontSize:11,color:B.textTer,marginTop:5,fontWeight:500}}>{sub}</div>}
+      <div style={{fontSize:10,fontWeight:700,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>{label}</div>
+      <div style={{fontSize:24,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1}}>{value}</div>
+      {sub&&<div style={{fontSize:11,color:'#94A3B8',marginTop:5,fontWeight:500}}>{sub}</div>}
     </div>
   </div>
 }
@@ -201,41 +196,41 @@ export default function App(){
   const groups=[...new Set(visibleNAV.map(n=>n.grp))]
 
   if(loading)return(
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:20,background:'#0F1117',fontFamily:"'Inter',system-ui,sans-serif"}}>
-      <div style={{width:52,height:52,borderRadius:16,background:'linear-gradient(135deg,#6366F1,#06B6D4)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 30px rgba(99,102,241,0.4)'}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:20,background:'#F8FAFF',fontFamily:"'Inter',system-ui,sans-serif"}}>
+      <div style={{width:52,height:52,borderRadius:16,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 20px rgba(59,130,246,0.3)'}}>
         <span style={{color:'#fff',fontWeight:900,fontSize:24}}>K</span>
       </div>
       <div style={{textAlign:'center'}}>
-        <div style={{fontSize:18,fontWeight:800,color:'#F8FAFC'}}>K&K Advertising</div>
-        <div style={{fontSize:12,color:'#475569',marginTop:4}}>Agency OS — Loading...</div>
+        <div style={{fontSize:18,fontWeight:800,color:'#0F172A'}}>K&K Advertising</div>
+        <div style={{fontSize:12,color:'#64748B',marginTop:4}}>Agency OS — Loading...</div>
       </div>
-      <div style={{width:140,height:2,background:'rgba(255,255,255,0.06)',borderRadius:99,overflow:'hidden'}}>
-        <div style={{height:'100%',width:'60%',background:'linear-gradient(90deg,#6366F1,#06B6D4)',borderRadius:99,animation:'loading 1.5s ease infinite'}}/>
+      <div style={{width:140,height:2,background:'rgba(59,130,246,0.1)',borderRadius:99,overflow:'hidden'}}>
+        <div style={{height:'100%',width:'60%',background:'linear-gradient(90deg,#3B82F6,#0EA5E9)',borderRadius:99,animation:'loading 1.5s ease infinite'}}/>
       </div>
     </div>
   )
 
   return(
-    <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden',background:'#0F1117',fontFamily:"'Inter',system-ui,sans-serif",position:'fixed',inset:0}}>
+    <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden',background:'#F8FAFF',fontFamily:"'Inter',system-ui,sans-serif",position:'fixed',inset:0}}>
 
       {/* SIDEBAR */}
-      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'#0D0F1C',position:'relative',zIndex:10}}>
+      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'#1E293B',position:'relative',zIndex:10}}>
         {/* Logo */}
-        <div style={{padding:'18px 14px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:10,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
-          <div style={{width:36,height:36,borderRadius:11,background:'linear-gradient(135deg,#6366F1,#06B6D4)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 0 16px rgba(99,102,241,0.35)'}}>
+        <div style={{padding:'18px 14px 14px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',gap:10,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
+          <div style={{width:36,height:36,borderRadius:11,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 4px 16px rgba(59,130,246,0.3)'}}>
             <span style={{color:'#fff',fontWeight:900,fontSize:17}}>K</span>
           </div>
           {!sidebarCollapsed&&<div style={{minWidth:0}}>
-            <div style={{fontWeight:800,fontSize:12.5,color:'#F8FAFC',letterSpacing:'-0.01em',whiteSpace:'nowrap'}}>K&K Advertising</div>
-            <div style={{fontSize:8.5,fontWeight:700,color:'#06B6D4',marginTop:1,letterSpacing:'0.08em'}}>AGENCY OS</div>
+            <div style={{fontWeight:800,fontSize:12.5,color:'#F1F5F9',letterSpacing:'-0.01em',whiteSpace:'nowrap'}}>K&K Advertising</div>
+            <div style={{fontSize:8.5,fontWeight:700,color:'#38BDF8',marginTop:1,letterSpacing:'0.08em'}}>AGENCY OS</div>
           </div>}
         </div>
         {/* Search */}
         {!sidebarCollapsed&&(
           <div style={{padding:'10px 10px 6px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',background:'rgba(255,255,255,0.04)',borderRadius:9,border:'1px solid rgba(255,255,255,0.06)'}}>
-              <Search size={12} color="#475569" strokeWidth={2}/>
-              <span style={{fontSize:11,color:'#475569'}}>Search...</span>
+            <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',background:'rgba(255,255,255,0.06)',borderRadius:9,border:'1px solid #E2E8F0'}}>
+              <span style={{fontSize:12,color:'#64748B',lineHeight:1}}>⌕</span>
+              <span style={{fontSize:11,color:'#64748B'}}>Search...</span>
             </div>
           </div>
         )}
@@ -243,24 +238,24 @@ export default function App(){
         <div style={{flex:1,overflowY:'auto',padding:'4px 8px'}}>
           {groups.map(grp=>(
             <div key={grp}>
-              {!sidebarCollapsed&&<div style={{padding:'8px 6px 2px',fontSize:9,fontWeight:800,color:'#334155',letterSpacing:'0.12em',textTransform:'uppercase'}}>{grp}</div>}
+              {!sidebarCollapsed&&<div style={{padding:'8px 6px 2px',fontSize:9,fontWeight:800,color:'#475569',letterSpacing:'0.12em',textTransform:'uppercase'}}>{grp}</div>}
               {visibleNAV.filter(n=>n.grp===grp).map(n=>{
                 const active=page===n.id
                 return(
                   <div key={n.id} onClick={()=>setPage(n.id)}
                     style={{padding:sidebarCollapsed?'8px 0':'6px 8px',cursor:'pointer',borderRadius:9,display:'flex',alignItems:'center',justifyContent:sidebarCollapsed?'center':'flex-start',gap:9,marginBottom:1,position:'relative',transition:'background 0.15s',
-                      background:active?'rgba(99,102,241,0.1)':'transparent'}}
-                    onMouseEnter={e=>{if(!active)e.currentTarget.style.background='rgba(255,255,255,0.04)'}}
+                      background:active?'rgba(59,130,246,0.15)':'transparent'}}
+                    onMouseEnter={e=>{if(!active)e.currentTarget.style.background='rgba(255,255,255,0.05)'}}
                     onMouseLeave={e=>{if(!active)e.currentTarget.style.background='transparent'}}>
-                    {active&&<div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:'linear-gradient(180deg,#6366F1,#06B6D4)',borderRadius:'0 3px 3px 0',boxShadow:'0 0 8px rgba(99,102,241,0.5)'}}/>}
+                    {active&&<div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:'#3B82F6',borderRadius:'0 3px 3px 0',boxShadow:'0 0 8px rgba(59,130,246,0.4)'}}/>}
                     <div style={{width:30,height:30,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
-                      background:active?'rgba(99,102,241,0.15)':'transparent',
-                      border:active?'1px solid rgba(99,102,241,0.25)':'1px solid transparent'}}>
-                      <NavIco id={n.id} size={14} col={active?'#6366F1':'#475569'}/>
+                      background:active?'rgba(59,130,246,0.2)':'transparent',
+                      border:active?'1px solid rgba(59,130,246,0.3)':'1px solid transparent'}}>
+                      <NavIco id={n.id} size={14} col={active?'#60A5FA':'#64748B'}/>
                     </div>
-                    {!sidebarCollapsed&&<span style={{fontSize:11.5,fontWeight:active?700:500,color:active?'#F8FAFC':'#475569',whiteSpace:'nowrap'}}>{n.label}</span>}
+                    {!sidebarCollapsed&&<span style={{fontSize:11.5,fontWeight:active?700:500,color:active?'#F1F5F9':'#64748B',whiteSpace:'nowrap'}}>{n.label}</span>}
                     {!sidebarCollapsed&&n.id==='approval'&&pending>0&&(
-                      <span style={{marginLeft:'auto',background:'#EF4444',color:'#fff',fontSize:9,padding:'1px 6px',borderRadius:99,fontWeight:700,boxShadow:'0 0 6px rgba(239,68,68,0.4)'}}>{pending}</span>
+                      <span style={{marginLeft:'auto',background:'#EF4444',color:'#fff',fontSize:9,padding:'1px 6px',borderRadius:99,fontWeight:700}}>{pending}</span>
                     )}
                   </div>
                 )
@@ -271,57 +266,57 @@ export default function App(){
         {/* User */}
         <div style={{padding:'10px 10px',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
           {sidebarCollapsed?(
-            <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#6366F1'},#06B6D4)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800,margin:'0 auto'}}>
+            <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#3B82F6'},#0EA5E9)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800,margin:'0 auto'}}>
               {currentUser?.avatar_initials||'K'}
             </div>
           ):(
-            <div style={{display:'flex',alignItems:'center',gap:9,padding:'8px 10px',borderRadius:11,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',cursor:'pointer'}}
-              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.07)'}
-              onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.04)'}>
-              <div style={{width:30,height:30,borderRadius:9,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#6366F1'},#06B6D4)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800,flexShrink:0,position:'relative'}}>
+            <div style={{display:'flex',alignItems:'center',gap:9,padding:'8px 10px',borderRadius:11,background:'rgba(255,255,255,0.05)',border:'1px solid #E2E8F0',cursor:'pointer'}}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.08)'}
+              onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}>
+              <div style={{width:30,height:30,borderRadius:9,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#3B82F6'},#0EA5E9)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800,flexShrink:0,position:'relative'}}>
                 {currentUser?.avatar_initials||'K'}
-                <div style={{position:'absolute',bottom:-1,right:-1,width:8,height:8,borderRadius:'50%',background:'#10B981',border:'2px solid #0D0F1C',boxShadow:'0 0 6px rgba(16,185,129,0.6)'}}/>
+                <div style={{position:'absolute',bottom:-1,right:-1,width:8,height:8,borderRadius:'50%',background:'#10B981',border:'2px solid #1E293B',boxShadow:'0 0 6px rgba(16,185,129,0.6)'}}/>
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:11.5,fontWeight:700,color:'#F8FAFC',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'}</div>
-                <div style={{fontSize:9,color:'#06B6D4',fontWeight:600,marginTop:1}}>{currentUser?.isMaster?'● Premium member':'● Staff'}</div>
+                <div style={{fontSize:11.5,fontWeight:700,color:'#F1F5F9',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'}</div>
+                <div style={{fontSize:9,color:'#38BDF8',fontWeight:600,marginTop:1}}>{currentUser?.isMaster?'● Premium member':'● Staff'}</div>
               </div>
-              <button onClick={handleLogout} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',padding:4,borderRadius:6,lineHeight:1,display:'flex',alignItems:'center'}}>
-                <LogOut size={13} strokeWidth={2}/>
+              <button onClick={handleLogout} style={{background:'none',border:'none',cursor:'pointer',color:'#64748B',padding:4,borderRadius:6,lineHeight:1,display:'flex',alignItems:'center'}}>
+                <span style={{fontSize:13,color:'currentColor',lineHeight:1}}>→</span>
               </button>
             </div>
           )}
         </div>
         {/* Collapse */}
         <button onClick={()=>setSidebarCollapsed(!sidebarCollapsed)}
-          style={{position:'absolute',right:-11,top:'50%',transform:'translateY(-50%)',width:22,height:22,borderRadius:'50%',background:'#161929',border:'1px solid rgba(99,102,241,0.2)',color:'#475569',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:20,boxShadow:'0 2px 8px rgba(0,0,0,0.5)'}}>
-          {sidebarCollapsed?<ChevronRight size={12} strokeWidth={2.5}/>:<ChevronLeft size={12} strokeWidth={2.5}/>}
+          style={{position:'absolute',right:-11,top:'50%',transform:'translateY(-50%)',width:22,height:22,borderRadius:'50%',background:'#273549',border:'1px solid rgba(255,255,255,0.1)',color:'#64748B',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:20,boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}}>
+          {sidebarCollapsed?<span style={{fontSize:14,lineHeight:1}}>›</span>:<span style={{fontSize:14,lineHeight:1}}>‹</span>}
         </button>
       </div>
 
       {/* MAIN */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative',zIndex:1}}>
         {/* Topbar */}
-        <div style={{height:52,borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',background:'rgba(13,15,28,0.9)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',flexShrink:0}}>
+        <div style={{height:52,borderBottom:'1px solid #E2E8F0',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',background:'rgba(255,255,255,0.9)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:11,color:'#475569',cursor:'pointer',fontWeight:500}} onClick={()=>setPage('dashboard')}>Home</span>
-            <span style={{fontSize:11,color:'#334155',margin:'0 4px'}}>›</span>
-            <span style={{fontSize:11,fontWeight:700,color:'#6366F1'}}>{visibleNAV.find(n=>n.id===page)?.label||NAV.find(n=>n.id===page)?.label||'Dashboard'}</span>
-            <span style={{fontSize:11,color:'#334155',margin:'0 4px'}}>›</span>
-            <span style={{fontSize:11,color:'#334155'}}>{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
+            <span style={{fontSize:11,color:'#94A3B8',cursor:'pointer',fontWeight:500}} onClick={()=>setPage('dashboard')}>Home</span>
+            <span style={{fontSize:11,color:'#CBD5E1',margin:'0 4px'}}>›</span>
+            <span style={{fontSize:11,fontWeight:700,color:'#3B82F6'}}>{visibleNAV.find(n=>n.id===page)?.label||NAV.find(n=>n.id===page)?.label||'Dashboard'}</span>
+            <span style={{fontSize:11,color:'#CBD5E1',margin:'0 4px'}}>›</span>
+            <span style={{fontSize:11,color:'#94A3B8'}}>{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setPage('approval')}>
-              <Bell size={15} color="#94A3B8" strokeWidth={2}/>
-              {pending>0&&<div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:'#EF4444',boxShadow:'0 0 5px rgba(239,68,68,0.8)'}}/>}
+            <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'#F8FAFC',border:'1px solid #E2E8F0',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setPage('approval')}>
+              <span style={{fontSize:15,color:'#64748B',lineHeight:1}}>○</span>
+              {pending>0&&<div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:'#EF4444'}}/>}
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderRadius:9,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.07)'}}>
-              <div style={{width:24,height:24,borderRadius:7,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#6366F1'},#06B6D4)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:800}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderRadius:9,background:'#F8FAFC',border:'1px solid #E2E8F0'}}>
+              <div style={{width:24,height:24,borderRadius:7,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#3B82F6'},#0EA5E9)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:800}}>
                 {currentUser?.avatar_initials||'K'}
               </div>
               <div>
-                <div style={{fontSize:11,fontWeight:700,color:'#F8FAFC',lineHeight:1}}>{currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'}</div>
-                <div style={{fontSize:9,color:'#475569',marginTop:1}}>{currentUser?.isMaster?'CEO':'Staff'}</div>
+                <div style={{fontSize:11,fontWeight:700,color:'#0F172A',lineHeight:1}}>{currentUser?.name?.split(' ').slice(-1)[0]||'Khoa'}</div>
+                <div style={{fontSize:9,color:'#64748B',marginTop:1}}>{currentUser?.isMaster?'CEO':'Staff'}</div>
               </div>
             </div>
           </div>
@@ -379,9 +374,10 @@ function Dashboard({ data, setPage, currentUser }) {
     })
 
   const glass = {
-    background: '#1A1D2E',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#FFFFFF',
+    border: '1px solid #E2E8F0',
     borderRadius: 12,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   }
 
   const kpis = [
@@ -409,18 +405,18 @@ function Dashboard({ data, setPage, currentUser }) {
   const months = ['J','F','M','A','M','J','J','A','S','O','N','D']
 
   return (
-    <div style={{ width: '100%', fontFamily: "'Inter', system-ui, sans-serif", color: '#F8FAFC' }}>
+    <div style={{ width: '100%', fontFamily: "'Inter', system-ui, sans-serif", color: '#0F172A' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginBottom: 4 }}>
+          <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 500, marginBottom: 3 }}>
             Good {now.getHours()<12?'morning':now.getHours()<17?'afternoon':'evening'}, {firstName}
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
             Agency Overview
           </div>
-          <div style={{ fontSize: 12, color: '#475569', marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
             {now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
           </div>
         </div>
@@ -439,13 +435,13 @@ function Dashboard({ data, setPage, currentUser }) {
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
         {kpis.map(({ label, value, sub, accent }) => (
-          <div key={label} style={{ background:'#1A1D2E', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, transform 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = accent+'40'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)' }}>
+          <div key={label} style={{ background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:12, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, transform 0.15s', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = accent+'60'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.transform = 'translateY(0)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, borderRadius: '12px 12px 0 0' }} />
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>{label}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-            <div style={{ fontSize: 10, color: '#475569', marginTop: 6 }}>{sub}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>{label}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6 }}>{sub}</div>
           </div>
         ))}
       </div>
@@ -457,13 +453,13 @@ function Dashboard({ data, setPage, currentUser }) {
         <div style={{ ...glass, padding: '20px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#F8FAFC', letterSpacing: '-0.01em' }}>Revenue · 2026</div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 3 }}>Monthly projection · VND</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.01em' }}>Revenue · 2026</div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 3 }}>Monthly projection · VND</div>
             </div>
             <div style={{ display: 'flex', gap: 16 }}>
               {[['Total', fmtS(rev), '#06B6D4'], ['This mo.', fmtS(byM[now.getMonth()]), '#8B5CF6'], ['Avg', fmtS(Math.round(rev/12)), '#10B981']].map(([l, v, c]) => (
                 <div key={l} style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 9, color: '#334155', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
+                  <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: c, marginTop: 2 }}>{v}</div>
                 </div>
               ))}
@@ -478,11 +474,11 @@ function Dashboard({ data, setPage, currentUser }) {
                 <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   <div style={{
                     width: '100%', borderRadius: '2px 2px 1px 1px', minHeight: 4, height: h + '%',
-                    background: isNow ? 'linear-gradient(180deg,#06B6D4,#6366F1)' : isPast && byM[i] > 0 ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.04)',
-                    boxShadow: isNow ? '0 0 14px rgba(6,182,212,0.4)' : 'none',
+                    background: isNow ? 'linear-gradient(180deg,#0EA5E9,#3B82F6)' : isPast && byM[i] > 0 ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.08)',
+                    boxShadow: isNow ? '0 0 14px rgba(14,165,233,0.4)' : 'none',
                     transition: 'height 0.4s ease',
                   }} />
-                  <div style={{ fontSize: 8, color: isNow ? '#06B6D4' : '#334155', fontWeight: isNow ? 700 : 400 }}>{m}</div>
+                  <div style={{ fontSize: 8, color: isNow ? '#0EA5E9' : '#94A3B8', fontWeight: isNow ? 700 : 400 }}>{m}</div>
                 </div>
               )
             })}
@@ -492,8 +488,8 @@ function Dashboard({ data, setPage, currentUser }) {
         {/* Pipeline */}
         <div style={{ ...glass, padding: '20px 18px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#F8FAFC' }}>Project Pipeline</div>
-            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>View →</button>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Project Pipeline</div>
+            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>View →</button>
           </div>
           {pipelineStages.map(({ key, color }) => {
             const cnt = data.projects.filter(p => (p.current_stage || 'LEAD') === key).length
@@ -501,10 +497,10 @@ function Dashboard({ data, setPage, currentUser }) {
             return (
               <div key={key} style={{ marginBottom: 11 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, color: '#475569', fontWeight: 500, letterSpacing: '0.02em' }}>{key}</span>
+                  <span style={{ fontSize: 10, color: '#64748B', fontWeight: 500, letterSpacing: '0.02em' }}>{key}</span>
                   <span style={{ fontSize: 10, fontWeight: 700, color: cnt > 0 ? color : '#334155' }}>{cnt}</span>
                 </div>
-                <div style={{ height: 2, background: 'rgba(255,255,255,0.05)', borderRadius: 99 }}>
+                <div style={{ height: 2, background: '#F1F5F9', borderRadius: 99 }}>
                   <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: 99 }} />
                 </div>
               </div>
@@ -519,39 +515,39 @@ function Dashboard({ data, setPage, currentUser }) {
         {/* Active Projects */}
         <div style={{ ...glass, padding: '18px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#F8FAFC' }}>Active Projects</div>
-            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Workflow →</button>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Active Projects</div>
+            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Workflow →</button>
           </div>
           {data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).slice(0, 4).map(p => (
-            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
               <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: '#F8FAFC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.campaign || '—'}</div>
+                <div style={{ fontWeight: 600, fontSize: 12, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.campaign || '—'}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                   <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#10B981', flexShrink: 0 }} />
-                  <div style={{ fontSize: 10, color: '#475569' }}>{p.client || '—'}</div>
+                  <div style={{ fontSize: 10, color: '#64748B' }}>{p.client || '—'}</div>
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#06B6D4' }}>{p.revenue ? fmtS(Number(p.revenue)) : '—'}</div>
-                <div style={{ fontSize: 9, color: '#475569', marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.current_stage || p.status || '—'}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#0EA5E9' }}>{p.revenue ? fmtS(Number(p.revenue)) : '—'}</div>
+                <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.current_stage || p.status || '—'}</div>
               </div>
             </div>
           ))}
           {!data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).length && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: '#334155', fontSize: 11 }}>No active projects</div>
+            <div style={{ textAlign: 'center', padding: '20px 0', color: '#94A3B8', fontSize: 11 }}>No active projects</div>
           )}
         </div>
 
         {/* Overdue Invoices */}
         <div style={{ ...glass, padding: '18px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#F8FAFC' }}>Outstanding Invoices</div>
-            <button onClick={() => setPage('invoices')} style={{ fontSize: 10, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View →</button>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Outstanding Invoices</div>
+            <button onClick={() => setPage('invoices')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View →</button>
           </div>
           {overdue.slice(0, 4).map(inv => (
-            <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#F8FAFC' }}>{inv.client}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{inv.client}</div>
                 <div style={{ fontSize: 10, color: '#EF4444', marginTop: 1, fontWeight: 500 }}>Overdue</div>
               </div>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>{fmtS(Number(inv.amount) - Number(inv.paid||0))}</span>
@@ -560,7 +556,7 @@ function Dashboard({ data, setPage, currentUser }) {
           {!overdue.length && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>All clear</div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>No outstanding payments</div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>No outstanding payments</div>
             </div>
           )}
         </div>
@@ -568,37 +564,37 @@ function Dashboard({ data, setPage, currentUser }) {
         {/* Approvals */}
         <div style={{ ...glass, padding: '18px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#F8FAFC' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>
               {currentUser?.isMaster ? 'Approval Queue' : 'My Approvals'}
             </div>
-            <button onClick={() => setPage('approval')} style={{ fontSize: 10, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Review →</button>
+            <button onClick={() => setPage('approval')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Review →</button>
           </div>
 
           {myPending.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '14px 0' }}>
               <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>Queue clear</div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
                 {!currentUser?.isMaster && pendingAppr.length > 0 ? 'Nothing requires your action' : 'No pending approvals'}
               </div>
             </div>
           ) : (
             myPending.slice(0, 3).map(a => (
-              <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#F8FAFC', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#0F172A', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.title || a.type || 'Approval'}
                   </div>
                   <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}>
                     PENDING
                   </span>
                 </div>
-                <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>{a.created_at?.slice(0, 10) || '—'}</div>
+                <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{a.created_at?.slice(0, 10) || '—'}</div>
               </div>
             ))
           )}
 
           {/* Quick nav */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 14, paddingTop: 12, borderTop: '1px solid #E2E8F0' }}>
             {[['Quote','quotations','#F59E0B'],['KOL','kols','#8B5CF6'],['Project','projects','#4F8EF7'],['Workflow','workflow','#10B981']].map(([l, pg, c]) => (
               <button key={pg} onClick={() => setPage(pg)} style={{
                 padding: '7px 8px', borderRadius: 8,
@@ -632,15 +628,15 @@ function Pipeline({data,add,upd,del,log,reload,supabase}){
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12}}>
         {stages.map(stage=>{
           const deals=data.deals.filter(d=>d.stage===stage),tot=deals.reduce((a,d)=>a+Number(d.value||0),0)
-          return <div key={stage} style={{background:'#1A1D2E',borderRadius:14,padding:12,border:`1px solid rgba(255,255,255,0.08)`,borderTop:`3px solid ${stageColor[stage]}`}}>
+          return <div key={stage} style={{background:'#F8FAFF',borderRadius:14,padding:12,border:`1px solid #E2E8F0`,borderTop:`3px solid ${stageColor[stage]}`}}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,alignItems:'center'}}>
               <span style={{fontSize:11,fontWeight:800,color:stageColor[stage],textTransform:'uppercase',letterSpacing:'0.04em'}}>{stage}</span>
-              <span style={{fontSize:10,color:B.textTer,background:'rgba(255,255,255,0.06)',padding:'2px 7px',borderRadius:99,fontWeight:600}}>{deals.length}</span>
+              <span style={{fontSize:10,color:B.textTer,background:'#E2E8F0',padding:'2px 7px',borderRadius:99,fontWeight:600}}>{deals.length}</span>
             </div>
             <div style={{fontSize:12,fontWeight:800,color:B.primary,marginBottom:10}}>{fmtS(tot)}</div>
-            {deals.map(d=><div key={d.id} onClick={()=>setEdit(d)} style={{background:'rgba(255,255,255,0.04)',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:10,padding:'10px 12px',marginBottom:7,cursor:'pointer',transition:'transform 0.15s, background 0.15s'}}
-              onMouseEnter={e=>e.currentTarget.style.background='rgba(99,102,241,0.08)'}
-              onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.04)'}>
+            {deals.map(d=><div key={d.id} onClick={()=>setEdit(d)} style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:10,padding:'10px 12px',marginBottom:7,cursor:'pointer',transition:'transform 0.15s, border-color 0.15s'}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor='#3B82F6'}
+              onMouseLeave={e=>e.currentTarget.style.borderColor='#E2E8F0'}>
               <div style={{fontWeight:700,fontSize:11.5,marginBottom:3,color:B.text}}>{d.client||'—'}</div>
               <div style={{fontSize:10,color:B.textTer,marginBottom:6}}>{d.service||'—'}</div>
               <div style={{fontWeight:800,fontSize:12,color:B.primary}}>{fmtS(d.value)}</div>
@@ -675,7 +671,7 @@ function Projects({data,add,upd,del,log,reload,supabase}){
   }
   const totRev=filtered.reduce((a,p)=>a+Number(p.revenue||0),0)
   const totProfit=filtered.reduce((a,p)=>a+Number(p.revenue||0)-Number(p.actual_cost||0),0)
-  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
+  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
   return(
     <div>
@@ -690,7 +686,7 @@ function Projects({data,add,upd,del,log,reload,supabase}){
         <select value={stF} onChange={e=>setStF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option></select>
         <select value={svF} onChange={e=>setSvF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Services</option><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select>
       </div>
-      <div style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:950}}>
           <thead><tr>{['ID','Client','Campaign','Service','PM','Budget','Actual','Revenue','Margin','Status','Deadline',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>
@@ -823,8 +819,8 @@ function Invoices({data,add,upd,log,reload,supabase}){
   const ov=data.invoices.filter(i=>i.status==='Overdue').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const a=Number(fd.get('amount')||0),p=Number(fd.get('paid')||0),d=fd.get('due_date');const od=d&&new Date(d)<new Date()&&p<a;await add('invoices',{invoice_code:'KK-'+String(data.invoices.length+1).padStart(3,'0'),client:fd.get('client'),project:fd.get('project'),amount:a,paid:p,due_date:d||null,status:p>=a?'Paid':od?'Overdue':p>0?'Partial':'Unpaid',notes:fd.get('notes')});log('HĐ: '+fd.get('client'));setShowAdd(false)}
   async function markPaid(inv){const a=Number(prompt('Thu từ '+inv.client+'\nCòn: '+fmt(Number(inv.amount)-Number(inv.paid))+' VND\nSố tiền:',Number(inv.amount)-Number(inv.paid))||0);if(!a)return;const np=Math.min(Number(inv.paid)+a,Number(inv.amount));await upd('invoices',inv.id,{paid:np,status:np>=Number(inv.amount)?'Paid':np>0?'Partial':'Unpaid'});log('Thu: '+fmt(a))}
-  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em'}
-  const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
+  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em'}
+  const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Hóa đơn & Công nợ</h2><div style={{display:'flex',gap:8}}><ImportBtn module="invoices" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Tạo hóa đơn</Btn></div></div>
@@ -835,7 +831,7 @@ function Invoices({data,add,upd,log,reload,supabase}){
         <StatCard label="Quá hạn" value={fmtS(ov)} color={B.danger}/>
       </div>
       <div style={{marginBottom:14}}><select value={filter} onChange={e=>setFilter(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Overdue">Overdue</option></select></div>
-      <div style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
           <thead><tr>{['Invoice','Client','Project','Amount','Paid','Remaining','Due','Status',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>
@@ -872,7 +868,7 @@ function Approval({data,upd,log}){
     <div>
       <h2 style={{margin:'0 0 20px',fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Approval Queue</h2>
       {data.approvals.length?data.approvals.map(a=>(
-        <div key={a.id} style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,padding:'18px 22px',marginBottom:12}}>
+        <div key={a.id} style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,padding:'18px 22px',marginBottom:12}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
             <div><div style={{fontWeight:800,fontSize:14,color:B.navy,letterSpacing:'-0.01em'}}>{a.title}</div><div style={{fontSize:11,color:B.textTer,marginTop:3,fontWeight:500}}>{a.type} · {a.submitted_by} · {a.approval_date}</div></div>
             <Badge text={a.status}/>
@@ -905,15 +901,15 @@ function Clients({data,add,upd,del,log,reload,supabase}){
           const rev=data.projects.filter(p=>p.client===c.name).reduce((a,p)=>a+Number(p.revenue||0),0)
           const pc=data.projects.filter(p=>p.client===c.name).length
           const col=PALETTE[i%PALETTE.length],init=(c.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
-          return <div key={c.id} onClick={()=>setEdit(c)} style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,padding:'18px 20px',cursor:'pointer',transition:'transform 0.15s, border-color 0.15s',overflow:'hidden',position:'relative'}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(99,102,241,0.3)';e.currentTarget.style.transform='translateY(-2px)'}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.08)';e.currentTarget.style.transform='translateY(0)'}}>
+          return <div key={c.id} onClick={()=>setEdit(c)} style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,padding:'18px 20px',cursor:'pointer',transition:'transform 0.15s, border-color 0.15s',overflow:'hidden',position:'relative',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor='#3B82F6';e.currentTarget.style.transform='translateY(-2px)'}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor='#E2E8F0';e.currentTarget.style.transform='translateY(0)'}}>
             <div style={{position:'absolute',top:0,right:0,width:80,height:80,borderRadius:'0 16px 0 80px',background:`${col}08`}}/>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
               <div style={{width:44,height:44,borderRadius:12,background:`linear-gradient(135deg,${col},${col}BB)`,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:15,flexShrink:0,boxShadow:`0 4px 14px ${col}40`}}>{init}</div>
-              <div><div style={{fontWeight:800,fontSize:14,color:'#F8FAFC',letterSpacing:'-0.01em'}}>{c.name}</div><div style={{fontSize:11,color:B.textTer,marginTop:2,fontWeight:500}}>{c.industry||'—'}</div></div>
+              <div><div style={{fontWeight:800,fontSize:14,color:'#0F172A',letterSpacing:'-0.01em'}}>{c.name}</div><div style={{fontSize:11,color:B.textTer,marginTop:2,fontWeight:500}}>{c.industry||'—'}</div></div>
             </div>
-            <div style={{height:1,background:'rgba(255,255,255,0.08)',margin:'12px 0'}}/>
+            <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
               <div><div style={{fontSize:9,color:B.textTer,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>PROJECTS</div><div style={{fontSize:18,fontWeight:900,color:B.text}}>{pc}</div></div>
               <div><div style={{fontSize:9,color:B.textTer,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>REVENUE</div><div style={{fontSize:18,fontWeight:900,color:col}}>{fmtS(rev)}</div></div>
@@ -944,8 +940,8 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   const [hist,setHist]=useState(null)
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:Number(fd.get('rate')||0),avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes')};edit?await upd('kols',edit.id,r):await add('kols',r);log('KOL: '+r.name);setEdit(null);setShowAdd(false)}
   const list=data.kols.filter(k=>(!search||(k.name||'').toLowerCase().includes(search.toLowerCase()))&&(!platF||k.platform===platF)&&(!tierF||k.tier===tierF))
-  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
-  const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
+  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
+  const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>KOL / KOC Database</h2><div style={{display:'flex',gap:8}}><ImportBtn module="kols" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add KOL</Btn></div></div>
@@ -954,7 +950,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
         <select value={platF} onChange={e=>setPlatF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Platforms</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select>
         <select value={tierF} onChange={e=>setTierF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Tiers</option><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select>
       </div>
-      <div style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:950}}>
           <thead><tr>{['ID','Name','Platform','Tier','Followers','Eng%','Rate/post','Campaigns','Stars','Status',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>
@@ -1009,12 +1005,12 @@ function Vendors({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
   async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),type:fd.get('type'),rating:Number(fd.get('rating')||5),contact:fd.get('contact'),total_spent:Number(fd.get('total_spent')||0),notes:fd.get('notes')};edit?await upd('vendors',edit.id,r):await add('vendors',r);log('Vendor: '+r.name);setEdit(null);setShowAdd(false)}
-  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em'}
+  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Vendors & Suppliers</h2><div style={{display:'flex',gap:8}}><ImportBtn module="vendors" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add Vendor</Btn></div></div>
-      <div style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead><tr>{['Name','Type','Contact','Rating','Total Spent','Notes',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>
@@ -1055,17 +1051,17 @@ function Team({data,add,upd,del,log,reload,supabase}){
           const active=data.projects.filter(p=>p.pm===m.name&&p.status==='Active').length
           const util=m.max_projects?Math.round(active/m.max_projects*100):0
           const col=PALETTE[i%PALETTE.length],init=(m.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
-          return <div key={m.id} onClick={()=>setEdit(m)} style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,padding:'18px 20px',cursor:'pointer',position:'relative',overflow:'hidden'}}>
+          return <div key={m.id} onClick={()=>setEdit(m)} style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,padding:'18px 20px',cursor:'pointer',position:'relative',overflow:'hidden'}}>
             <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${col},${col}55)`}}/>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
               <div style={{width:44,height:44,borderRadius:'50%',background:`linear-gradient(135deg,${col},${col}BB)`,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:15,flexShrink:0,boxShadow:`0 4px 14px ${col}40`}}>{init}</div>
-              <div><div style={{fontWeight:800,fontSize:14,color:'#F8FAFC',letterSpacing:'-0.01em'}}>{m.name}</div><div style={{fontSize:11,color:B.textTer,marginTop:2,fontWeight:500}}>{m.role}</div></div>
+              <div><div style={{fontWeight:800,fontSize:14,color:'#0F172A',letterSpacing:'-0.01em'}}>{m.name}</div><div style={{fontSize:11,color:B.textTer,marginTop:2,fontWeight:500}}>{m.role}</div></div>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,fontSize:11}}>
               <span style={{color:B.textSec,fontWeight:500}}>Projects: <strong style={{color:B.navy}}>{active}/{m.max_projects||5}</strong></span>
               <span style={{fontWeight:800,color:util>=80?B.danger:util>=60?B.warning:B.success}}>{util}%</span>
             </div>
-            <div style={{height:6,background:'rgba(255,255,255,0.08)',borderRadius:99,overflow:'hidden'}}>
+            <div style={{height:6,background:'#E2E8F0',borderRadius:99,overflow:'hidden'}}>
               <div style={{height:'100%',width:util+'%',background:util>=80?B.danger:util>=60?B.warning:B.success,borderRadius:99,transition:'width 0.4s ease'}}/>
             </div>
             <div style={{marginTop:7,fontSize:10,fontWeight:700,color:util>=80?B.danger:util>=60?B.warning:B.success,textTransform:'uppercase',letterSpacing:'0.04em'}}>{util>=80?'AT CAPACITY':util>=60?'HIGH LOAD':'AVAILABLE'}</div>
@@ -1073,9 +1069,9 @@ function Team({data,add,upd,del,log,reload,supabase}){
         })}
         {!data.team.length&&<div style={{gridColumn:'1/-1',textAlign:'center',padding:60,color:B.textTer,fontSize:12,fontWeight:600}}>No team members yet</div>}
       </div>
-      <div style={{background:'#1A1D2E',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
-          <thead><tr>{['Name','Role','Max','Active','Utilization','Status'].map(h=><th key={h} style={{padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>)}</tr></thead>
+          <thead><tr>{['Name','Role','Max','Active','Utilization','Status'].map(h=><th key={h} style={{padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>)}</tr></thead>
           <tbody>
             {data.team.map(m=>{const a=data.projects.filter(p=>p.pm===m.name&&p.status==='Active').length,u=m.max_projects?Math.round(a/m.max_projects*100):0;return <tr key={m.id}>
               <td style={{padding:'11px 14px',fontWeight:800,color:B.navy,borderBottom:`1px solid ${B.border}`}}>{m.name}</td>
@@ -1429,19 +1425,19 @@ function Contracts({data, supabase, reload, log}) {
     (c.party_b_name||'').toLowerCase().includes(filter.toLowerCase())
   )
 
-  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#475569',borderBottom:'1px solid rgba(255,255,255,0.08)',textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
-  const TD={padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',verticalAlign:'middle',color:'#F8FAFC'}
+  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
+  const TD={padding:'10px 14px',borderBottom:'1px solid #F1F5F9',verticalAlign:'middle',color:'#1F2937'}
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#F8FAFC'}}>Hợp đồng</h2>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A'}}>Hợp đồng</h2>
         <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo hợp đồng</CBtn>
       </div>
 
-      <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.05)',padding:4,borderRadius:10,width:'fit-content',border:'1px solid rgba(255,255,255,0.08)'}}>
+      <div style={{display:'flex',gap:4,marginBottom:16,background:'#F1F5F9',padding:4,borderRadius:10,width:'fit-content',border:'1px solid #E2E8F0'}}>
         {[['client','HĐ Dịch vụ (Client)'],['kol','HĐ Cộng tác viên (KOL)']].map(([key,label])=>(
-          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':CB.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
+          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':CB.textSec,cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Inter',sans-serif"}}>{label}</button>
         ))}
       </div>
 
@@ -1452,9 +1448,9 @@ function Contracts({data, supabase, reload, log}) {
           ['Đã ký', contracts.filter(c=>c.status==='Signed').length],
           ['Tổng giá trị', cfmtS(contracts.reduce((a,c)=>a+Number(c.total_with_vat||0),0))+' VND']
         ].map(([l,v])=>(
-          <div key={l} style={{background:'#1A1D2E',borderRadius:12,padding:'12px 16px',border:'1px solid rgba(255,255,255,0.08)'}}>
-            <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</div>
-            <div style={{fontSize:20,fontWeight:900,color:'#6366F1',marginTop:5}}>{v}</div>
+          <div key={l} style={{background:'#FFFFFF',borderRadius:12,padding:'12px 16px',border:'1px solid #E2E8F0',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</div>
+            <div style={{fontSize:20,fontWeight:900,color:'#3B82F6',marginTop:5}}>{v}</div>
           </div>
         ))}
       </div>
@@ -1463,7 +1459,7 @@ function Contracts({data, supabase, reload, log}) {
         <input placeholder="Tìm theo số HĐ, tên client, KOL..." value={filter} onChange={e=>setFilter(e.target.value)} style={{...CINP_S,maxWidth:380}}/>
       </div>
 
-      <div style={{background:'#1A1D2E',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
           <thead>
             <tr>
@@ -2033,23 +2029,23 @@ function AcceptanceReports({data, supabase, reload, log}) {
   }
 
   const filtered = reports.filter(r => contracts.some(c=>c.id===r.contract_id))
-  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#475569',borderBottom:'1px solid rgba(255,255,255,0.08)',textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em'}
-  const TD={padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',verticalAlign:'middle',color:'#F8FAFC'}
+  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em'}
+  const TD={padding:'10px 14px',borderBottom:'1px solid #F1F5F9',verticalAlign:'middle',color:'#1F2937'}
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#F8FAFC'}}>Biên bản nghiệm thu</h2>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A'}}>Biên bản nghiệm thu</h2>
         <CBtn primary onClick={()=>{setEditItem(null);setShowForm(true)}}>+ Tạo BBNT</CBtn>
       </div>
 
-      <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.05)',padding:4,borderRadius:10,width:'fit-content',border:'1px solid rgba(255,255,255,0.08)'}}>
+      <div style={{display:'flex',gap:4,marginBottom:16,background:'#F1F5F9',padding:4,borderRadius:10,width:'fit-content',border:'1px solid #E2E8F0'}}>
         {[['client','BBNT Client'],['kol','BBNT KOL/CTV']].map(([key,label])=>(
-          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</button>
+          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?CB.grad:'transparent',color:tab===key?'#fff':'#64748B',cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Inter',sans-serif"}}>{label}</button>
         ))}
       </div>
 
-      <div style={{background:'#1A1D2E',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:700}}>
           <thead><tr>{['Số BBNT','HĐ tham chiếu','Giá trị NT','Còn lại','Ngày ký','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>
@@ -2057,7 +2053,7 @@ function AcceptanceReports({data, supabase, reload, log}) {
             {!loading&&filtered.map(r=>{
               const ct=contracts.find(c=>c.id===r.contract_id)
               return <tr key={r.id}>
-                <td style={{...TD,fontWeight:800,color:'#6366F1'}}>{r.report_code}</td>
+                <td style={{...TD,fontWeight:800,color:'#3B82F6'}}>{r.report_code}</td>
                 <td style={{...TD,fontWeight:600}}>{ct?.contract_code||'—'}</td>
                 <td style={{...TD,fontWeight:700}}>{cfmt(r.accepted_value)}</td>
                 <td style={{...TD,fontWeight:700,color:Number(r.remaining_amount)>0?'#F59E0B':'#10B981'}}>{cfmt(r.remaining_amount)}</td>
@@ -2424,53 +2420,48 @@ function LoginScreen({supabase, onLogin}) {
   }
 
   return (
-    <div style={{minHeight:'100vh',background:'radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.12) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(6,182,212,0.08) 0%, transparent 50%), #0F1117',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif"}}>
-      {/* Background mesh */}
-      <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none'}}>
-        <div style={{position:'absolute',top:'10%',left:'5%',width:400,height:400,borderRadius:'50%',background:'rgba(99,102,241,0.06)',filter:'blur(60px)'}}/>
-        <div style={{position:'absolute',bottom:'10%',right:'5%',width:500,height:500,borderRadius:'50%',background:'rgba(6,182,212,0.04)',filter:'blur(80px)'}}/>
-      </div>
+    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#F8FAFF 0%,#EFF6FF 100%)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Inter',system-ui,sans-serif"}}>
 
       <div style={{width:420,position:'relative'}}>
         {/* Logo */}
         <div style={{textAlign:'center',marginBottom:32}}>
-          <div style={{width:64,height:64,borderRadius:18,background:'linear-gradient(135deg,#6366F1,#06B6D4)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:'0 8px 32px rgba(99,102,241,0.35)'}}>
+          <div style={{width:64,height:64,borderRadius:18,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:'0 8px 32px rgba(59,130,246,0.25)'}}>
             <span style={{color:'#fff',fontWeight:900,fontSize:28,letterSpacing:'-0.05em'}}>K</span>
           </div>
-          <div style={{fontSize:22,fontWeight:900,color:'#F8FAFC',letterSpacing:'-0.03em'}}>K&K Advertising</div>
-          <div style={{fontSize:13,color:'#94A3B8',marginTop:4,fontWeight:500}}>Agency OS — Đăng nhập</div>
+          <div style={{fontSize:22,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em'}}>K&K Advertising</div>
+          <div style={{fontSize:13,color:'#64748B',marginTop:4,fontWeight:500}}>Agency OS — Đăng nhập</div>
         </div>
 
         {/* Card */}
-        <div style={{background:'#1A1D2E',borderRadius:20,padding:'32px 36px',border:'1px solid rgba(255,255,255,0.08)',boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
+        <div style={{background:'#FFFFFF',borderRadius:20,padding:'32px 36px',border:'1px solid #E2E8F0',boxShadow:'0 8px 40px rgba(59,130,246,0.1)'}}>
           <form onSubmit={handleLogin}>
             <div style={{marginBottom:18}}>
-              <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>Email</label>
+              <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>Email</label>
               <input
                 type="email" value={email} onChange={e=>setEmail(e.target.value)} required
                 placeholder="your@email.com"
-                style={{width:'100%',padding:'11px 14px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
-                onFocus={e=>e.target.style.borderColor='#6366F1'}
-                onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.08)'}
+                style={{width:'100%',padding:'11px 14px',border:'1px solid #D1D5DB',borderRadius:10,fontSize:13,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
+                onFocus={e=>e.target.style.borderColor='#3B82F6'}
+                onBlur={e=>e.target.style.borderColor='#D1D5DB'}
               />
             </div>
             <div style={{marginBottom:24}}>
-              <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>Mật khẩu</label>
+              <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>Mật khẩu</label>
               <input
                 type="password" value={password} onChange={e=>setPassword(e.target.value)} required
                 placeholder="••••••••"
-                style={{width:'100%',padding:'11px 14px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
-                onFocus={e=>e.target.style.borderColor='#6366F1'}
-                onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.08)'}
+                style={{width:'100%',padding:'11px 14px',border:'1px solid #D1D5DB',borderRadius:10,fontSize:13,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
+                onFocus={e=>e.target.style.borderColor='#3B82F6'}
+                onBlur={e=>e.target.style.borderColor='#D1D5DB'}
               />
             </div>
             {error&&<div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#EF4444',marginBottom:18,fontWeight:500}}>{error}</div>}
-            <button type="submit" disabled={loading} style={{width:'100%',padding:'12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 4px 16px rgba(99,102,241,0.35)',opacity:loading?0.7:1}}>
+            <button type="submit" disabled={loading} style={{width:'100%',padding:'12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'Inter',sans-serif",boxShadow:'0 4px 16px rgba(59,130,246,0.3)',opacity:loading?0.7:1}}>
               {loading?'Đang đăng nhập...':'Đăng nhập →'}
             </button>
           </form>
-          <div style={{marginTop:20,padding:'12px 14px',background:'rgba(99,102,241,0.06)',borderRadius:8,fontSize:11,color:'#94A3B8',textAlign:'center'}}>
-            Tài khoản CEO: <strong style={{color:'#6366F1'}}>admin@knk.com</strong> / <strong style={{color:'#6366F1'}}>KnK@2026!</strong>
+          <div style={{marginTop:20,padding:'12px 14px',background:'rgba(59,130,246,0.05)',borderRadius:8,fontSize:11,color:'#64748B',textAlign:'center',border:'1px solid #E2E8F0'}}>
+            Tài khoản CEO: <strong style={{color:'#3B82F6'}}>admin@knk.com</strong> / <strong style={{color:'#3B82F6'}}>KnK@2026!</strong>
           </div>
         </div>
       </div>
@@ -2531,10 +2522,10 @@ function PermissionManager({account, supabase, onClose}) {
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:3000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div style={{background:'#1A1D2E',borderRadius:20,padding:'24px 28px',width:700,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+      <div style={{background:'#FFFFFF',borderRadius:20,padding:'24px 28px',width:700,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 8px 40px rgba(0,0,0,0.12)',border:'1px solid #E2E8F0'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid #F1F5F9'}}>
           <div>
-            <div style={{fontSize:16,fontWeight:800,color:'#F8FAFC'}}>Phân quyền — {account.name}</div>
+            <div style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Phân quyền — {account.name}</div>
             <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{account.email} · {account.role}</div>
           </div>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
@@ -2546,15 +2537,15 @@ function PermissionManager({account, supabase, onClose}) {
             <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead>
                 <tr>
-                  <th style={{fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:'left',padding:'5px 8px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>Module</th>
-                  {permCols.map(p=><th key={p} style={{fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:'center',padding:'5px 8px',width:70,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{permLabels[p]}</th>)}
-                  <th style={{fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:'center',padding:'5px 8px',width:120,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>Nhanh</th>
+                  <th style={{fontSize:10,fontWeight:700,color:'#374151',textAlign:'left',padding:'5px 8px',borderBottom:'1px solid #E2E8F0',background:'#F1F5F9'}}>Module</th>
+                  {permCols.map(p=><th key={p} style={{fontSize:10,fontWeight:700,color:'#374151',textAlign:'center',padding:'5px 8px',width:70,borderBottom:'1px solid #E2E8F0',background:'#F1F5F9'}}>{permLabels[p]}</th>)}
+                  <th style={{fontSize:10,fontWeight:700,color:'#374151',textAlign:'center',padding:'5px 8px',width:120,borderBottom:'1px solid #E2E8F0',background:'#F1F5F9'}}>Nhanh</th>
                 </tr>
               </thead>
               <tbody>
                 {MODULES.filter(m=>m.grp===grp).map(m=>(
-                  <tr key={m.id} style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                    <td style={{padding:'8px 8px',fontSize:12.5,fontWeight:500,color:'#F8FAFC'}}>
+                  <tr key={m.id} style={{borderBottom:'1px solid #F1F5F9'}}>
+                    <td style={{padding:'8px 8px',fontSize:12.5,fontWeight:500,color:'#1F2937'}}>
                       <span style={{marginRight:8,opacity:0.6}}>{m.icon}</span>{m.label}
                     </td>
                     {permCols.map(p=>(
@@ -2579,9 +2570,9 @@ function PermissionManager({account, supabase, onClose}) {
           </div>
         ))}
 
-        <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:14,borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-          <button onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Đóng</button>
-          <button onClick={save} disabled={saving} style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(99,102,241,0.3)'}}>
+        <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:14,borderTop:'1px solid #F1F5F9'}}>
+          <button onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#374151',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>Đóng</button>
+          <button onClick={save} disabled={saving} style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif",boxShadow:'0 3px 12px rgba(59,130,246,0.3)'}}>
             {saving?'Đang lưu...':(saved?'✓ Đã lưu!':'Lưu phân quyền')}
           </button>
         </div>
@@ -2619,7 +2610,7 @@ function TeamPage({data, supabase, reload, log, currentUser}) {
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#F8FAFC'}}>Team & Accounts</h2>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A'}}>Team & Accounts</h2>
         {currentUser?.isMaster && <button onClick={()=>setShowAdd(true)} style={{padding:'7px 16px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(99,102,241,0.3)'}}>+ Thêm thành viên</button>}
       </div>
 
@@ -2632,24 +2623,24 @@ function TeamPage({data, supabase, reload, log, currentUser}) {
           const init = getInitials(m.name)
           const acc = accounts.find(a=>a.team_id===m.id)
           return (
-            <div key={m.id} style={{background:'#1A1D2E',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
+            <div key={m.id} style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
               <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${col},${col}88)`}}/>
               <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
                 <div style={{width:44,height:44,borderRadius:'50%',background:m.avatar_color||col,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:15,flexShrink:0,boxShadow:`0 4px 12px ${col}40`}}>
                   {m.avatar_initials||init}
                 </div>
                 <div>
-                  <div style={{fontWeight:800,fontSize:13.5,color:'#F8FAFC'}}>{m.name}</div>
+                  <div style={{fontWeight:800,fontSize:13.5,color:'#0F172A'}}>{m.name}</div>
                   <div style={{fontSize:11,color:'#94A3B8',marginTop:1}}>{m.role}</div>
                   {acc&&<div style={{fontSize:10,color:acc.is_active?'#10B981':'#EF4444',fontWeight:600,marginTop:2}}>{acc.is_active?'● Online account':'● Bị khoá'}</div>}
                 </div>
               </div>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:7,fontSize:11}}>
-                <span style={{color:'#475569'}}>Projects: <strong style={{color:'#F8FAFC'}}>{active}/{m.max_projects||5}</strong></span>
+                <span style={{color:'#475569'}}>Projects: <strong style={{color:'#0F172A'}}>{active}/{m.max_projects||5}</strong></span>
                 <span style={{fontWeight:800,color:util>=80?'#EF4444':util>=60?'#F59E0B':'#10B981'}}>{util}%</span>
               </div>
-              <div style={{height:6,background:'rgba(255,255,255,0.08)',borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',width:util+'%',background:util>=80?'#EF4444':'linear-gradient(90deg,#6366F1,#06B6D4)',borderRadius:99}}/>
+              <div style={{height:6,background:'#E2E8F0',borderRadius:99,overflow:'hidden'}}>
+                <div style={{height:'100%',width:util+'%',background:util>=80?'#EF4444':'linear-gradient(90deg,#3B82F6,#0EA5E9)',borderRadius:99}}/>
               </div>
               {currentUser?.isMaster && (
                 <div style={{display:'flex',gap:6,marginTop:12}}>
@@ -2672,12 +2663,12 @@ function TeamPage({data, supabase, reload, log, currentUser}) {
       </div>
 
       {/* Accounts table */}
-      <div style={{background:'#1A1D2E',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,overflow:'auto'}}>
+      <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead>
             <tr>
               {['Thành viên','Email','SĐT','Role','Lần cuối đăng nhập','Trạng thái','Quyền truy cập',''].map(h=>(
-                <th key={h} style={{padding:'10px 14px',fontSize:10,fontWeight:800,color:'#94A3B8',borderBottom:'1px solid rgba(255,255,255,0.08)',textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+                <th key={h} style={{padding:'10px 14px',fontSize:10,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -2686,28 +2677,28 @@ function TeamPage({data, supabase, reload, log, currentUser}) {
               const modCount = a.permissions?.filter(p=>p.can_view).length||0
               return (
                 <tr key={a.id}>
-                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid #F1F5F9'}}>
                     <div style={{display:'flex',alignItems:'center',gap:10}}>
                       <div style={{width:32,height:32,borderRadius:'50%',background:a.avatar_color||'#6366F1',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}}>
                         {a.avatar_initials||getInitials(a.team?.name||a.email)}
                       </div>
                       <div>
-                        <div style={{fontWeight:700,fontSize:12.5,color:'#F8FAFC'}}>{a.team?.name||'—'}</div>
+                        <div style={{fontWeight:700,fontSize:12.5,color:'#0F172A'}}>{a.team?.name||'—'}</div>
                         <div style={{fontSize:10.5,color:'#94A3B8'}}>{a.team?.role||'Staff'}</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid rgba(255,255,255,0.06)',color:'#94A3B8'}}>{a.email}</td>
-                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid rgba(255,255,255,0.06)',color:'#94A3B8'}}>{a.phone||'—'}</td>
-                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}><span style={{background:'rgba(99,102,241,0.1)',color:'#6366F1',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:600}}>{a.team?.role||'Staff'}</span></td>
-                  <td style={{padding:'11px 14px',fontSize:11,color:'#94A3B8',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{a.last_login?new Date(a.last_login).toLocaleDateString('vi-VN'):'Chưa đăng nhập'}</td>
-                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}><span style={{background:a.is_active?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.1)',color:a.is_active?'#10B981':'#EF4444',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:700}}>{a.is_active?'Active':'Khoá'}</span></td>
-                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid rgba(255,255,255,0.06)',color:'#6366F1',fontWeight:600}}>{modCount}/{MODULES.length} modules</td>
-                  <td style={{padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid #F1F5F9',color:'#94A3B8'}}>{a.email}</td>
+                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid #F1F5F9',color:'#94A3B8'}}>{a.phone||'—'}</td>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid #F1F5F9'}}><span style={{background:'rgba(99,102,241,0.1)',color:'#6366F1',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:600}}>{a.team?.role||'Staff'}</span></td>
+                  <td style={{padding:'11px 14px',fontSize:11,color:'#94A3B8',borderBottom:'1px solid #F1F5F9'}}>{a.last_login?new Date(a.last_login).toLocaleDateString('vi-VN'):'Chưa đăng nhập'}</td>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid #F1F5F9'}}><span style={{background:a.is_active?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.1)',color:a.is_active?'#10B981':'#EF4444',padding:'2px 9px',borderRadius:6,fontSize:10.5,fontWeight:700}}>{a.is_active?'Active':'Khoá'}</span></td>
+                  <td style={{padding:'11px 14px',fontSize:11.5,borderBottom:'1px solid #F1F5F9',color:'#6366F1',fontWeight:600}}>{modCount}/{MODULES.length} modules</td>
+                  <td style={{padding:'11px 14px',borderBottom:'1px solid #F1F5F9'}}>
                     {currentUser?.isMaster && (
                       <div style={{display:'flex',gap:6}}>
                         <button onClick={()=>setEditPerms(a)} style={{padding:'4px 10px',borderRadius:7,border:'1px solid rgba(99,102,241,0.25)',background:'rgba(99,102,241,0.08)',color:'#6366F1',cursor:'pointer',fontSize:10.5,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>🔐 Quyền</button>
-                        <button onClick={()=>setEditAcc(a)} style={{padding:'4px 10px',borderRadius:7,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Edit</button>
+                        <button onClick={()=>setEditAcc(a)} style={{padding:'4px 10px',borderRadius:7,border:'1px solid #E2E8F0',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:10.5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Edit</button>
                       </div>
                     )}
                   </td>
@@ -2777,22 +2768,22 @@ function AddAccountForm({supabase, teamMembers, preselected, onClose, onSaved}) 
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div style={{background:'#1A1D2E',borderRadius:20,padding:'24px 28px',width:520,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <span style={{fontSize:16,fontWeight:800,color:'#F8FAFC'}}>Thêm thành viên & tài khoản</span>
+      <div style={{background:'#FFFFFF',borderRadius:20,padding:'24px 28px',width:520,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 8px 40px rgba(0,0,0,0.12)',border:'1px solid #E2E8F0'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid #F1F5F9'}}>
+          <span style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Thêm thành viên & tài khoản</span>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           {/* Avatar preview */}
-          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,padding:'16px',background:'rgba(99,102,241,0.06)',borderRadius:12,border:'1px solid rgba(99,102,241,0.15)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,padding:'16px',background:'rgba(59,130,246,0.05)',borderRadius:12,border:'1px solid #E2E8F0'}}>
             <div style={{width:56,height:56,borderRadius:'50%',background:form.avatar_color,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,boxShadow:`0 4px 16px ${form.avatar_color}50`,flexShrink:0}}>
               {getInitials(form.name||'?')}
             </div>
             <div>
-              <div style={{fontSize:12,fontWeight:700,color:'#94A3B8',marginBottom:8}}>Màu Avatar</div>
+              <div style={{fontSize:12,fontWeight:700,color:'#64748B',marginBottom:8}}>Màu Avatar</div>
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 {AVATAR_COLORS.map(c=>(
-                  <div key={c} onClick={()=>set('avatar_color',c)} style={{width:22,height:22,borderRadius:'50%',background:c,cursor:'pointer',border:form.avatar_color===c?`3px solid #F8FAFC`:'3px solid transparent',transition:'border 0.1s'}}/>
+                  <div key={c} onClick={()=>set('avatar_color',c)} style={{width:22,height:22,borderRadius:'50%',background:c,cursor:'pointer',border:form.avatar_color===c?`3px solid #0F172A`:'3px solid transparent',transition:'border 0.1s'}}/>
                 ))}
               </div>
             </div>
@@ -2800,8 +2791,8 @@ function AddAccountForm({supabase, teamMembers, preselected, onClose, onSaved}) 
 
           {!preselected && (
             <div style={{marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#94A3B8',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.04em'}}>Thành viên hiện có</div>
-              <select value={form.team_id} onChange={e=>{const m=teamMembers.find(t=>t.id===e.target.value);set('team_id',e.target.value);if(m){set('name',m.name);set('role',m.role)}}} style={{width:'100%',padding:'9px 12px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#64748B',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.04em'}}>Thành viên hiện có</div>
+              <select value={form.team_id} onChange={e=>{const m=teamMembers.find(t=>t.id===e.target.value);set('team_id',e.target.value);if(m){set('name',m.name);set('role',m.role)}}} style={{width:'100%',padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:9,fontSize:12.5,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none'}}>
                 <option value="">— Tạo thành viên mới —</option>
                 {teamMembers.map(m=><option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
               </select>
@@ -2812,8 +2803,8 @@ function AddAccountForm({supabase, teamMembers, preselected, onClose, onSaved}) 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
               {[['Họ và tên *','name','text',''],['Role','role','text','']].map(([l,k,t,ph])=>(
                 <div key={k} style={{marginBottom:12}}>
-                  <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</label>
-                  <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} style={{width:'100%',padding:'9px 12px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box'}} required={k==='name'}/>
+                  <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</label>
+                  <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} style={{width:'100%',padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:9,fontSize:12.5,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box'}} required={k==='name'}/>
                 </div>
               ))}
             </div>
@@ -2822,17 +2813,17 @@ function AddAccountForm({supabase, teamMembers, preselected, onClose, onSaved}) 
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             {[['Email *','email','email'],['Số điện thoại','phone','tel'],['Mật khẩu *','password','password'],['Xác nhận mật khẩu *','confirm_password','password']].map(([l,k,t])=>(
               <div key={k} style={{marginBottom:12}}>
-                <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</label>
-                <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box'}} required={['email','password','confirm_password'].includes(k)}/>
+                <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</label>
+                <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:9,fontSize:12.5,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box'}} required={['email','password','confirm_password'].includes(k)}/>
               </div>
             ))}
           </div>
 
           {error&&<div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#EF4444',marginBottom:16,fontWeight:500}}>{error}</div>}
 
-          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:8,paddingTop:14,borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-            <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
-            <button type="submit" disabled={saving} style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:8,paddingTop:14,borderTop:'1px solid #F1F5F9'}}>
+            <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:9,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#374151',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>Huỷ</button>
+            <button type="submit" disabled={saving} style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif"}}>
               {saving?'Đang tạo...':'Tạo tài khoản'}
             </button>
           </div>
@@ -2863,40 +2854,40 @@ function EditAccountForm({account, supabase, onClose, onSaved}) {
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div style={{background:'#1A1D2E',borderRadius:20,padding:'24px 28px',width:420,maxWidth:'95vw',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <span style={{fontSize:16,fontWeight:800,color:'#F8FAFC'}}>Chỉnh sửa tài khoản</span>
+      <div style={{background:'#FFFFFF',borderRadius:20,padding:'24px 28px',width:420,maxWidth:'95vw',boxShadow:'0 8px 40px rgba(0,0,0,0.12)',border:'1px solid #E2E8F0'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid #F1F5F9'}}>
+          <span style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Chỉnh sửa tài khoản</span>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
         </div>
         <form onSubmit={save}>
           {/* Avatar */}
-          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,padding:'16px',background:'rgba(99,102,241,0.06)',borderRadius:12,border:'1px solid rgba(99,102,241,0.12)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,padding:'16px',background:'rgba(59,130,246,0.05)',borderRadius:12,border:'1px solid #E2E8F0'}}>
             <div style={{width:56,height:56,borderRadius:'50%',background:color,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,boxShadow:`0 4px 16px ${color}50`,flexShrink:0}}>
               {account.avatar_initials||getInitials(account.team?.name||account.email)}
             </div>
             <div>
-              <div style={{fontWeight:700,fontSize:13,color:'#F8FAFC'}}>{account.team?.name||account.email}</div>
+              <div style={{fontWeight:700,fontSize:13,color:'#0F172A'}}>{account.team?.name||account.email}</div>
               <div style={{fontSize:11,color:'#94A3B8',marginBottom:8}}>{account.email}</div>
               <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
                 {AVATAR_COLORS.map(c=>(
-                  <div key={c} onClick={()=>setColor(c)} style={{width:20,height:20,borderRadius:'50%',background:c,cursor:'pointer',border:color===c?`3px solid #F8FAFC`:'3px solid transparent'}}/>
+                  <div key={c} onClick={()=>setColor(c)} style={{width:20,height:20,borderRadius:'50%',background:c,cursor:'pointer',border:color===c?`3px solid #0F172A`:'3px solid transparent'}}/>
                 ))}
               </div>
             </div>
           </div>
 
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Số điện thoại</label>
-            <input value={phone} onChange={e=>setPhone(e.target.value)} type="tel" style={{width:'100%',padding:'9px 12px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box'}}/>
+            <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Số điện thoại</label>
+            <input value={phone} onChange={e=>setPhone(e.target.value)} type="tel" style={{width:'100%',padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:9,fontSize:12.5,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box'}}/>
           </div>
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Đổi mật khẩu mới (để trống nếu không đổi)</label>
-            <input value={newPwd} onChange={e=>setNewPwd(e.target.value)} type="password" placeholder="Mật khẩu mới (≥6 ký tự)" style={{width:'100%',padding:'9px 12px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box'}}/>
+            <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Đổi mật khẩu mới (để trống nếu không đổi)</label>
+            <input value={newPwd} onChange={e=>setNewPwd(e.target.value)} type="password" placeholder="Mật khẩu mới (≥6 ký tự)" style={{width:'100%',padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:9,fontSize:12.5,fontFamily:"'Inter',sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box'}}/>
           </div>
 
-          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:14,borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-            <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
-            <button type="submit" disabled={saving} style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:14,borderTop:'1px solid #F1F5F9'}}>
+            <button type="button" onClick={onClose} style={{padding:'7px 16px',borderRadius:9,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#374151',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>Huỷ</button>
+            <button type="submit" disabled={saving} style={{padding:'7px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif"}}>
               {saving?'Đang lưu...':'Lưu thay đổi'}
             </button>
           </div>
@@ -3252,12 +3243,12 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}} onClick={e=>{if(e.target===e.currentTarget&&step!=='duplicates')onClose()}}>
-      <div style={{background:'#1A1D2E',borderRadius:20,padding:'28px 32px',width:700,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
+      <div style={{background:'#FFFFFF',borderRadius:20,padding:'28px 32px',width:700,maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',border:'1px solid #E2E8F0'}}>
 
         {/* Header */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,paddingBottom:16,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,paddingBottom:16,borderBottom:'1px solid #F1F5F9'}}>
           <div>
-            <div style={{fontSize:17,fontWeight:900,color:'#F8FAFC'}}>📥 Import {configData?.label}</div>
+            <div style={{fontSize:17,fontWeight:900,color:'#0F172A'}}>📥 Import {configData?.label}</div>
             <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>Dùng file template K&K — Sheet: {configData?.sheet}</div>
           </div>
           {step!=='duplicates'&&<button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>}
@@ -3282,11 +3273,11 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
               onDragOver={e=>{e.preventDefault();setDragOver(true)}}
               onDragLeave={()=>setDragOver(false)}
               onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0])}}
-              style={{border:`2px dashed ${dragOver?'#6366F1':'rgba(99,102,241,0.25)'}`,borderRadius:16,padding:'48px 32px',textAlign:'center',background:dragOver?'rgba(99,102,241,0.06)':'rgba(255,255,255,0.02)',transition:'all 0.2s',cursor:'pointer'}}
+              style={{border:`2px dashed ${dragOver?'#6366F1':'rgba(99,102,241,0.25)'}`,borderRadius:16,padding:'48px 32px',textAlign:'center',background:dragOver?'rgba(99,102,241,0.06)':'#F8FAFF',transition:'all 0.2s',cursor:'pointer'}}
               onClick={()=>document.getElementById('file-input-'+module).click()}
             >
               <div style={{fontSize:40,marginBottom:12}}>📊</div>
-              <div style={{fontSize:15,fontWeight:700,color:'#F8FAFC',marginBottom:6}}>Kéo thả file Excel vào đây</div>
+              <div style={{fontSize:15,fontWeight:700,color:'#0F172A',marginBottom:6}}>Kéo thả file Excel vào đây</div>
               <div style={{fontSize:12,color:'#94A3B8',marginBottom:16}}>hoặc click để chọn file (.xlsx)</div>
               <div style={{display:'inline-block',padding:'8px 20px',borderRadius:9,background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',fontSize:12,fontWeight:700}}>Chọn file</div>
             </div>
@@ -3303,18 +3294,18 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
         {step==='preview'&&(
           <div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-              <div style={{fontSize:14,fontWeight:700,color:'#F8FAFC'}}>Tìm thấy <span style={{color:'#6366F1'}}>{rows.length} records</span> để import</div>
-              <button onClick={()=>setStep('upload')} style={{padding:'5px 12px',borderRadius:7,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>← Chọn lại file</button>
+              <div style={{fontSize:14,fontWeight:700,color:'#0F172A'}}>Tìm thấy <span style={{color:'#6366F1'}}>{rows.length} records</span> để import</div>
+              <button onClick={()=>setStep('upload')} style={{padding:'5px 12px',borderRadius:7,border:'1px solid #E2E8F0',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>← Chọn lại file</button>
             </div>
-            <div style={{overflowX:'auto',maxHeight:340,border:'1px solid rgba(255,255,255,0.06)',borderRadius:10}}>
+            <div style={{overflowX:'auto',maxHeight:340,border:'1px solid #E2E8F0',borderRadius:10}}>
               <table style={{width:'100%',borderCollapse:'collapse',minWidth:600}}>
                 <thead>
-                  <tr>{headers.slice(0,8).map(h=><th key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'#94A3B8',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'left',background:'#0F1117',whiteSpace:'nowrap',textTransform:'uppercase'}}>{h.replace(' *','')}</th>)}</tr>
+                  <tr>{headers.slice(0,8).map(h=><th key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'#94A3B8',borderBottom:'1px solid #F1F5F9',textAlign:'left',background:'#FFFFFF',whiteSpace:'nowrap',textTransform:'uppercase'}}>{h.replace(' *','')}</th>)}</tr>
                 </thead>
                 <tbody>
                   {rows.slice(0,10).map((row,i)=>(
-                    <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,0.04)',background:i%2===0?'transparent':'rgba(255,255,255,0.02)'}}>
-                      {headers.slice(0,8).map(h=><td key={h} style={{padding:'7px 10px',fontSize:11,color:'#F8FAFC',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{row[h]||'—'}</td>)}
+                    <tr key={i} style={{borderBottom:'1px solid #F8FAFF',background:i%2===0?'transparent':'#F8FAFF'}}>
+                      {headers.slice(0,8).map(h=><td key={h} style={{padding:'7px 10px',fontSize:11,color:'#0F172A',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{row[h]||'—'}</td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -3322,7 +3313,7 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
             </div>
             {rows.length>10&&<div style={{fontSize:11,color:'#94A3B8',marginTop:8,textAlign:'center'}}>...và {rows.length-10} records khác</div>}
             <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:20}}>
-              <button onClick={()=>setStep('upload')} style={{padding:'8px 18px',borderRadius:9,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+              <button onClick={()=>setStep('upload')} style={{padding:'8px 18px',borderRadius:9,border:'1px solid #E2E8F0',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
               <button onClick={startImport} disabled={importing} style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                 {importing?'Đang kiểm tra...':'Tiếp tục →'}
               </button>
@@ -3346,7 +3337,7 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
                 {Object.entries(curDup.row).slice(0,8).map(([k,v])=>v?(
                   <div key={k} style={{fontSize:11,marginBottom:4,display:'flex',gap:8}}>
                     <span style={{color:'#94A3B8',minWidth:120,flexShrink:0}}>{k.replace(' *','')}:</span>
-                    <span style={{color:'#F8FAFC',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v}</span>
+                    <span style={{color:'#0F172A',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v}</span>
                   </div>
                 ):null)}
               </div>
@@ -3355,7 +3346,7 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
                 {Object.entries(curDup.existing).map(([k,v])=>v&&k!=='id'?(
                   <div key={k} style={{fontSize:11,marginBottom:4,display:'flex',gap:8}}>
                     <span style={{color:'#94A3B8',minWidth:80,flexShrink:0}}>{k}:</span>
-                    <span style={{color:'#F8FAFC',fontWeight:500}}>{String(v)}</span>
+                    <span style={{color:'#0F172A',fontWeight:500}}>{String(v)}</span>
                   </div>
                 ):null)}
               </div>
@@ -3376,10 +3367,10 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
               </button>
             </div>
 
-            <div style={{marginTop:16,padding:'10px 14px',background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(255,255,255,0.06)'}}>
+            <div style={{marginTop:16,padding:'10px 14px',background:'rgba(59,130,246,0.04)',borderRadius:8,border:'1px solid #EFF6FF'}}>
               <div style={{display:'flex',gap:4}}>
                 {duplicates.map((d,i)=>(
-                  <div key={i} style={{width:12,height:12,borderRadius:3,background:i<dupIdx?'#10B981':i===dupIdx?'#6366F1':'rgba(255,255,255,0.12)',display:'inline-block',marginRight:4}}/>
+                  <div key={i} style={{width:12,height:12,borderRadius:3,background:i<dupIdx?'#10B981':i===dupIdx?'#6366F1':'#D1D5DB',display:'inline-block',marginRight:4}}/>
                 ))}
               </div>
               <div style={{fontSize:11,color:'#94A3B8',marginTop:6}}>
@@ -3393,14 +3384,14 @@ function ImportModal({module, data, supabase, reload, log, onClose}) {
         {step==='done'&&result&&(
           <div style={{textAlign:'center',padding:'20px 0'}}>
             <div style={{fontSize:48,marginBottom:16}}>🎉</div>
-            <div style={{fontSize:18,fontWeight:900,color:'#F8FAFC',marginBottom:8}}>Import hoàn tất!</div>
+            <div style={{fontSize:18,fontWeight:900,color:'#0F172A',marginBottom:8}}>Import hoàn tất!</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,margin:'24px 0',textAlign:'left'}}>
               {[['✅ Đã thêm mới',result.imported,'#10B981','rgba(16,185,129,0.08)'],
                 ['🔄 Đã cập nhật',result.updated,'#6366F1','rgba(99,102,241,0.08)'],
                 ['⏭️ Đã bỏ qua',result.skipped,'#F59E0B','rgba(245,158,11,0.08)']].map(([l,v,c,bg])=>(
                 <div key={l} style={{background:bg,borderRadius:12,padding:'16px',border:`1px solid ${c}25`}}>
                   <div style={{fontSize:11,color:c,fontWeight:700,marginBottom:4}}>{l}</div>
-                  <div style={{fontSize:28,fontWeight:900,color:'#F8FAFC'}}>{v}</div>
+                  <div style={{fontSize:28,fontWeight:900,color:'#0F172A'}}>{v}</div>
                 </div>
               ))}
             </div>
@@ -3447,7 +3438,7 @@ function Quotations({data, supabase, reload, log}) {
   }
 
   const total = quotes.reduce((a,q)=>a+Number(q.total||0),0)
-  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#94A3B8',borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
+  const TH={padding:'10px 14px',fontSize:10,fontWeight:800,color:'#94A3B8',borderBottom:'1px solid rgba(26,86,219,0.1)',textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'10px 14px',borderBottom:'1px solid rgba(26,86,219,0.06)',verticalAlign:'middle'}
 
   return (
@@ -4333,7 +4324,7 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <div>
-          <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#F8FAFC',letterSpacing:'-0.03em'}}>Project Workflow</h2>
+          <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em'}}>Project Workflow</h2>
           <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{data.projects.length} dự án · {data.projects.filter(p=>p.current_stage==='EXECUTION').length} đang thực hiện</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
@@ -4353,7 +4344,7 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
       </div>
 
       {/* Stage pipeline overview */}
-      <div style={{display:'flex',gap:0,marginBottom:20,background:'#1A1D2E',borderRadius:14,padding:'14px 16px',border:'1px solid rgba(255,255,255,0.08)',overflowX:'auto'}}>
+      <div style={{display:'flex',gap:0,marginBottom:20,background:'#FFFFFF',borderRadius:14,padding:'14px 16px',border:'1px solid #E2E8F0',overflowX:'auto'}}>
         {STAGES.map((s,i)=>(
           <div key={s.id} style={{display:'flex',alignItems:'center',flexShrink:0}}>
             <div onClick={()=>setFilterStage(filterStage===s.id?'':s.id)} style={{
@@ -4387,12 +4378,12 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
 
       {/* List view */}
       {view==='list'&&(
-        <div style={{background:'#1A1D2E',borderRadius:14,overflow:'auto',border:'1px solid rgba(255,255,255,0.08)'}}>
+        <div style={{background:'#FFFFFF',borderRadius:14,overflow:'auto',border:'1px solid #E2E8F0'}}>
           <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
             <thead>
               <tr>
                 {['Project','Client','Stage','PM','Priority','Progress','Deadline',''].map(h=>(
-                  <th key={h} style={{padding:'10px 14px',fontSize:10,fontWeight:800,color:'#475569',borderBottom:'1px solid rgba(255,255,255,0.08)',textAlign:'left',background:'#1A1D2E',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+                  <th key={h} style={{padding:'10px 14px',fontSize:10,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -4400,9 +4391,9 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
               {projects.map(p=>{
                 const stage = STAGES.find(s=>s.id===(p.current_stage||'LEAD'))
                 const urgentStyle = p.is_urgent?{background:'rgba(239,68,68,0.04)'}:{}
-                return <tr key={p.id} style={{borderBottom:'1px solid rgba(255,255,255,0.06)',...urgentStyle}}>
+                return <tr key={p.id} style={{borderBottom:'1px solid #F1F5F9',...urgentStyle}}>
                   <td style={{padding:'11px 14px'}}>
-                    <div style={{fontWeight:700,fontSize:12.5,color:'#F8FAFC'}}>{p.campaign||'—'}</div>
+                    <div style={{fontWeight:700,fontSize:12.5,color:'#0F172A'}}>{p.campaign||'—'}</div>
                     <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{p.project_code}</div>
                   </td>
                   <td style={{padding:'11px 14px',fontSize:12,color:'#94A3B8'}}>{p.client||'—'}</td>
@@ -4679,7 +4670,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
         {/* Project header */}
         <div style={{background:`linear-gradient(135deg,#0F172A,${currentStageData.color}88)`,padding:'24px 28px',position:'relative',overflow:'hidden',flexShrink:0}}>
-          <div style={{position:'absolute',top:-30,right:-30,width:150,height:150,borderRadius:'50%',background:'rgba(255,255,255,0.04)'}}/>
+          <div style={{position:'absolute',top:-30,right:-30,width:150,height:150,borderRadius:'50%',background:'#F8FAFF'}}/>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'relative'}}>
             <div>
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
@@ -4754,18 +4745,18 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   ['Pending approvals',pendingApprovals.length,pendingApprovals.length?'Cần xử lý':'OK ✓',pendingApprovals.length?'#DC2626':'#059669'],
                   ['Revenue',project.revenue?Number(project.revenue).toLocaleString('vi-VN'):'—','VND','#059669'],
                 ].map(([l,v,s,c])=>(
-                  <div key={l} style={{background:'#1A1D2E',borderRadius:12,padding:'14px 16px',border:`1px solid rgba(255,255,255,0.08)`,borderTop:`2px solid ${c}`}}>
+                  <div key={l} style={{background:'#FFFFFF',borderRadius:12,padding:'14px 16px',border:`1px solid #E2E8F0`,borderTop:`2px solid ${c}`}}>
                     <div style={{fontSize:10,fontWeight:700,color:c,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6}}>{l}</div>
-                    <div style={{fontSize:16,fontWeight:900,color:'#F8FAFC'}}>{v}</div>
+                    <div style={{fontSize:16,fontWeight:900,color:'#0F172A'}}>{v}</div>
                     <div style={{fontSize:10,color:'#94A3B8',marginTop:3}}>{s}</div>
                   </div>
                 ))}
               </div>
 
               {/* Stage tasks summary */}
-              <div style={{background:'#1A1D2E',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid rgba(255,255,255,0.08)'}}>
+              <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid #E2E8F0'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-                  <div style={{fontSize:13,fontWeight:800,color:'#F8FAFC'}}>Tasks — {currentStageData.label}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {currentStageData.label}</div>
                   <div style={{display:'flex',gap:8}}>
                     {stageTasks.length===0&&(
                       <button onClick={()=>initStageTasks(project.current_stage||'LEAD')} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
@@ -4826,8 +4817,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       {/* Stage change modal */}
       {showStageChange&&(
         <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',zIndex:100}}>
-          <div style={{background:'#1A1D2E',borderRadius:18,padding:'24px 28px',width:480,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
-            <div style={{fontSize:15,fontWeight:800,color:'#F8FAFC',marginBottom:16}}>Chuyển Stage dự án</div>
+          <div style={{background:'#FFFFFF',borderRadius:18,padding:'24px 28px',width:480,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.5)',border:'1px solid #E2E8F0'}}>
+            <div style={{fontSize:15,fontWeight:800,color:'#0F172A',marginBottom:16}}>Chuyển Stage dự án</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
               {STAGES.map((s,i)=>{
                 const isCurrent = s.id===(project.current_stage||'LEAD')
@@ -4835,8 +4826,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                 return <button key={s.id} onClick={()=>changeStage(s.id)}
                   disabled={isCurrent}
                   style={{
-                    padding:'10px 12px',borderRadius:10,border:`1.5px solid ${isCurrent?s.color:isPrev?'rgba(5,150,105,0.3)':'rgba(255,255,255,0.08)'}`,
-                    background:isCurrent?s.color+'18':isPrev?'rgba(5,150,105,0.06)':'rgba(255,255,255,0.04)',
+                    padding:'10px 12px',borderRadius:10,border:`1.5px solid ${isCurrent?s.color:isPrev?'rgba(5,150,105,0.3)':'#E2E8F0'}`,
+                    background:isCurrent?s.color+'18':isPrev?'rgba(5,150,105,0.06)':'#F8FAFF',
                     color:isCurrent?s.color:isPrev?'#059669':'#94A3B8',
                     cursor:isCurrent?'default':'pointer',
                     fontSize:12,fontWeight:isCurrent?700:500,
@@ -4851,7 +4842,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
             <div style={{padding:'10px 14px',background:'rgba(245,158,11,0.08)',borderRadius:8,border:'1px solid rgba(245,158,11,0.25)',fontSize:11,color:'#F59E0B',marginBottom:14}}>
               ⚠️ Vào EXECUTION cần Finance & Director đã approve P&L. Vào PAYMENT cần có BBNT.
             </div>
-            <button onClick={()=>setShowStageChange(false)} style={{width:'100%',padding:'9px',borderRadius:9,border:'1.5px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+            <button onClick={()=>setShowStageChange(false)} style={{width:'100%',padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
           </div>
         </div>
       )}
@@ -4873,7 +4864,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 function TaskRow({task:t, onStatusChange, onEdit}) {
   const isLate = t.due_date && new Date(t.due_date)<new Date() && t.status!=='Done'
   return (
-    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
       <select value={t.status} onChange={e=>onStatusChange(t.id,e.target.value)}
         style={{padding:'3px 6px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
         {['Todo','In Progress','Review','Done','Blocked'].map(s=><option key={s}>{s}</option>)}
@@ -4912,12 +4903,12 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
         <div style={{display:'flex',gap:8}}>
           <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
-            style={{padding:'6px 10px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#0F1117',color:'#F8FAFC'}}>
+            style={{padding:'6px 10px',border:'1px solid #E2E8F0',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#FFFFFF',color:'#0F172A'}}>
             <option value="">Tất cả stages</option>
             {STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
           <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)}
-            style={{padding:'6px 10px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#0F1117',color:'#F8FAFC'}}>
+            style={{padding:'6px 10px',border:'1px solid #E2E8F0',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#FFFFFF',color:'#0F172A'}}>
             <option value="">Tất cả assignees</option>
             {data.team.map(m=><option key={m.id} value={m.name}>{m.name}</option>)}
           </select>
@@ -4932,7 +4923,7 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:16}}>
         {['Todo','In Progress','Review','Done','Blocked'].map(s=>{
           const cnt = filtered.filter(t=>t.status===s).length
-          return <div key={s} style={{background:'#1A1D2E',borderRadius:10,padding:'10px 12px',border:`1px solid rgba(255,255,255,0.06)`,borderTop:`2px solid ${TASK_STATUS_COLOR[s]||'#94A3B8'}`,textAlign:'center'}}>
+          return <div key={s} style={{background:'#FFFFFF',borderRadius:10,padding:'10px 12px',border:'1px solid #E2E8F0',borderTop:`2px solid ${TASK_STATUS_COLOR[s]||'#94A3B8'}`,textAlign:'center'}}>
             <div style={{fontSize:18,fontWeight:900,color:TASK_STATUS_COLOR[s]||'#94A3B8'}}>{cnt}</div>
             <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,marginTop:2}}>{s}</div>
           </div>
@@ -4949,7 +4940,7 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
               {stage.icon} {stage.label}
               <span style={{background:stage.color+'18',color:stage.color,padding:'1px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{stageTasks.length}</span>
             </div>
-            <div style={{background:'#1A1D2E',borderRadius:12,padding:'12px 16px',border:`1px solid rgba(255,255,255,0.06)`}}>
+            <div style={{background:'#FFFFFF',borderRadius:12,padding:'12px 16px',border:'1px solid #E2E8F0'}}>
               {stageTasks.map(t=><TaskRow key={t.id} task={t} onStatusChange={onStatusChange} onEdit={()=>onEdit(t)}/>)}
             </div>
           </div>
@@ -4983,8 +4974,8 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
   if(!needed.length) return null
 
   return (
-    <div style={{background:'#1A1D2E',borderRadius:14,padding:'18px 20px',border:'1px solid rgba(255,255,255,0.08)'}}>
-      <div style={{fontSize:13,fontWeight:800,color:'#F8FAFC',marginBottom:14}}>Approvals — Stage {stage}</div>
+    <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',border:'1px solid #E2E8F0'}}>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>Approvals — Stage {stage}</div>
       {needed.map(item=>{
         const existing = approvals.find(a=>a.stage===stage&&a.approval_type===item.type)
         const isPending = existing?.status==='Pending'
@@ -4993,9 +4984,9 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
         const canResolve = currentUser?.isMaster || currentUser?.role?.includes(item.role)
 
         return (
-          <div key={item.type} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',marginBottom:8,background:isApproved?'rgba(16,185,129,0.06)':isRejected?'rgba(239,68,68,0.06)':isPending?'rgba(245,158,11,0.06)':'rgba(255,255,255,0.03)',borderRadius:10,border:`1px solid ${isApproved?'rgba(16,185,129,0.2)':isRejected?'rgba(239,68,68,0.2)':isPending?'rgba(245,158,11,0.2)':'rgba(255,255,255,0.08)'}`}}>
+          <div key={item.type} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',marginBottom:8,background:isApproved?'rgba(16,185,129,0.06)':isRejected?'rgba(239,68,68,0.06)':isPending?'rgba(245,158,11,0.06)':'#F8FAFF',borderRadius:10,border:`1px solid ${isApproved?'rgba(16,185,129,0.2)':isRejected?'rgba(239,68,68,0.2)':isPending?'rgba(245,158,11,0.2)':'rgba(255,255,255,0.08)'}`}}>
             <div>
-              <div style={{fontSize:12,fontWeight:700,color:'#F8FAFC'}}>{item.label}</div>
+              <div style={{fontSize:12,fontWeight:700,color:'#0F172A'}}>{item.label}</div>
               <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{item.desc}</div>
               {existing?.comment&&<div style={{fontSize:10,color:'#475569',marginTop:3,fontStyle:'italic'}}>"{existing.comment}"</div>}
               {existing?.reviewed_by&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>Bởi: {existing.reviewed_by} — {existing.reviewed_at?new Date(existing.reviewed_at).toLocaleDateString('vi-VN'):''}</div>}
@@ -5025,7 +5016,7 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
 function ApprovalsTab({approvals, project, currentUser, onRequest, onResolve}) {
   return (
     <div>
-      <div style={{fontSize:13,fontWeight:800,color:'#F8FAFC',marginBottom:16}}>Toàn bộ Approvals — {project.campaign}</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>Toàn bộ Approvals — {project.campaign}</div>
       {STAGES.map(stage=>{
         const stageApprovals = approvals.filter(a=>a.stage===stage.id)
         if(!stageApprovals.length) return null
@@ -5033,9 +5024,9 @@ function ApprovalsTab({approvals, project, currentUser, onRequest, onResolve}) {
           <div key={stage.id} style={{marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:800,color:stage.color,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}}>{stage.icon} {stage.label}</div>
             {stageApprovals.map(a=>(
-              <div key={a.id} style={{background:'#1A1D2E',borderRadius:10,padding:'12px 16px',marginBottom:8,border:'1px solid rgba(255,255,255,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div key={a.id} style={{background:'#FFFFFF',borderRadius:10,padding:'12px 16px',marginBottom:8,border:'1px solid #E2E8F0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:'#F8FAFC'}}>{a.approval_type}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:'#0F172A'}}>{a.approval_type}</div>
                   <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>Requested by {a.requested_by} · {new Date(a.requested_at).toLocaleDateString('vi-VN')}</div>
                   {a.comment&&<div style={{fontSize:11,color:'#475569',marginTop:4,fontStyle:'italic'}}>"{a.comment}"</div>}
                 </div>
@@ -5085,7 +5076,7 @@ function KPITab({tasks, project, data}) {
 
   return (
     <div>
-      <div style={{fontSize:13,fontWeight:800,color:'#F8FAFC',marginBottom:16}}>📈 KPI Performance — {project.campaign}</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>📈 KPI Performance — {project.campaign}</div>
       <div style={{background:'rgba(99,102,241,0.06)',borderRadius:10,padding:'12px 16px',marginBottom:16,border:'1px solid rgba(99,102,241,0.15)',fontSize:11,color:'#94A3B8'}}>
         <strong>Công thức KPI:</strong> Completion Rate (40%) + On-time Rate (40%) + Weighted Task Score (20%)
       </div>
@@ -5095,14 +5086,14 @@ function KPITab({tasks, project, data}) {
         if(!kpi) return null
         const scoreColor = kpi.kpiScore>=80?'#059669':kpi.kpiScore>=60?'#D97706':'#DC2626'
         return (
-          <div key={member} style={{background:'#1A1D2E',borderRadius:14,padding:'18px 20px',marginBottom:12,border:'1px solid rgba(255,255,255,0.08)'}}>
+          <div key={member} style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:12,border:'1px solid #E2E8F0'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
                 <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13}}>
                   {member.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
                 </div>
                 <div>
-                  <div style={{fontWeight:700,fontSize:13,color:'#F8FAFC'}}>{member}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:'#0F172A'}}>{member}</div>
                   <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{data.team.find(m=>m.name===member)?.role||'—'}</div>
                 </div>
               </div>
@@ -5121,7 +5112,7 @@ function KPITab({tasks, project, data}) {
               ].map(([l,v,s,c])=>(
                 <div key={l} style={{background:c+'08',borderRadius:8,padding:'10px 12px',border:`1px solid ${c}15`}}>
                   <div style={{fontSize:9,fontWeight:700,color:c,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4}}>{l}</div>
-                  <div style={{fontSize:16,fontWeight:800,color:'#F8FAFC'}}>{v}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>{v}</div>
                   {s&&<div style={{fontSize:9,color:'#94A3B8',marginTop:2}}>{s}</div>}
                 </div>
               ))}
@@ -5152,14 +5143,14 @@ function KPITab({tasks, project, data}) {
 function ActivityTab({notifications, project}) {
   return (
     <div>
-      <div style={{fontSize:13,fontWeight:800,color:'#F8FAFC',marginBottom:16}}>🔔 Activity Log</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:16}}>🔔 Activity Log</div>
       {notifications.map(n=>(
-        <div key={n.id} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+        <div key={n.id} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #F1F5F9'}}>
           <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(99,102,241,0.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>
             {n.type==='TASK_ASSIGNED'?'✅':n.type==='APPROVAL'?'🔐':'🔔'}
           </div>
           <div style={{flex:1}}>
-            <div style={{fontSize:12,fontWeight:600,color:'#F8FAFC'}}>{n.title}</div>
+            <div style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{n.title}</div>
             <div style={{fontSize:11,color:'#94A3B8',marginTop:2}}>{n.message}</div>
             <div style={{fontSize:10,color:'#94A3B8',marginTop:3}}>{new Date(n.created_at).toLocaleString('vi-VN')}</div>
           </div>
@@ -5196,13 +5187,13 @@ function TaskForm({task, project, data, onSave, onClose, currentStage}) {
     onSave(form)
   }
 
-  const INP={width:'100%',padding:'8px 11px',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#0F1117',color:'#F8FAFC',outline:'none',boxSizing:'border-box'}
+  const INP={width:'100%',padding:'8px 11px',border:'1px solid #E2E8F0',borderRadius:8,fontSize:12.5,fontFamily:"'Plus Jakarta Sans',sans-serif",background:'#FFFFFF',color:'#0F172A',outline:'none',boxSizing:'border-box'}
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:3000,backdropFilter:'blur(4px)'}}>
-      <div style={{background:'#1A1D2E',borderRadius:18,padding:'24px 26px',width:520,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 60px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <span style={{fontSize:15,fontWeight:800,color:'#F8FAFC'}}>{task?'Sửa task':'Tạo task mới'}</span>
+      <div style={{background:'#FFFFFF',borderRadius:18,padding:'24px 26px',width:520,maxWidth:'95vw',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 60px rgba(0,0,0,0.5)',border:'1px solid #E2E8F0'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid #F1F5F9'}}>
+          <span style={{fontSize:15,fontWeight:800,color:'#0F172A'}}>{task?'Sửa task':'Tạo task mới'}</span>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,color:'#94A3B8'}}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -5266,7 +5257,7 @@ function TaskForm({task, project, data, onSave, onClose, currentStage}) {
             <textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...INP,minHeight:70}}/>
           </div>
           <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-            <button type="button" onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+            <button type="button" onClick={onClose} style={{padding:'8px 18px',borderRadius:9,border:'1px solid #E2E8F0',background:'transparent',color:'#94A3B8',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
             <button type="submit" style={{padding:'8px 22px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Lưu task</button>
           </div>
         </form>
