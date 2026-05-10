@@ -1223,6 +1223,10 @@ function Clients({data,add,upd,del,log,reload,supabase}){
   )
 }
 
+const KOL_PRICING_TYPES = ['Video Post','Image Post','Story','Livestream','Image Usage Rights (1 Month)','Event Attendance','Brand Ambassador','Exclusivity Fee']
+const KOL_PLATFORMS = ['TikTok','Instagram','YouTube','Facebook']
+const KOL_PRICING_DEFAULT = () => [{platform:'TikTok',type:'Video Post',amount:0}]
+
 function Kols({data,add,upd,del,log,reload,supabase}){
   const [search,setSearch]=useState('')
   const [platF,setPlatF]=useState('')
@@ -1234,7 +1238,30 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'created_at',dir:'desc'})
-  async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:Number(fd.get('rate')||0),avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes'),phone:fd.get('phone'),email:fd.get('email'),cccd:fd.get('cccd'),tax_code:fd.get('tax_code'),address:fd.get('address'),tiktok_url:fd.get('tiktok_url'),instagram_url:fd.get('instagram_url'),youtube_url:fd.get('youtube_url'),facebook_url:fd.get('facebook_url'),audience_age:fd.get('audience_age'),audience_gender:fd.get('audience_gender'),audience_location:fd.get('audience_location'),bank_account:fd.get('bank_account'),bank_name:fd.get('bank_name'),bank_branch:fd.get('bank_branch')};edit?await upd('kols',edit.id,r):await add('kols',r);log('KOL: '+r.name);setEdit(null);setShowAdd(false)}
+  const [pricing,setPricing]=useState(KOL_PRICING_DEFAULT())
+
+  useEffect(()=>{
+    if(showAdd){setPricing(KOL_PRICING_DEFAULT())}
+    if(edit){
+      const p=edit.pricing&&edit.pricing.length?edit.pricing:(edit.rate?[{platform:edit.platform||'TikTok',type:'Video Post',amount:Number(edit.rate||0)}]:KOL_PRICING_DEFAULT())
+      setPricing(p)
+    }
+  },[edit,showAdd])
+
+  function addPricingRow(){setPricing(p=>[...p,{platform:'TikTok',type:'Video Post',amount:0}])}
+  function updPricingRow(i,field,val){setPricing(p=>p.map((r,j)=>j===i?{...r,[field]:val}:r))}
+  function delPricingRow(i){setPricing(p=>p.filter((_,j)=>j!==i))}
+
+  async function save(e){
+    e.preventDefault()
+    const fd=new FormData(e.target)
+    const minRate=pricing.length?Math.min(...pricing.map(p=>Number(p.amount||0))):0
+    const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:minRate,pricing:pricing,avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes'),phone:fd.get('phone'),email:fd.get('email'),cccd:fd.get('cccd'),tax_code:fd.get('tax_code'),address:fd.get('address'),tiktok_url:fd.get('tiktok_url'),instagram_url:fd.get('instagram_url'),youtube_url:fd.get('youtube_url'),facebook_url:fd.get('facebook_url'),audience_age:fd.get('audience_age'),audience_gender:fd.get('audience_gender'),audience_location:fd.get('audience_location'),bank_account:fd.get('bank_account'),bank_name:fd.get('bank_name'),bank_branch:fd.get('bank_branch')}
+    edit?await upd('kols',edit.id,r):await add('kols',r)
+    log('KOL: '+r.name)
+    setEdit(null)
+    setShowAdd(false)
+  }
   const list=applySortDate(applyDateFilter(data.kols.filter(k=>(!search||(k.name||'').toLowerCase().includes(search.toLowerCase()))&&(!platF||k.platform===platF)&&(!tierF||k.tier===tierF)),'created_at',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
@@ -1250,7 +1277,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:950}}>
           <thead><tr>
-            {['ID','Name','Platform','Tier','Followers','Eng%','Rate/post','Campaigns','Stars','Status'].map(h=><th key={h} style={TH}>{h}</th>)}
+            {['ID','Name','Platform','Tier','Followers','Eng%','Pricing','Campaigns','Stars','Status'].map(h=><th key={h} style={TH}>{h}</th>)}
             <SortHdr field="created_at" sort={sort} setSort={setSort} thStyle={TH}>Added</SortHdr>
             <th style={TH}></th>
           </tr></thead>
@@ -1262,7 +1289,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
               <td style={TD}><Badge text={k.tier}/></td>
               <td style={{...TD,fontSize:11,fontWeight:600}}>{fmtS(k.followers)}</td>
               <td style={{...TD,fontSize:11,fontWeight:700,color:Number(k.engagement)>=5?B.success:B.textSec}}>{Number(k.engagement||0).toFixed(1)}%</td>
-              <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{vnd(k.rate)}</td>
+              <td style={{...TD,fontSize:11,color:B.primary}}>{k.pricing&&k.pricing.length?<span style={{fontWeight:800}}>{vnd(Math.min(...k.pricing.map(p=>Number(p.amount||0))))}</span>:vnd(k.rate)}{k.pricing&&k.pricing.length>1&&<span style={{fontSize:9,color:B.textTer,marginLeft:4}}>+{k.pricing.length-1}</span>}</td>
               <td style={{...TD,textAlign:'center',fontSize:12,fontWeight:800,color:B.accent}}>{used}</td>
               <td style={{...TD,fontSize:13,color:'#F59E0B',letterSpacing:'-1px'}}>{stars}</td>
               <td style={TD}><Badge text={k.available?'Active':'Booked'}/></td>
@@ -1282,7 +1309,35 @@ function Kols({data,add,upd,del,log,reload,supabase}){
         <Row2><FG label="Platform chính"><select name="platform" defaultValue={edit?.platform||'TikTok'} {...inp()}><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select></FG><FG label="Tier"><select name="tier" defaultValue={edit?.tier||'Micro'} {...inp()}><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select></FG></Row2>
         <FG label="Niche / Chuyên mục"><input name="niche" defaultValue={edit?.niche||''} placeholder="Beauty, Lifestyle, Food..." {...inp()}/></FG>
         <Row2><FG label="Followers"><input name="followers" type="number" defaultValue={edit?.followers||0} {...inp()}/></FG><FG label="Engagement (%)"><input name="engagement" type="number" step="0.1" defaultValue={edit?.engagement||0} {...inp()}/></FG></Row2>
-        <Row2><FG label="Rate (VND/post)"><input name="rate" type="number" defaultValue={edit?.rate||0} {...inp()}/></FG><FG label="Avg Views"><input name="avg_views" type="number" defaultValue={edit?.avg_views||0} {...inp()}/></FG></Row2>
+        <FG label="Avg Views"><input name="avg_views" type="number" defaultValue={edit?.avg_views||0} {...inp()}/></FG>
+        <div style={{marginTop:14}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em'}}>Bảng giá</div>
+            <button type="button" onClick={addPricingRow} style={{padding:'4px 12px',borderRadius:6,border:'1px solid rgba(59,130,246,0.3)',background:'rgba(59,130,246,0.07)',color:'#3B82F6',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>+ Thêm mức giá</button>
+          </div>
+          <div style={{border:'1px solid #E2E8F0',borderRadius:10,overflow:'hidden'}}>
+            <div style={{display:'grid',gridTemplateColumns:'130px 1fr 140px 28px',background:'#F8FAFF',borderBottom:'1px solid #E2E8F0',padding:'6px 10px',gap:6}}>
+              {['Platform','Loại dịch vụ','Giá (VND)',''].map(h=><div key={h} style={{fontSize:9,fontWeight:800,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</div>)}
+            </div>
+            {pricing.map((row,i)=>(
+              <div key={i} style={{display:'grid',gridTemplateColumns:'130px 1fr 140px 28px',gap:6,padding:'6px 10px',borderBottom:i<pricing.length-1?'1px solid #F1F5F9':'none',alignItems:'center'}}>
+                <select value={row.platform} onChange={e=>updPricingRow(i,'platform',e.target.value)}
+                  style={{padding:'5px 8px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:11,fontFamily:"'Inter',system-ui,sans-serif",background:'#fff',color:'#1F2937',outline:'none',width:'100%'}}>
+                  {KOL_PLATFORMS.map(p=><option key={p}>{p}</option>)}
+                </select>
+                <select value={row.type} onChange={e=>updPricingRow(i,'type',e.target.value)}
+                  style={{padding:'5px 8px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:11,fontFamily:"'Inter',system-ui,sans-serif",background:'#fff',color:'#1F2937',outline:'none',width:'100%'}}>
+                  {KOL_PRICING_TYPES.map(t=><option key={t}>{t}</option>)}
+                </select>
+                <input type="text" value={fmtNum(row.amount)} onChange={e=>updPricingRow(i,'amount',parseNum(e.target.value))}
+                  placeholder="0" style={{padding:'5px 8px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:12,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif",background:'#fff',color:'#0F172A',outline:'none',width:'100%',textAlign:'right',boxSizing:'border-box'}}/>
+                <button type="button" onClick={()=>delPricingRow(i)} disabled={pricing.length<=1}
+                  style={{background:'none',border:'none',cursor:pricing.length<=1?'not-allowed':'pointer',color:pricing.length<=1?'#E2E8F0':'#EF4444',fontSize:16,lineHeight:1,padding:'2px',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+              </div>
+            ))}
+          </div>
+          {pricing.length>0&&<div style={{fontSize:10,color:'#64748B',marginTop:5,textAlign:'right'}}>Từ {vnd(Math.min(...pricing.map(p=>Number(p.amount||0))))} / loại thấp nhất</div>}
+        </div>
         <Row2><FG label="Độ tin cậy (1-5)"><select name="reliability" defaultValue={edit?.reliability||5} {...inp()}><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></FG><FG label="Trạng thái"><select name="available" defaultValue={edit?.available!==false?'true':'false'} {...inp()}><option value="true">Available</option><option value="false">Booked</option></select></FG></Row2>
         <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Liên hệ & Mạng xã hội</div>
         <Row2><FG label="Số điện thoại"><input name="phone" defaultValue={edit?.phone||''} {...inp()}/></FG><FG label="Email"><input name="email" type="email" defaultValue={edit?.email||''} {...inp()}/></FG></Row2>
@@ -1310,7 +1365,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
 </Modal>}
       {hist&&<Modal title={'History: '+hist.name} onClose={()=>setHist(null)}>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:18}}>
-          {[['Campaigns',data.projects.filter(p=>(p.kols||[]).includes(hist.name)).length],['Rate',vnd(hist.rate)],['Stars',hist.reliability+'/5']].map(([l,v])=>(
+          {[['Campaigns',data.projects.filter(p=>(p.kols||[]).includes(hist.name)).length],['Base Rate',vnd(hist.pricing?.length?Math.min(...hist.pricing.map(p=>Number(p.amount||0))):hist.rate)],['Stars',hist.reliability+'/5']].map(([l,v])=>(
             <div key={l} style={{background:B.gradSoft,borderRadius:12,padding:'12px 14px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',marginBottom:5}}>{l}</div><div style={{fontSize:17,fontWeight:900,color:B.navy}}>{v}</div></div>
           ))}
         </div>
@@ -1337,13 +1392,34 @@ function Kols({data,add,upd,del,log,reload,supabase}){
           </div>
           <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
-              {[['Followers',fmtS(kolDetail.followers)],['Engagement',kolDetail.engagement+'%'],['Rate/post',vnd(kolDetail.rate)],['Reliability',(kolDetail.reliability||0)+'/5']].map(([l,v])=>(
+              {[['Followers',fmtS(kolDetail.followers)],['Engagement',kolDetail.engagement+'%'],['Reliability',(kolDetail.reliability||0)+'/5']].map(([l,v])=>(
                 <div key={l} style={{background:'#F8FAFF',borderRadius:10,padding:'12px 14px',border:'1px solid #E2E8F0'}}>
                   <div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}}>{l}</div>
                   <div style={{fontSize:20,fontWeight:900,color:'#0F172A'}}>{v}</div>
                 </div>
               ))}
+              {(kolDetail.pricing&&kolDetail.pricing.length?kolDetail.pricing:[{platform:kolDetail.platform||'TikTok',type:'Video Post',amount:kolDetail.rate||0}]).length>0&&(
+                <div style={{background:'#F8FAFF',borderRadius:10,padding:'12px 14px',border:'1px solid #E2E8F0',gridColumn:'span 1'}}>
+                  <div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:6}}>Base Rate</div>
+                  <div style={{fontSize:20,fontWeight:900,color:'#0F172A'}}>{vnd(kolDetail.pricing?.length?Math.min(...kolDetail.pricing.map(p=>Number(p.amount||0))):kolDetail.rate)}</div>
+                </div>
+              )}
             </div>
+            {(()=>{const pr=kolDetail.pricing&&kolDetail.pricing.length?kolDetail.pricing:[{platform:kolDetail.platform||'TikTok',type:'Video Post',amount:kolDetail.rate||0}];return(<div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #E2E8F0',textTransform:'uppercase',letterSpacing:'0.06em'}}>Bảng giá</div>
+              <div style={{border:'1px solid #E2E8F0',borderRadius:10,overflow:'hidden'}}>
+                <div style={{display:'grid',gridTemplateColumns:'110px 1fr 120px',background:'#F8FAFF',borderBottom:'1px solid #E2E8F0',padding:'6px 12px',gap:8}}>
+                  {['Platform','Loại','Giá'].map(h=><div key={h} style={{fontSize:9,fontWeight:800,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</div>)}
+                </div>
+                {pr.map((row,i)=>(
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'110px 1fr 120px',gap:8,padding:'8px 12px',borderBottom:i<pr.length-1?'1px solid #F1F5F9':'none',alignItems:'center'}}>
+                    <span style={{fontSize:10,fontWeight:700,color:'#3B82F6',background:'rgba(59,130,246,0.08)',padding:'2px 8px',borderRadius:4,display:'inline-block'}}>{row.platform}</span>
+                    <span style={{fontSize:11,color:'#374151'}}>{row.type}</span>
+                    <span style={{fontSize:12,fontWeight:800,color:'#0F172A',textAlign:'right'}}>{vnd(row.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>)})()}
             <div style={{marginBottom:16}}>
               <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #E2E8F0',textTransform:'uppercase',letterSpacing:'0.06em'}}>Thông tin cơ bản</div>
               {[['Niche/Chuyên mục',kolDetail.niche||'—'],['Contact',kolDetail.contact||'—'],['Platform',kolDetail.platform||'—'],['Avg Views',fmtS(kolDetail.avg_views)]].map(([l,v])=>(
