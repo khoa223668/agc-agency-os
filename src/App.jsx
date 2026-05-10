@@ -77,9 +77,9 @@ function FG({label,children}){return<div style={{marginBottom:14}}><label style=
 function Row2({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
 function Empty({children}){return <div style={{textAlign:'center',padding:'28px 0',color:B.textTer,fontSize:12,fontWeight:500}}>{children}</div>}
 
-function Modal({title,children,onClose}){
+function Modal({title,children,onClose,wide}){
   return<div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose?.()}}>
-    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:520,maxHeight:'90vh',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
+    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:wide?900:520,maxHeight:'90vh',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
       <div style={{padding:'18px 22px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
         <span style={{fontSize:15,fontWeight:700,color:'#0F172A'}}>{title}</span>
         <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8',fontSize:18,lineHeight:1,padding:4,borderRadius:6}}>×</button>
@@ -361,6 +361,11 @@ export default function App(){
     if(stored){try{setCurrentUser(JSON.parse(stored))}catch(e){}}
     setAuthReady(true)
     loadAll()
+    function handleNavigate(e){
+      if(e.detail?.page) setPage(e.detail.page)
+    }
+    window.addEventListener('navigate',handleNavigate)
+    return ()=>window.removeEventListener('navigate',handleNavigate)
   },[])
 
   function handleLogin(session){setCurrentUser(session)}
@@ -578,6 +583,30 @@ function Dashboard({ data, setPage, currentUser }) {
   const firstName = currentUser?.name?.split(' ').slice(-1)[0] || 'Khoa'
   const now = new Date()
   const hour = now.getHours()
+  const [meetings, setMeetings] = useState([])
+  const [showMeetingForm, setShowMeetingForm] = useState(false)
+  const [meetingForm, setMeetingForm] = useState({title:'',meeting_date:'',meeting_time:'',location:'',attendees:'',notes:''})
+
+  useEffect(()=>{
+    async function loadMeetings(){
+      const today = new Date().toISOString().slice(0,10)
+      const next7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10)
+      const {data:mdata} = await supabase.from('meetings').select('*').gte('meeting_date',today).lte('meeting_date',next7).order('meeting_date',{ascending:true})
+      setMeetings(mdata||[])
+    }
+    if(currentUser?.isMaster) loadMeetings()
+  },[currentUser])
+
+  async function saveMeeting(e){
+    e.preventDefault()
+    await supabase.from('meetings').insert([{...meetingForm, created_by: currentUser?.name||'CEO'}])
+    setShowMeetingForm(false)
+    setMeetingForm({title:'',meeting_date:'',meeting_time:'',location:'',attendees:'',notes:''})
+    const today = new Date().toISOString().slice(0,10)
+    const next7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10)
+    const {data:mdata} = await supabase.from('meetings').select('*').gte('meeting_date',today).lte('meeting_date',next7).order('meeting_date',{ascending:true})
+    setMeetings(mdata||[])
+  }
 
   const rev  = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
   const cost = data.projects.reduce((a,p) => a + Number(p.actual_cost||0), 0)
@@ -744,7 +773,7 @@ function Dashboard({ data, setPage, currentUser }) {
       </div>
 
       {/* Bottom Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <div style={{ ...glass, padding: '18px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Dự án đang hoạt động</div>
@@ -782,6 +811,47 @@ function Dashboard({ data, setPage, currentUser }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Meetings Widget */}
+      <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 22px',marginBottom:16}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>📅 Cuộc họp tuần này</div>
+          <button onClick={()=>setShowMeetingForm(true)} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>+ Thêm</button>
+        </div>
+        {meetings.length===0&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Không có cuộc họp nào trong 7 ngày tới</div>}
+        {meetings.map((m,i)=>(
+          <div key={i} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #F1F5F9',alignItems:'flex-start'}}>
+            <div style={{background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',borderRadius:10,padding:'8px 10px',textAlign:'center',flexShrink:0,minWidth:48}}>
+              <div style={{fontSize:11,fontWeight:600,opacity:0.85}}>{new Date(m.meeting_date).toLocaleDateString('vi-VN',{month:'short'})}</div>
+              <div style={{fontSize:20,fontWeight:900,lineHeight:1}}>{new Date(m.meeting_date).getDate()}</div>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:12,color:'#0F172A',marginBottom:2}}>{m.title}</div>
+              <div style={{fontSize:11,color:'#64748B'}}>{m.meeting_time&&`${m.meeting_time} · `}{m.location&&`📍 ${m.location}`}</div>
+              {m.attendees&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>👥 {m.attendees}</div>}
+            </div>
+          </div>
+        ))}
+        {showMeetingForm&&(
+          <div style={{marginTop:14,padding:14,background:'#F8FAFF',borderRadius:10,border:'1px solid #E2E8F0'}}>
+            <form onSubmit={saveMeeting}>
+              <div style={{marginBottom:10,fontWeight:700,fontSize:12,color:'#0F172A'}}>Thêm cuộc họp mới</div>
+              <input value={meetingForm.title} onChange={e=>setMeetingForm(p=>({...p,title:e.target.value}))} placeholder="Tiêu đề cuộc họp *" required style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:8,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+                <input type="date" value={meetingForm.meeting_date} onChange={e=>setMeetingForm(p=>({...p,meeting_date:e.target.value}))} required style={{padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",outline:'none'}}/>
+                <input type="time" value={meetingForm.meeting_time} onChange={e=>setMeetingForm(p=>({...p,meeting_time:e.target.value}))} style={{padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",outline:'none'}}/>
+              </div>
+              <input value={meetingForm.location} onChange={e=>setMeetingForm(p=>({...p,location:e.target.value}))} placeholder="Địa điểm" style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:8,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
+              <input value={meetingForm.attendees} onChange={e=>setMeetingForm(p=>({...p,attendees:e.target.value}))} placeholder="Người tham dự" style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:8,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
+              <textarea value={meetingForm.notes} onChange={e=>setMeetingForm(p=>({...p,notes:e.target.value}))} placeholder="Ghi chú" style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:10,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box',minHeight:60,resize:'vertical'}}/>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+                <button type="button" onClick={()=>setShowMeetingForm(false)} style={{padding:'7px 14px',borderRadius:7,border:'1px solid #D1D5DB',background:'#fff',color:'#64748B',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif"}}>Hủy</button>
+                <button type="submit" style={{padding:'7px 16px',borderRadius:7,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>Lưu</button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1162,7 +1232,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'created_at',dir:'desc'})
-  async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:Number(fd.get('rate')||0),avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes')};edit?await upd('kols',edit.id,r):await add('kols',r);log('KOL: '+r.name);setEdit(null);setShowAdd(false)}
+  async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:Number(fd.get('rate')||0),avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes'),phone:fd.get('phone'),email:fd.get('email'),cccd:fd.get('cccd'),tax_code:fd.get('tax_code'),address:fd.get('address'),tiktok_url:fd.get('tiktok_url'),instagram_url:fd.get('instagram_url'),youtube_url:fd.get('youtube_url'),facebook_url:fd.get('facebook_url'),audience_age:fd.get('audience_age'),audience_gender:fd.get('audience_gender'),audience_location:fd.get('audience_location'),bank_account:fd.get('bank_account'),bank_name:fd.get('bank_name'),bank_branch:fd.get('bank_branch')};edit?await upd('kols',edit.id,r):await add('kols',r);log('KOL: '+r.name);setEdit(null);setShowAdd(false)}
   const list=applySortDate(applyDateFilter(data.kols.filter(k=>(!search||(k.name||'').toLowerCase().includes(search.toLowerCase()))&&(!platF||k.platform===platF)&&(!tierF||k.tier===tierF)),'created_at',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
@@ -1190,7 +1260,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
               <td style={TD}><Badge text={k.tier}/></td>
               <td style={{...TD,fontSize:11,fontWeight:600}}>{fmtS(k.followers)}</td>
               <td style={{...TD,fontSize:11,fontWeight:700,color:Number(k.engagement)>=5?B.success:B.textSec}}>{Number(k.engagement||0).toFixed(1)}%</td>
-              <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{fmtS(k.rate)}</td>
+              <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{vnd(k.rate)}</td>
               <td style={{...TD,textAlign:'center',fontSize:12,fontWeight:800,color:B.accent}}>{used}</td>
               <td style={{...TD,fontSize:13,color:'#F59E0B',letterSpacing:'-1px'}}>{stars}</td>
               <td style={TD}><Badge text={k.available?'Active':'Booked'}/></td>
@@ -1201,16 +1271,41 @@ function Kols({data,add,upd,del,log,reload,supabase}){
           </tbody>
         </table>
       </div>
-      {(showAdd||edit)&&<Modal title={edit?'Edit KOL':'Add KOL / KOC'} onClose={()=>{setEdit(null);setShowAdd(false)}}><form onSubmit={save}>
-        <Row2><FG label="Name"><input name="name" defaultValue={edit?.name||''} required {...inp()}/></FG><FG label="Platform"><select name="platform" defaultValue={edit?.platform||'TikTok'} {...inp()}><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select></FG></Row2>
-        <Row2><FG label="Tier"><select name="tier" defaultValue={edit?.tier||'Micro'} {...inp()}><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select></FG><FG label="Niche"><input name="niche" defaultValue={edit?.niche||''} placeholder="Beauty, Lifestyle..." {...inp()}/></FG></Row2>
+      {(showAdd||edit)&&<Modal title={edit?'Edit KOL':'Add KOL / KOC'} onClose={()=>{setEdit(null);setShowAdd(false)}} wide>
+  <form onSubmit={save}>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0}}>
+      <div style={{padding:'0 16px 0 0',borderRight:'1px solid #F1F5F9'}}>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9'}}>Thông tin cơ bản</div>
+        <FG label="Tên KOL / KOC *"><input name="name" defaultValue={edit?.name||''} required {...inp()}/></FG>
+        <Row2><FG label="Platform chính"><select name="platform" defaultValue={edit?.platform||'TikTok'} {...inp()}><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select></FG><FG label="Tier"><select name="tier" defaultValue={edit?.tier||'Micro'} {...inp()}><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select></FG></Row2>
+        <FG label="Niche / Chuyên mục"><input name="niche" defaultValue={edit?.niche||''} placeholder="Beauty, Lifestyle, Food..." {...inp()}/></FG>
         <Row2><FG label="Followers"><input name="followers" type="number" defaultValue={edit?.followers||0} {...inp()}/></FG><FG label="Engagement (%)"><input name="engagement" type="number" step="0.1" defaultValue={edit?.engagement||0} {...inp()}/></FG></Row2>
         <Row2><FG label="Rate (VND/post)"><input name="rate" type="number" defaultValue={edit?.rate||0} {...inp()}/></FG><FG label="Avg Views"><input name="avg_views" type="number" defaultValue={edit?.avg_views||0} {...inp()}/></FG></Row2>
-        <Row2><FG label="Reliability (1-5)"><select name="reliability" defaultValue={edit?.reliability||5} {...inp()}><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></FG><FG label="Status"><select name="available" defaultValue={edit?.available!==false?'true':'false'} {...inp()}><option value="true">Available</option><option value="false">Booked</option></select></FG></Row2>
-        <FG label="Contact"><input name="contact" defaultValue={edit?.contact||''} {...inp()}/></FG>
-        <FG label="Notes"><textarea name="notes" defaultValue={edit?.notes||''} {...inp({style:{...INP.style,minHeight:70}})}/></FG>
-        <MFoot onClose={()=>{setEdit(null);setShowAdd(false)}} onDelete={edit?()=>{del('kols',edit.id);setEdit(null)}:null}/>
-      </form></Modal>}
+        <Row2><FG label="Độ tin cậy (1-5)"><select name="reliability" defaultValue={edit?.reliability||5} {...inp()}><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></FG><FG label="Trạng thái"><select name="available" defaultValue={edit?.available!==false?'true':'false'} {...inp()}><option value="true">Available</option><option value="false">Booked</option></select></FG></Row2>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Liên hệ & Mạng xã hội</div>
+        <Row2><FG label="Số điện thoại"><input name="phone" defaultValue={edit?.phone||''} {...inp()}/></FG><FG label="Email"><input name="email" type="email" defaultValue={edit?.email||''} {...inp()}/></FG></Row2>
+        <FG label="Link TikTok"><input name="tiktok_url" defaultValue={edit?.tiktok_url||''} placeholder="https://tiktok.com/@..." {...inp()}/></FG>
+        <FG label="Link Instagram"><input name="instagram_url" defaultValue={edit?.instagram_url||''} placeholder="https://instagram.com/..." {...inp()}/></FG>
+        <FG label="Link YouTube"><input name="youtube_url" defaultValue={edit?.youtube_url||''} placeholder="https://youtube.com/..." {...inp()}/></FG>
+        <FG label="Contact chung"><input name="contact" defaultValue={edit?.contact||''} placeholder="Zalo, manager name..." {...inp()}/></FG>
+      </div>
+      <div style={{padding:'0 0 0 16px'}}>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9'}}>Định danh pháp lý</div>
+        <Row2><FG label="CCCD / CMND"><input name="cccd" defaultValue={edit?.cccd||''} {...inp()}/></FG><FG label="Mã số thuế"><input name="tax_code" defaultValue={edit?.tax_code||''} {...inp()}/></FG></Row2>
+        <FG label="Địa chỉ"><input name="address" defaultValue={edit?.address||''} {...inp()}/></FG>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Thông tin khán giả</div>
+        <FG label="Độ tuổi chủ yếu"><input name="audience_age" defaultValue={edit?.audience_age||''} placeholder="18-24, 25-34..." {...inp()}/></FG>
+        <Row2><FG label="Giới tính chủ yếu"><select name="audience_gender" defaultValue={edit?.audience_gender||''} {...inp()}><option value="">—</option><option>Nữ chủ yếu</option><option>Nam chủ yếu</option><option>Cân bằng</option></select></FG><FG label="Khu vực"><input name="audience_location" defaultValue={edit?.audience_location||''} placeholder="HCM, HN..." {...inp()}/></FG></Row2>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Thông tin ngân hàng</div>
+        <FG label="Số tài khoản"><input name="bank_account" defaultValue={edit?.bank_account||''} {...inp()}/></FG>
+        <Row2><FG label="Tên ngân hàng"><input name="bank_name" defaultValue={edit?.bank_name||''} {...inp()}/></FG><FG label="Chi nhánh"><input name="bank_branch" defaultValue={edit?.bank_branch||''} {...inp()}/></FG></Row2>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Ghi chú</div>
+        <FG label="Notes"><textarea name="notes" defaultValue={edit?.notes||''} {...inp({style:{...INP.style,minHeight:80}})}/></FG>
+      </div>
+    </div>
+    <MFoot onClose={()=>{setEdit(null);setShowAdd(false)}} onDelete={edit?()=>{del('kols',edit.id);setEdit(null)}:null}/>
+  </form>
+</Modal>}
       {hist&&<Modal title={'History: '+hist.name} onClose={()=>setHist(null)}>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:18}}>
           {[['Campaigns',data.projects.filter(p=>(p.kols||[]).includes(hist.name)).length],['Rate',fmtS(hist.rate)+' VND'],['Stars',hist.reliability+'/5']].map(([l,v])=>(
@@ -1285,7 +1380,7 @@ function Vendors({data,add,upd,del,log,reload,supabase}){
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'created_at',dir:'desc'})
-  async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),type:fd.get('type'),rating:Number(fd.get('rating')||5),contact:fd.get('contact'),total_spent:Number(fd.get('total_spent')||0),notes:fd.get('notes')};edit?await upd('vendors',edit.id,r):await add('vendors',r);log('Vendor: '+r.name);setEdit(null);setShowAdd(false)}
+  async function save(e){e.preventDefault();const fd=new FormData(e.target);const r={name:fd.get('name'),type:fd.get('type'),rating:Number(fd.get('rating')||5),contact:fd.get('contact'),total_spent:Number(fd.get('total_spent')||0),notes:fd.get('notes'),phone:fd.get('phone'),email:fd.get('email'),address:fd.get('address'),tax_code:fd.get('tax_code'),legal_rep:fd.get('legal_rep'),services_detail:fd.get('services_detail'),price_range:fd.get('price_range'),lead_time:fd.get('lead_time'),bank_account:fd.get('bank_account'),bank_name:fd.get('bank_name'),bank_branch:fd.get('bank_branch')};edit?await upd('vendors',edit.id,r):await add('vendors',r);log('Vendor: '+r.name);setEdit(null);setShowAdd(false)}
   const vendorList=applySortDate(applyDateFilter(data.vendors.filter(v=>!search||(v.name||'').toLowerCase().includes(search.toLowerCase())),'created_at',dateFrom,dateTo),sort)
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:B.textTer,borderBottom:`1px solid ${B.border}`,textAlign:'left',background:'#FFFFFF',textTransform:'uppercase',letterSpacing:'0.06em'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
@@ -1309,7 +1404,7 @@ function Vendors({data,add,upd,del,log,reload,supabase}){
               <td style={TD}><span style={{background:B.infoBg,color:B.info,padding:'3px 9px',borderRadius:6,fontSize:10,fontWeight:700,border:`1px solid ${B.borderStrong}`}}>{v.type||'—'}</span></td>
               <td style={{...TD,fontSize:11,color:B.textSec}}>{v.contact||'—'}</td>
               <td style={{...TD,fontSize:14,color:'#F59E0B',letterSpacing:'-1px'}}>{'★'.repeat(Number(v.rating||0))+'☆'.repeat(Math.max(0,5-Number(v.rating||0)))}</td>
-              <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{fmtS(v.total_spent)}</td>
+              <td style={{...TD,fontSize:12,fontWeight:800,color:B.primary}}>{vnd(v.total_spent)}</td>
               <td style={{...TD,fontSize:11,color:B.textTer}}>{v.notes||'—'}</td>
               <td style={{...TD,fontSize:10,color:B.textTer}}>{v.created_at?.slice(0,10)||'—'}</td>
               <td style={TD}><Btn sm onClick={()=>setEdit(v)}>Edit</Btn></td>
@@ -1318,14 +1413,34 @@ function Vendors({data,add,upd,del,log,reload,supabase}){
           </tbody>
         </table>
       </div>
-      {(showAdd||edit)&&<Modal title={edit?'Edit Vendor':'Add Vendor'} onClose={()=>{setEdit(null);setShowAdd(false)}}><form onSubmit={save}>
-        <FG label="Company Name"><input name="name" defaultValue={edit?.name||''} required {...inp()}/></FG>
-        <Row2><FG label="Service Type"><select name="type" defaultValue={edit?.type||'Production'} {...inp()}><option>Production</option><option>Photography</option><option>Video</option><option>Media Buy</option><option>Event</option><option>Design</option><option>PR</option><option>Other</option></select></FG><FG label="Rating (1-5)"><select name="rating" defaultValue={edit?.rating||5} {...inp()}><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></FG></Row2>
-        <FG label="Contact"><input name="contact" defaultValue={edit?.contact||''} {...inp()}/></FG>
-        <FG label="Total Spent (VND)"><input name="total_spent" type="number" defaultValue={edit?.total_spent||0} {...inp()}/></FG>
-        <FG label="Notes"><textarea name="notes" defaultValue={edit?.notes||''} {...inp({style:{...INP.style,minHeight:70}})}/></FG>
-        <MFoot onClose={()=>{setEdit(null);setShowAdd(false)}} onDelete={edit?()=>{del('vendors',edit.id);setEdit(null)}:null}/>
-      </form></Modal>}
+      {(showAdd||edit)&&<Modal title={edit?'Edit Vendor':'Add Vendor'} onClose={()=>{setEdit(null);setShowAdd(false)}} wide>
+  <form onSubmit={save}>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0}}>
+      <div style={{padding:'0 16px 0 0',borderRight:'1px solid #F1F5F9'}}>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9'}}>Thông tin công ty</div>
+        <FG label="Tên công ty / Nhà cung cấp *"><input name="name" defaultValue={edit?.name||''} required {...inp()}/></FG>
+        <Row2><FG label="Loại dịch vụ"><select name="type" defaultValue={edit?.type||'Production'} {...inp()}><option>Production</option><option>Photography</option><option>Video</option><option>Media Buy</option><option>Event</option><option>Design</option><option>PR</option><option>Other</option></select></FG><FG label="Đánh giá (1-5)"><select name="rating" defaultValue={edit?.rating||5} {...inp()}><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></FG></Row2>
+        <FG label="Địa chỉ"><input name="address" defaultValue={edit?.address||''} {...inp()}/></FG>
+        <Row2><FG label="Mã số thuế"><input name="tax_code" defaultValue={edit?.tax_code||''} {...inp()}/></FG><FG label="Người đại diện"><input name="legal_rep" defaultValue={edit?.legal_rep||''} {...inp()}/></FG></Row2>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Liên hệ</div>
+        <Row2><FG label="Số điện thoại"><input name="phone" defaultValue={edit?.phone||''} {...inp()}/></FG><FG label="Email"><input name="email" type="email" defaultValue={edit?.email||''} {...inp()}/></FG></Row2>
+        <FG label="Contact (Zalo/Telegram)"><input name="contact" defaultValue={edit?.contact||''} {...inp()}/></FG>
+      </div>
+      <div style={{padding:'0 0 0 16px'}}>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9'}}>Dịch vụ & Báo giá</div>
+        <FG label="Mô tả dịch vụ"><textarea name="services_detail" defaultValue={edit?.services_detail||''} placeholder="Mô tả chi tiết các dịch vụ cung cấp..." {...inp({style:{...INP.style,minHeight:70}})}/></FG>
+        <Row2><FG label="Mức giá tham khảo"><input name="price_range" defaultValue={edit?.price_range||''} placeholder="VD: 5M-50M/project" {...inp()}/></FG><FG label="Lead time"><input name="lead_time" defaultValue={edit?.lead_time||''} placeholder="VD: 3-5 ngày" {...inp()}/></FG></Row2>
+        <FG label="Tổng đã chi (VND)"><input name="total_spent" type="number" defaultValue={edit?.total_spent||0} {...inp()}/></FG>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Thông tin ngân hàng</div>
+        <FG label="Số tài khoản"><input name="bank_account" defaultValue={edit?.bank_account||''} {...inp()}/></FG>
+        <Row2><FG label="Tên ngân hàng"><input name="bank_name" defaultValue={edit?.bank_name||''} {...inp()}/></FG><FG label="Chi nhánh"><input name="bank_branch" defaultValue={edit?.bank_branch||''} {...inp()}/></FG></Row2>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Ghi chú</div>
+        <FG label="Notes"><textarea name="notes" defaultValue={edit?.notes||''} {...inp({style:{...INP.style,minHeight:60}})}/></FG>
+      </div>
+    </div>
+    <MFoot onClose={()=>{setEdit(null);setShowAdd(false)}} onDelete={edit?()=>{del('vendors',edit.id);setEdit(null)}:null}/>
+  </form>
+</Modal>}
     </div>
   )
 }
@@ -1904,6 +2019,31 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
         }])
       }
     }
+    // Auto-link when signed
+    if(form.status === 'Signed' || payload.status === 'Signed') {
+      const val = Number(form.total_with_vat||0)
+      const client = data.clients.find(c=>c.name===form.party_a_name||c.tax_code===form.party_a_tax)
+      if(client) {
+        await supabase.from('clients').update({
+          total_contracts: (Number(client.total_contracts||0)+1),
+          total_revenue: (Number(client.total_revenue||0)+val)
+        }).eq('id',client.id)
+      }
+      if(!edit) {
+        const contractData = await supabase.from('contracts').select('id').eq('contract_code',form.contract_code).single()
+        if(contractData.data) {
+          await supabase.from('payments').insert([{
+            type:'thu',
+            amount: val,
+            category: 'Hợp đồng',
+            description: `Thu HĐ ${form.contract_code} — ${form.party_a_name}`,
+            payment_date: form.sign_date||new Date().toISOString().slice(0,10),
+            status:'pending',
+            reference_id: contractData.data.id
+          }])
+        }
+      }
+    }
     setSaving(false); onSaved(); onClose()
   }
 
@@ -2087,6 +2227,15 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
           address:form.party_b_address, bank_account:form.party_b_bank_account,
           bank_name:form.party_b_bank_name, platform:form.channels, available:true
         }])
+      }
+    }
+    if(form.status === 'Signed') {
+      const kolRecord = data.kols.find(k=>k.name===form.party_b_name||k.real_name===form.party_b_name)
+      if(kolRecord) {
+        await supabase.from('kols').update({
+          total_campaigns: (Number(kolRecord.total_campaigns||0)+1),
+          total_earned: (Number(kolRecord.total_earned||0)+Number(form.total_with_vat||0))
+        }).eq('id',kolRecord.id)
       }
     }
     setSaving(false); onSaved(); onClose()
@@ -4401,6 +4550,99 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
     setTimeout(()=>w.print(),600)
   }
 
+  function printQuoteClient() {
+    const w = window.open('','_blank')
+    const clientItemRows = items.map((item,i)=>{
+      const c = calcItem(item)
+      const name = item.source_name||item.description||`Hạng mục ${i+1}`
+      const desc = item.source_name&&item.description ? item.description : ''
+      return `<tr>
+        <td style="text-align:center;color:#94A3B8">${i+1}</td>
+        <td><strong>${name}</strong>${desc?`<br><span style="font-size:10px;color:#94A3B8">${desc}</span>`:''}</td>
+        <td style="text-align:center">${item.unit}</td>
+        <td style="text-align:right">${item.qty}</td>
+        <td style="text-align:right;font-weight:800">${cfmt(Math.round(c.lineTotal))}</td>
+      </tr>`
+    }).join('')
+
+    w.document.write(`<html><head><title>Báo giá ${q.quote_code}</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:Arial,sans-serif;font-size:12px;color:#0F172A;padding:28px 36px}
+      .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #1A56DB}
+      .logo{font-size:22px;font-weight:900;color:#1A56DB}.logo span{color:#06B6D4}
+      .co{font-size:10px;color:#475569;text-align:right;line-height:1.7}
+      h1{text-align:center;font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 4px}
+      .qnum{text-align:center;color:#94A3B8;font-size:11px;margin-bottom:18px}
+      .meta{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+      .box{background:#F8FAFF;border-radius:7px;padding:12px 14px;border:1px solid #E2E8F0}
+      .box h3{font-size:9px;font-weight:700;color:#1A56DB;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+      .row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+      .row .v{font-weight:600}
+      table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:11px}
+      thead{background:#0F172A}
+      th{padding:8px 8px;color:#fff;font-size:9px;text-align:left;letter-spacing:.04em;font-weight:700}
+      td{padding:8px 8px;border-bottom:1px solid #E2E8F0;vertical-align:top}
+      tr:nth-child(even) td{background:#F8FAFF}
+      .totals{display:flex;justify-content:flex-end;margin-bottom:18px}
+      .tbox{width:340px;background:#F8FAFF;border-radius:8px;padding:16px;border:1px solid #E2E8F0}
+      .trow{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;align-items:center}
+      .trow.grand{font-size:16px;font-weight:900;color:#1A56DB;border-top:2px solid #1A56DB;padding-top:10px;margin-top:4px}
+      .trow.vat{color:#6D28D9;font-weight:600}
+      .trow.disc{color:#D97706}
+      .words{font-size:10px;color:#94A3B8;font-style:italic;margin-top:5px;text-align:right}
+      .notes{background:#FFFBEB;border:1px solid #FCD34D;border-radius:7px;padding:12px;margin-bottom:20px;font-size:11px;color:#92400E;line-height:1.7}
+      .sig{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:28px}
+      .sigbox{text-align:center;padding-top:12px;border-top:1px dashed #CBD5E1}
+      .footer{margin-top:24px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:10px;color:#94A3B8;text-align:center;line-height:1.8}
+      @media print{body{padding:14px 18px}@page{margin:.8cm}}
+    </style></head><body>
+    <div class="hdr">
+      <div><div class="logo">K&K <span>advertising</span></div><div style="font-size:10px;color:#94A3B8;margin-top:2px">Creative & KOL Marketing Agency</div></div>
+      <div class="co">CÔNG TY TNHH QUẢNG CÁO K&K<br>737/7 Kha Vạn Cân, P. Linh Xuân, TP.HCM<br>MST: 0317776715 | ĐT: 0938 223 668<br>Email: contact@weareknk.com</div>
+    </div>
+    <h1>BÁO GIÁ DỊCH VỤ</h1>
+    <div class="qnum">Số: ${q.quote_code}</div>
+    <div class="meta">
+      <div class="box"><h3>Thông tin khách hàng</h3>
+        <div class="row"><span>Client:</span><span class="v">${q.client_name||'—'}</span></div>
+        <div class="row"><span>Brand/Nhãn hàng:</span><span class="v">${q.brand_name||'—'}</span></div>
+        <div class="row"><span>Campaign:</span><span class="v">${q.campaign_name||'—'}</span></div>
+      </div>
+      <div class="box"><h3>Thông tin báo giá</h3>
+        <div class="row"><span>Mã báo giá:</span><span class="v">${q.quote_code}</span></div>
+        <div class="row"><span>Ngày lập:</span><span class="v">${new Date(q.created_at||today).toLocaleDateString('vi-VN')}</span></div>
+        <div class="row"><span>Hiệu lực đến:</span><span class="v">${validUntil.toLocaleDateString('vi-VN')}</span></div>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:30px">STT</th>
+        <th>Tên KOL / Dịch vụ</th>
+        <th style="width:50px;text-align:center">ĐV</th>
+        <th style="width:40px;text-align:right">SL</th>
+        <th style="width:120px;text-align:right">Thành tiền (VND)</th>
+      </tr></thead>
+      <tbody>${clientItemRows}</tbody>
+    </table>
+    <div class="totals"><div class="tbox">
+      <div class="trow"><span>Tổng trước VAT:</span><span style="font-weight:700">${cfmt(Math.round(subtotalBeforeVAT))} VND</span></div>
+      ${q.discount>0?`<div class="trow disc"><span>Chiết khấu (${q.discount}%):</span><span>- ${cfmt(Math.round(discountAmt))} VND</span></div>`:''}
+      <div class="trow vat"><span>Thuế VAT:</span><span>${cfmt(Math.round(totalVAT))} VND</span></div>
+      <div class="trow grand"><span>TỔNG SAU THUẾ VAT:</span><span>${cfmt(Math.round(grandTotal))} VND</span></div>
+      <div class="words">Bằng chữ: ${numWords(Math.round(grandTotal))}</div>
+    </div></div>
+    ${q.notes?`<div class="notes"><strong>📋 Điều kiện & Ghi chú:</strong><br>${q.notes.replace(/\n/g,'<br>')}</div>`:''}
+    <div class="sig">
+      <div class="sigbox"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Đại diện Bên A</div><div style="font-size:11px;color:#475569;margin-top:3px">${q.client_name||'Client'}</div><br><br><br><div style="font-size:10px;color:#94A3B8">(Ký, ghi rõ họ tên)</div></div>
+      <div class="sigbox"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Đại diện Bên B</div><div style="font-size:11px;color:#475569;margin-top:3px">CÔNG TY TNHH QUẢNG CÁO K&K</div><br><br><br><div style="font-size:12px;font-weight:700">TÔ NGUYỄN ĐĂNG KHOA</div><div style="font-size:10px;color:#94A3B8">Giám Đốc</div></div>
+    </div>
+    <div class="footer">K&K Advertising | 737/7 Kha Vạn Cân, P. Linh Xuân, TP.HCM | MST: 0317776715 | ĐT: 0938 223 668 | contact@weareknk.com</div>
+    </body></html>`)
+    w.document.close()
+    setTimeout(()=>w.print(),600)
+  }
+
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.65)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}}
       onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
@@ -4409,6 +4651,7 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
           <div style={{fontSize:16,fontWeight:800,color:'#0F172A'}}>Preview: {q.quote_code}</div>
           <div style={{display:'flex',gap:8}}>
             <button onClick={printQuote} style={{padding:'8px 18px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(26,86,219,0.25)'}}>In / Export PDF</button>
+            <button onClick={printQuoteClient} style={{padding:'8px 18px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#059669,#10B981)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif",boxShadow:'0 3px 12px rgba(5,150,105,0.25)'}}>In (Client)</button>
             <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:'#94A3B8'}}>×</button>
           </div>
         </div>
@@ -4838,6 +5081,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   const [editTask, setEditTask] = useState(null)
   const [showStageChange, setShowStageChange] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [taskDetail, setTaskDetail] = useState(null)
+  const [taskComments, setTaskComments] = useState([])
+
+  async function openTaskDetail(task) {
+    setTaskDetail(task)
+    const {data:cdata} = await supabase.from('task_comments').select('*').eq('task_id',task.id).order('created_at',{ascending:true})
+    setTaskComments(cdata||[])
+  }
 
   useEffect(()=>{ loadData() },[project.id])
 
@@ -5056,6 +5307,11 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
           {/* OVERVIEW TAB */}
           {!loading&&activeTab==='overview'&&(
             <div>
+              {/* Quick action buttons */}
+              <div style={{display:'flex',gap:8,marginBottom:16}}>
+                <button onClick={()=>{window.dispatchEvent(new CustomEvent('navigate',{detail:{page:'contracts',prefill:{party_a_name:project.client,project_id:project.id}}}))}} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(59,130,246,0.25)',background:'rgba(59,130,246,0.08)',color:'#3B82F6',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>📄 Order Hợp đồng</button>
+                <button onClick={()=>{window.dispatchEvent(new CustomEvent('navigate',{detail:{page:'bbnt',prefill:{project_id:project.id}}}))}} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(16,185,129,0.25)',background:'rgba(16,185,129,0.08)',color:'#10B981',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>✅ Order BBNT</button>
+              </div>
               {/* KPI cards */}
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
                 {[
@@ -5087,7 +5343,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                     </button>
                   </div>
                 </div>
-                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={updateTaskStatus} onEdit={()=>{setEditTask(t);setShowTaskForm(true)}}/>)}
+                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={updateTaskStatus} onEdit={()=>openTaskDetail(t)}/>)}
                 {stageTasks.length>5&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',marginTop:8,cursor:'pointer'}} onClick={()=>setActiveTab('tasks')}>+ {stageTasks.length-5} tasks khác → Xem tất cả</div>}
                 {!stageTasks.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có tasks. Click "Khởi tạo tasks" để tạo tự động.</div>}
               </div>
@@ -5175,6 +5431,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
           currentStage={project.current_stage||'LEAD'}
         />
       )}
+
+      {taskDetail&&<TaskDetailPanel task={taskDetail} comments={taskComments} supabase={supabase} currentUser={currentUser} onClose={()=>setTaskDetail(null)} onUpdate={()=>{}}/>}
     </div>
   )
 }
@@ -5202,6 +5460,82 @@ function TaskRow({task:t, onStatusChange, onEdit}) {
       <span style={{background:(PRIORITY_COLOR[t.priority]||'#94A3B8')+'15',color:PRIORITY_COLOR[t.priority]||'#94A3B8',padding:'2px 8px',borderRadius:99,fontSize:9,fontWeight:700,flexShrink:0}}>{t.priority}</span>
       <button onClick={onEdit} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8',fontSize:14,padding:'2px 6px',borderRadius:5}}>✎</button>
     </div>
+  )
+}
+
+// ── TASK DETAIL PANEL ───────────────────────────────────
+function TaskDetailPanel({task, comments, supabase, currentUser, onClose, onUpdate}) {
+  const [newComment, setNewComment] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [localComments, setLocalComments] = useState(comments)
+
+  useEffect(() => { setLocalComments(comments) }, [comments])
+
+  async function addComment(e) {
+    e.preventDefault()
+    if(!newComment.trim()) return
+    setSaving(true)
+    const mentions = [...newComment.matchAll(/@(\w+)/g)].map(m=>m[1])
+    const {data} = await supabase.from('task_comments').insert([{
+      task_id: task.id,
+      author_name: currentUser?.name || 'User',
+      content: newComment,
+      mentions: mentions
+    }]).select()
+    if(data) setLocalComments(p=>[...p, ...data])
+    setNewComment('')
+    setSaving(false)
+  }
+
+  const PRIORITY_COLOR = {'Urgent':'#EF4444','High':'#F59E0B','Medium':'#3B82F6','Low':'#10B981'}
+  const TASK_STATUS_COLOR = {'Todo':'#94A3B8','In Progress':'#3B82F6','Review':'#F59E0B','Done':'#10B981','Blocked':'#EF4444'}
+  const isLate = task.due_date && new Date(task.due_date)<new Date() && task.status!=='Done'
+
+  return (
+    <>
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:2100}} onClick={onClose}/>
+      <div style={{position:'fixed',top:0,right:0,width:'55vw',height:'100vh',background:'#fff',boxShadow:'-8px 0 40px rgba(0,0,0,0.15)',zIndex:2101,display:'flex',flexDirection:'column'}}>
+        <div style={{padding:'18px 24px',borderBottom:'1px solid #E2E8F0',display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexShrink:0,background:'#F8FAFF'}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:16,fontWeight:800,color:'#0F172A',marginBottom:4}}>{task.title}</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <span style={{background:(TASK_STATUS_COLOR[task.status]||'#94A3B8')+'20',color:TASK_STATUS_COLOR[task.status]||'#94A3B8',padding:'2px 10px',borderRadius:99,fontSize:10,fontWeight:700}}>{task.status}</span>
+              <span style={{background:(PRIORITY_COLOR[task.priority]||'#94A3B8')+'15',color:PRIORITY_COLOR[task.priority]||'#94A3B8',padding:'2px 10px',borderRadius:99,fontSize:10,fontWeight:700}}>{task.priority}</span>
+              {task.assigned_to&&<span style={{fontSize:10,color:'#64748B',padding:'2px 8px',background:'#F1F5F9',borderRadius:6}}>👤 {task.assigned_to}</span>}
+              {task.due_date&&<span style={{fontSize:10,color:isLate?'#EF4444':'#64748B',padding:'2px 8px',background:isLate?'#FEF2F2':'#F1F5F9',borderRadius:6}}>📅 {task.due_date}{isLate?' · Trễ':''}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:'#F1F5F9',border:'none',cursor:'pointer',width:32,height:32,borderRadius:8,fontSize:18,color:'#64748B',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
+          {task.description&&<div style={{marginBottom:20,padding:14,background:'#F8FAFF',borderRadius:10,border:'1px solid #E2E8F0',fontSize:13,color:'#374151',lineHeight:1.6}}>{task.description}</div>}
+
+          <div style={{fontSize:11,fontWeight:800,color:'#0F172A',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:12}}>Bình luận ({localComments.length})</div>
+
+          {localComments.map((c,i)=>(
+            <div key={i} style={{marginBottom:14,display:'flex',gap:10}}>
+              <div style={{width:30,height:30,borderRadius:'50%',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:11,flexShrink:0}}>{(c.author_name||'?')[0].toUpperCase()}</div>
+              <div style={{flex:1,background:'#F8FAFF',borderRadius:10,padding:'10px 14px',border:'1px solid #E2E8F0'}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                  <span style={{fontWeight:700,fontSize:11,color:'#0F172A'}}>{c.author_name}</span>
+                  <span style={{fontSize:10,color:'#94A3B8'}}>{c.created_at?new Date(c.created_at).toLocaleString('vi-VN'):''}</span>
+                </div>
+                <div style={{fontSize:12,color:'#374151',lineHeight:1.5,whiteSpace:'pre-wrap'}}>{c.content}</div>
+                {c.mentions&&c.mentions.length>0&&<div style={{marginTop:6,display:'flex',gap:4,flexWrap:'wrap'}}>{c.mentions.map(m=><span key={m} style={{background:'rgba(59,130,246,0.1)',color:'#3B82F6',padding:'1px 7px',borderRadius:99,fontSize:10,fontWeight:600}}>@{m}</span>)}</div>}
+              </div>
+            </div>
+          ))}
+          {!localComments.length&&<div style={{textAlign:'center',padding:'24px 0',color:'#94A3B8',fontSize:12}}>Chưa có bình luận nào</div>}
+        </div>
+        <div style={{padding:'16px 24px',borderTop:'1px solid #E2E8F0',flexShrink:0}}>
+          <form onSubmit={addComment} style={{display:'flex',gap:8}}>
+            <input value={newComment} onChange={e=>setNewComment(e.target.value)} placeholder="Nhập bình luận... Dùng @tên để mention" style={{flex:1,padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',background:'#fff',color:'#0F172A'}}/>
+            <button type="submit" disabled={saving||!newComment.trim()} style={{padding:'9px 18px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,opacity:(saving||!newComment.trim())?0.5:1,fontFamily:"'Inter',system-ui,sans-serif"}}>Gửi</button>
+          </form>
+          <div style={{fontSize:10,color:'#94A3B8',marginTop:6}}>Tip: Dùng @tên để mention thành viên</div>
+        </div>
+      </div>
+    </>
   )
 }
 
