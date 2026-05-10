@@ -51,6 +51,7 @@ function Badge({text}){
 
 function fmt(n){return Number(n||0).toLocaleString('vi-VN')}
 function fmtS(n){n=Number(n||0);if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()}
+function vnd(n){return Number(n||0).toLocaleString('vi-VN')+' đ'}
 
 const INP = {style:{width:'100%',padding:'8px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
 
@@ -113,7 +114,7 @@ function NavIco({id,size=15,col='currentColor'}){
     dashboard:'▣',pipeline:'◈',workflow:'◎',projects:'▤',
     pricing:'◊',invoices:'≡',approval:'✓',contracts:'⊟',
     bbnt:'☐',clients:'◉',kols:'◆',vendors:'⬡',
-    team:'◑',reports:'▦',quotations:'≈',
+    team:'◑',reports:'▦',quotations:'≈',payment:'₫',
   }
   return<span style={{fontSize:size-1,color:col,lineHeight:1,display:'inline-flex',alignItems:'center',justifyContent:'center',fontStyle:'normal'}}>{sym[id]||'·'}</span>
 }
@@ -195,6 +196,158 @@ function SortHdr({children,field,sort,setSort,thStyle}){
   )
 }
 
+function Payment({data, supabase, reload, log, currentUser}) {
+  const [tab, setTab] = useState('thu')
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [editItem, setEditItem] = useState(null)
+  const [search, setSearch] = useState('')
+  const [monthF, setMonthF] = useState('')
+  const [yearF, setYearF] = useState(new Date().getFullYear().toString())
+
+  useEffect(()=>{ loadPayments() },[tab])
+
+  async function loadPayments() {
+    setLoading(true)
+    const {data:rows} = await supabase.from('payments').select('*').order('created_at',{ascending:false})
+    const today = new Date().toISOString().slice(0,10)
+    const updated = (rows||[]).map(p => {
+      if(p.due_date < today && p.status !== 'Paid') return {...p, status:'Overdue'}
+      return p
+    })
+    setPayments(updated)
+    setLoading(false)
+  }
+
+  async function savePayment(e) {
+    e.preventDefault()
+    const fd = new FormData(e.target)
+    const amtTotal = Number(fd.get('amount_total')||0)
+    const amtPaid = Number(fd.get('amount_paid')||0)
+    const r = {
+      party_type: tab==='thu'?'client':'kol',
+      party_name: fd.get('party_name'),
+      contract_code: fd.get('contract_code'),
+      amount_total: amtTotal,
+      amount_paid: amtPaid,
+      amount_remaining: amtTotal - amtPaid,
+      due_date: fd.get('due_date')||null,
+      payment_method: fd.get('payment_method')||'Bank Transfer',
+      status: amtPaid >= amtTotal ? 'Paid' : amtPaid > 0 ? 'Partial' : 'Pending',
+      notes: fd.get('notes')||'',
+    }
+    if(editItem) {
+      await supabase.from('payments').update(r).eq('id',editItem.id)
+    } else {
+      await supabase.from('payments').insert([r])
+    }
+    log('Payment: '+r.party_name)
+    loadPayments()
+    setShowAdd(false); setEditItem(null)
+  }
+
+  const list = payments.filter(p => {
+    const matchType = tab==='thu' ? p.party_type==='client' : (p.party_type==='kol'||p.party_type==='vendor')
+    const matchSearch = !search || (p.party_name||'').toLowerCase().includes(search.toLowerCase()) || (p.contract_code||'').toLowerCase().includes(search.toLowerCase())
+    const matchMonth = !monthF || (p.due_date||'').slice(5,7) === monthF.padStart(2,'0')
+    const matchYear = !yearF || (p.due_date||'').slice(0,4) === yearF
+    return matchType && matchSearch && matchMonth && matchYear
+  })
+
+  const totalAmt = list.reduce((a,p)=>a+Number(p.amount_total||0),0)
+  const totalPaid = list.reduce((a,p)=>a+Number(p.amount_paid||0),0)
+  const totalRem = list.reduce((a,p)=>a+Number(p.amount_remaining||0),0)
+  const totalOvd = list.filter(p=>p.status==='Overdue').reduce((a,p)=>a+Number(p.amount_remaining||0),0)
+
+  const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:'1px solid #E2E8F0',textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}
+  const TD={padding:'10px 14px',borderBottom:'1px solid #F1F5F9',verticalAlign:'middle',color:'#1F2937',fontSize:12}
+  const statusColor = {Pending:'#F59E0B',Partial:'#3B82F6',Paid:'#10B981',Overdue:'#EF4444'}
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+        <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A'}}>Quản lý thanh toán</h2>
+        <Btn primary onClick={()=>{setEditItem(null);setShowAdd(true)}}>+ Thêm thanh toán</Btn>
+      </div>
+
+      <div style={{display:'flex',gap:4,marginBottom:16,background:'#F1F5F9',padding:4,borderRadius:10,width:'fit-content',border:'1px solid #E2E8F0'}}>
+        {[['thu','Thu công nợ (Clients)'],['chi','Chi KOL/NCC']].map(([key,label])=>(
+          <button key={key} onClick={()=>setTab(key)} style={{padding:'7px 18px',borderRadius:8,border:'none',background:tab===key?'linear-gradient(135deg,#3B82F6,#0EA5E9)':'transparent',color:tab===key?'#fff':'#64748B',cursor:'pointer',fontSize:12,fontWeight:tab===key?700:500,fontFamily:"'Inter',sans-serif"}}>{label}</button>
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16}}>
+        {[
+          ['Tổng phải '+(tab==='thu'?'thu':'chi'),totalAmt,'#3B82F6'],
+          ['Đã '+(tab==='thu'?'thu':'chi'),totalPaid,'#10B981'],
+          ['Còn lại',totalRem,'#F59E0B'],
+          ['Quá hạn',totalOvd,'#EF4444']
+        ].map(([l,v,c])=>(
+          <div key={l} style={{background:'#FFFFFF',borderRadius:12,padding:'14px 16px',border:'1px solid #E2E8F0',boxShadow:'0 1px 3px rgba(0,0,0,0.05)',position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:0,left:0,width:4,height:'100%',background:c,borderRadius:'12px 0 0 12px'}}/>
+            <div style={{paddingLeft:8}}>
+              <div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:6}}>{l}</div>
+              <div style={{fontSize:18,fontWeight:900,color:'#0F172A'}}>{fmtS(v)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap',alignItems:'center'}}>
+        <input placeholder="Tìm tên / mã HĐ..." value={search} onChange={e=>setSearch(e.target.value)} style={{...INP.style,maxWidth:240}}/>
+        <select value={monthF} onChange={e=>setMonthF(e.target.value)} style={{...INP.style,width:'auto'}}>
+          <option value="">Tất cả tháng</option>
+          {Array.from({length:12},(_,i)=><option key={i+1} value={String(i+1).padStart(2,'0')}>Tháng {i+1}</option>)}
+        </select>
+        <select value={yearF} onChange={e=>setYearF(e.target.value)} style={{...INP.style,width:'auto'}}>
+          {['2024','2025','2026','2027'].map(y=><option key={y}>{y}</option>)}
+        </select>
+      </div>
+
+      <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,overflow:'auto'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',minWidth:800}}>
+          <thead><tr>{['Đối tác','Mã HĐ','Tổng','Đã TT','Còn lại','Hạn TT','Phương thức','Trạng thái',''].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <tbody>
+            {loading&&<tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#94A3B8'}}>Đang tải...</td></tr>}
+            {!loading&&list.map(p=>(
+              <tr key={p.id}>
+                <td style={{...TD,fontWeight:700}}>{p.party_name||'—'}</td>
+                <td style={{...TD,fontSize:11,color:'#6366F1',fontWeight:600}}>{p.contract_code||'—'}</td>
+                <td style={{...TD,fontWeight:700}}>{vnd(p.amount_total)}</td>
+                <td style={{...TD,color:'#10B981',fontWeight:600}}>{vnd(p.amount_paid)}</td>
+                <td style={{...TD,color:Number(p.amount_remaining)>0?'#F59E0B':'#10B981',fontWeight:700}}>{vnd(p.amount_remaining)}</td>
+                <td style={{...TD,fontSize:11,color:'#64748B'}}>{p.due_date||'—'}</td>
+                <td style={{...TD,fontSize:11}}>{p.payment_method||'—'}</td>
+                <td style={TD}><span style={{background:(statusColor[p.status]||'#94A3B8')+'18',color:statusColor[p.status]||'#94A3B8',padding:'3px 10px',borderRadius:99,fontSize:10,fontWeight:700,border:`1px solid ${(statusColor[p.status]||'#94A3B8')}25`}}>{p.status}</span></td>
+                <td style={TD}><Btn sm onClick={()=>{setEditItem(p);setShowAdd(true)}}>Sửa</Btn></td>
+              </tr>
+            ))}
+            {!loading&&!list.length&&<tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có thanh toán nào</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {showAdd&&<Modal title={editItem?'Sửa thanh toán':'Thêm thanh toán'} onClose={()=>{setShowAdd(false);setEditItem(null)}}>
+        <form onSubmit={savePayment}>
+          <FG label="Tên đối tác"><input name="party_name" defaultValue={editItem?.party_name||''} required style={INP.style}/></FG>
+          <Row2>
+            <FG label="Mã hợp đồng"><input name="contract_code" defaultValue={editItem?.contract_code||''} style={INP.style}/></FG>
+            <FG label="Phương thức TT"><select name="payment_method" defaultValue={editItem?.payment_method||'Bank Transfer'} style={INP.style}><option>Bank Transfer</option><option>Cash</option><option>Check</option></select></FG>
+          </Row2>
+          <Row2>
+            <FG label="Tổng giá trị (VND)"><input name="amount_total" type="number" defaultValue={editItem?.amount_total||0} required style={INP.style}/></FG>
+            <FG label="Đã thanh toán (VND)"><input name="amount_paid" type="number" defaultValue={editItem?.amount_paid||0} style={INP.style}/></FG>
+          </Row2>
+          <FG label="Hạn thanh toán"><input name="due_date" type="date" defaultValue={editItem?.due_date||''} style={INP.style}/></FG>
+          <FG label="Ghi chú"><textarea name="notes" defaultValue={editItem?.notes||''} style={{...INP.style,minHeight:70}}/></FG>
+          <MFoot onClose={()=>{setShowAdd(false);setEditItem(null)}}/>
+        </form>
+      </Modal>}
+    </div>
+  )
+}
+
 export default function App(){
   const [page,setPage]=useState('dashboard')
   const [data,setData]=useState({projects:[],clients:[],kols:[],team:[],invoices:[],deals:[],dealHistory:[],vendors:[],approvals:[]})
@@ -234,21 +387,22 @@ export default function App(){
   async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
 
   const NAV=[
-    {id:'dashboard',label:'Dashboard',grp:'OVERVIEW'},
-    {id:'pipeline',label:'Deal Pipeline',grp:'OVERVIEW'},
-    {id:'workflow',label:'Công việc',grp:'OVERVIEW'},
+    {id:'dashboard',label:'Dashboard',grp:'BUSINESS DEV'},
+    {id:'pipeline',label:'Deal Pipeline',grp:'BUSINESS DEV'},
+    {id:'workflow',label:'Công việc',grp:'OPERATIONS'},
     {id:'projects',label:'Dự án',grp:'OPERATIONS'},
-    {id:'pricing',label:'Pricing Engine',grp:'OPERATIONS'},
-    {id:'invoices',label:'Hóa đơn',grp:'OPERATIONS'},
-    {id:'approval',label:'Approvals',grp:'OPERATIONS'},
-    {id:'contracts',label:'Hợp đồng',grp:'LEGAL'},
-    {id:'bbnt',label:'Biên bản NT',grp:'LEGAL'},
-    {id:'clients',label:'Clients',grp:'DATA'},
-    {id:'kols',label:'KOL / KOC',grp:'DATA'},
-    {id:'vendors',label:'Vendors',grp:'DATA'},
-    {id:'team',label:'Team',grp:'DATA'},
-    {id:'reports',label:'Analytics',grp:'INSIGHTS'},
-    {id:'quotations',label:'Báo giá',grp:'INSIGHTS'},
+    {id:'pricing',label:'Dự toán chi phí',grp:'OPERATIONS'},
+    {id:'quotations',label:'Báo giá',grp:'OPERATIONS'},
+    {id:'contracts',label:'Hợp đồng',grp:'LEGAL & FINANCE'},
+    {id:'bbnt',label:'Biên bản NT',grp:'LEGAL & FINANCE'},
+    {id:'invoices',label:'Hóa đơn',grp:'LEGAL & FINANCE'},
+    {id:'payment',label:'Thanh toán',grp:'LEGAL & FINANCE'},
+    {id:'approval',label:'Approvals',grp:'LEGAL & FINANCE'},
+    {id:'clients',label:'Clients',grp:'DATABASE'},
+    {id:'kols',label:'KOL / KOC',grp:'DATABASE'},
+    {id:'vendors',label:'Vendors',grp:'DATABASE'},
+    {id:'team',label:'Team',grp:'TEAM & REPORTS'},
+    {id:'reports',label:'Analytics',grp:'TEAM & REPORTS'},
   ]
   const pending=data.approvals.filter(a=>a.status==='Pending').length
   const overdue=data.invoices.filter(i=>i.status==='Overdue').length
@@ -279,7 +433,7 @@ export default function App(){
     <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden',background:'#F8FAFF',fontFamily:"'Inter',system-ui,sans-serif",position:'fixed',inset:0}}>
 
       {/* SIDEBAR */}
-      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'#1E293B',position:'relative',zIndex:10}}>
+      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'linear-gradient(180deg,#1E3A5F 0%,#1a2d4a 100%)',position:'relative',zIndex:10}}>
         {/* Logo */}
         <div style={{padding:'18px 14px 14px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',gap:10,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
           <div style={{width:36,height:36,borderRadius:11,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 4px 16px rgba(59,130,246,0.3)'}}>
@@ -293,7 +447,7 @@ export default function App(){
         {/* Search */}
         {!sidebarCollapsed&&(
           <div style={{padding:'10px 10px 6px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',background:'rgba(255,255,255,0.06)',borderRadius:9,border:'1px solid #E2E8F0'}}>
+            <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',background:'rgba(255,255,255,0.06)',borderRadius:9,border:'1px solid rgba(255,255,255,0.1)'}}>
               <span style={{fontSize:12,color:'#64748B',lineHeight:1}}>⌕</span>
               <span style={{fontSize:11,color:'#64748B'}}>Search...</span>
             </div>
@@ -303,7 +457,7 @@ export default function App(){
         <div style={{flex:1,overflowY:'auto',padding:'4px 8px'}}>
           {groups.map(grp=>(
             <div key={grp}>
-              {!sidebarCollapsed&&<div style={{padding:'8px 6px 2px',fontSize:9,fontWeight:800,color:'#475569',letterSpacing:'0.12em',textTransform:'uppercase'}}>{grp}</div>}
+              {!sidebarCollapsed&&<div style={{padding:'8px 6px 2px',fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.35)',letterSpacing:'0.12em',textTransform:'uppercase'}}>{grp}</div>}
               {visibleNAV.filter(n=>n.grp===grp).map(n=>{
                 const active=page===n.id
                 return(
@@ -318,7 +472,7 @@ export default function App(){
                       border:active?'1px solid rgba(59,130,246,0.3)':'1px solid transparent'}}>
                       <NavIco id={n.id} size={14} col={active?'#60A5FA':'#64748B'}/>
                     </div>
-                    {!sidebarCollapsed&&<span style={{fontSize:11.5,fontWeight:active?700:500,color:active?'#F1F5F9':'#64748B',whiteSpace:'nowrap'}}>{n.label}</span>}
+                    {!sidebarCollapsed&&<span style={{fontSize:11.5,fontWeight:active?700:500,color:active?'#FFFFFF':'rgba(255,255,255,0.55)',whiteSpace:'nowrap'}}>{n.label}</span>}
                     {!sidebarCollapsed&&n.id==='approval'&&pending>0&&(
                       <span style={{marginLeft:'auto',background:'#EF4444',color:'#fff',fontSize:9,padding:'1px 6px',borderRadius:99,fontWeight:700}}>{pending}</span>
                     )}
@@ -335,7 +489,7 @@ export default function App(){
               {currentUser?.avatar_initials||'K'}
             </div>
           ):(
-            <div style={{display:'flex',alignItems:'center',gap:9,padding:'8px 10px',borderRadius:11,background:'rgba(255,255,255,0.05)',border:'1px solid #E2E8F0',cursor:'pointer'}}
+            <div style={{display:'flex',alignItems:'center',gap:9,padding:'8px 10px',borderRadius:11,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.12)',cursor:'pointer'}}
               onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.08)'}
               onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}>
               <div style={{width:30,height:30,borderRadius:9,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#3B82F6'},#0EA5E9)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800,flexShrink:0,position:'relative'}}>
@@ -412,6 +566,7 @@ export default function App(){
           {page==='team'       && <TeamPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
           {page==='reports'    && <Reports {...P}/>}
           {page==='quotations' && <Quotations data={data} supabase={supabase} reload={loadAll} log={log}/>}
+          {page==='payment'    && <Payment data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
         </div>
       </div>
     </div>
@@ -419,64 +574,95 @@ export default function App(){
 }
 
 function Dashboard({ data, setPage, currentUser }) {
+  const isCEO = currentUser?.isMaster
+  const firstName = currentUser?.name?.split(' ').slice(-1)[0] || 'Khoa'
+  const now = new Date()
+  const hour = now.getHours()
+
   const rev  = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
   const cost = data.projects.reduce((a,p) => a + Number(p.actual_cost||0), 0)
   const profit = rev - cost
   const margin = rev ? Math.round(profit/rev*100) : 0
   const active = data.projects.filter(p => p.status==='Active' || p.current_stage==='EXECUTION').length
-  const overdue = data.invoices.filter(i => i.status==='Overdue')
   const pendingAppr = data.approvals.filter(a => a.status==='Pending')
   const won = data.deals.filter(d => d.stage==='Won').length
   const wr = data.deals.length ? Math.round(won/data.deals.length*100) : 0
-  const now = new Date()
-  const firstName = currentUser?.name?.split(' ').slice(-1)[0] || 'Khoa'
+  const outstanding = data.invoices.filter(i=>i.status!=='Paid').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
 
-  const myPending = currentUser?.isMaster ? pendingAppr :
-    pendingAppr.filter(a => {
-      const role = (currentUser?.role||'').toLowerCase()
-      return (a.type==='Finance' && role.includes('finance')) ||
-             (a.type==='Director' && (role.includes('director') || role.includes('giám')))
-    })
+  const myProjects = data.projects.filter(p=>p.pm===currentUser?.name&&p.status==='Active')
 
   const glass = {
     background: '#FFFFFF',
     border: '1px solid #E2E8F0',
-    borderRadius: 12,
+    borderRadius: 14,
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   }
-
-  const kpis = [
-    { label: 'Total Revenue',    value: fmtS(rev),                sub: 'VND',                               accent: '#06B6D4' },
-    { label: 'Net Profit',       value: fmtS(profit),             sub: margin + '% margin',                 accent: '#10B981' },
-    { label: 'Active Projects',  value: active,                   sub: data.projects.length + ' total',     accent: '#6366F1' },
-    { label: 'Win Rate',         value: wr + '%',                 sub: won + '/' + data.deals.length + ' deals', accent: wr >= 50 ? '#10B981' : '#F59E0B' },
-    { label: 'Clients',          value: data.clients.length,      sub: 'in database',                       accent: '#8B5CF6' },
-    { label: 'KOL Database',     value: data.kols.length,         sub: 'contacts',                          accent: '#F59E0B' },
-  ]
-
-  const pipelineStages = [
-    { key:'LEAD',      color:'#64748B' },
-    { key:'BRIEF',     color:'#3B82F6' },
-    { key:'PROPOSAL',  color:'#8B5CF6' },
-    { key:'PRICING',   color:'#F59E0B' },
-    { key:'CONTRACT',  color:'#00D4FF' },
-    { key:'EXECUTION', color:'#10B981' },
-    { key:'PAYMENT',   color:'#4F8EF7' },
-  ]
 
   const byM = Array(12).fill(0)
   data.projects.forEach(p => { if(p.start_date) byM[new Date(p.start_date).getMonth()] += Number(p.revenue||0) })
   const maxM = Math.max(...byM, 1)
   const months = ['J','F','M','A','M','J','J','A','S','O','N','D']
 
+  const greeting = hour<12?'Chào buổi sáng':hour<17?'Chào buổi chiều':'Chào buổi tối'
+  const greetingEN = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening'
+
+  if (!isCEO) {
+    return (
+      <div style={{maxWidth:900,margin:'0 auto'}}>
+        <div style={{marginBottom:28}}>
+          <div style={{fontSize:28,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1.2}}>
+            {greeting}, {firstName}!
+          </div>
+          <div style={{fontSize:13,color:'#64748B',marginTop:6}}>
+            Hôm nay là {now.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
+          <div style={{...glass,padding:'20px 22px'}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#0F172A',marginBottom:14}}>Dự án của tôi</div>
+            {myProjects.length ? myProjects.map(p=>(
+              <div key={p.id} style={{padding:'10px 0',borderBottom:'1px solid #F1F5F9'}}>
+                <div style={{fontWeight:700,fontSize:12,color:'#0F172A'}}>{p.campaign||p.client}</div>
+                <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+                  <span style={{fontSize:10,color:'#64748B'}}>{p.client}</span>
+                  <Badge text={p.status}/>
+                </div>
+              </div>
+            )) : <Empty>Chưa có dự án nào</Empty>}
+          </div>
+          <div style={{...glass,padding:'20px 22px'}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#0F172A',marginBottom:14}}>Phê duyệt đang chờ</div>
+            {pendingAppr.length ? pendingAppr.slice(0,5).map(a=>(
+              <div key={a.id} style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
+                <div style={{fontWeight:600,fontSize:12}}>{a.title||a.type}</div>
+                <div style={{fontSize:10,color:'#64748B',marginTop:2}}>{a.submitted_by} · {a.approval_date}</div>
+              </div>
+            )) : <Empty>Không có gì cần phê duyệt</Empty>}
+          </div>
+        </div>
+
+        <div style={{...glass,padding:'20px 22px'}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#0F172A',marginBottom:14}}>Thao tác nhanh</div>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            {[['+ Báo giá','quotations','#3B82F6'],['+ KOL mới','kols','#8B5CF6'],['Xem HĐ','contracts','#059669'],['Tạo BBNT','bbnt','#F59E0B']].map(([l,pg,c])=>(
+              <button key={pg} onClick={()=>setPage(pg)} style={{padding:'9px 16px',borderRadius:10,border:`1px solid ${c}25`,background:c+'0D',color:c,cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // CEO DASHBOARD
   return (
     <div style={{ width: '100%', fontFamily: "'Inter', system-ui, sans-serif", color: '#0F172A' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 500, marginBottom: 3 }}>
-            Good {now.getHours()<12?'morning':now.getHours()<17?'afternoon':'evening'}, {firstName}
+            {greetingEN}, {firstName}
           </div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
             Agency Overview
@@ -485,27 +671,32 @@ function Dashboard({ data, setPage, currentUser }) {
             {now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
           </div>
         </div>
-        {myPending.length > 0 && (
+        {pendingAppr.length > 0 && (
           <button onClick={() => setPage('approval')} style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, cursor: 'pointer',
             background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)',
-            fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#FCA5A5',
+            fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#EF4444',
           }}>
-            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444', boxShadow: '0 0 6px rgba(239,68,68,0.8)' }} />
-            {myPending.length} pending approval{myPending.length > 1 ? 's' : ''}
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444' }} />
+            {pendingAppr.length} phê duyệt đang chờ
           </button>
         )}
       </div>
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
-        {kpis.map(({ label, value, sub, accent }) => (
-          <div key={label} style={{ background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:12, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, transform 0.15s', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = accent+'60'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.transform = 'translateY(0)' }}>
+        {[
+          ['Revenue', fmtS(rev), 'VND', '#06B6D4'],
+          ['Profit', fmtS(profit), margin+'% margin', '#10B981'],
+          ['Active', active, data.projects.length+' tổng', '#6366F1'],
+          ['Win Rate', wr+'%', won+'/'+data.deals.length+' deals', wr>=50?'#10B981':'#F59E0B'],
+          ['Clients', data.clients.length, 'in database', '#8B5CF6'],
+          ['Tồn đọng', fmtS(outstanding), 'VND', '#EF4444'],
+        ].map(([label, value, sub, accent]) => (
+          <div key={label} style={{ background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:12, padding: '18px 20px', position: 'relative', overflow: 'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, borderRadius: '12px 12px 0 0' }} />
             <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>{label}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
             <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6 }}>{sub}</div>
           </div>
         ))}
@@ -513,23 +704,8 @@ function Dashboard({ data, setPage, currentUser }) {
 
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 250px', gap: 12, marginBottom: 12 }}>
-
-        {/* Revenue Chart */}
         <div style={{ ...glass, padding: '20px 22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.01em' }}>Revenue · 2026</div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 3 }}>Monthly projection · VND</div>
-            </div>
-            <div style={{ display: 'flex', gap: 16 }}>
-              {[['Total', fmtS(rev), '#06B6D4'], ['This mo.', fmtS(byM[now.getMonth()]), '#8B5CF6'], ['Avg', fmtS(Math.round(rev/12)), '#10B981']].map(([l, v, c]) => (
-                <div key={l} style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: c, marginTop: 2 }}>{v}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Revenue · 2026</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
             {months.map((m, i) => {
               const h = byM[i] ? Math.max(6, Math.round(byM[i]/maxM*88)) : 4
@@ -541,7 +717,6 @@ function Dashboard({ data, setPage, currentUser }) {
                     width: '100%', borderRadius: '2px 2px 1px 1px', minHeight: 4, height: h + '%',
                     background: isNow ? 'linear-gradient(180deg,#0EA5E9,#3B82F6)' : isPast && byM[i] > 0 ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.08)',
                     boxShadow: isNow ? '0 0 14px rgba(14,165,233,0.4)' : 'none',
-                    transition: 'height 0.4s ease',
                   }} />
                   <div style={{ fontSize: 8, color: isNow ? '#0EA5E9' : '#94A3B8', fontWeight: isNow ? 700 : 400 }}>{m}</div>
                 </div>
@@ -550,23 +725,17 @@ function Dashboard({ data, setPage, currentUser }) {
           </div>
         </div>
 
-        {/* Pipeline */}
         <div style={{ ...glass, padding: '20px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Project Pipeline</div>
-            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>View →</button>
-          </div>
-          {pipelineStages.map(({ key, color }) => {
-            const cnt = data.projects.filter(p => (p.current_stage || 'LEAD') === key).length
-            const pct = data.projects.length ? Math.round(cnt/data.projects.length*100) : 0
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', marginBottom: 14 }}>Pipeline</div>
+          {['Lead','Pitching','Negotiation','Won','Lost'].map(s => {
+            const cnt = data.deals.filter(d=>d.stage===s).length
+            const colors = {Lead:'#94A3B8',Pitching:'#3B82F6',Negotiation:'#F59E0B',Won:'#10B981',Lost:'#EF4444'}
             return (
-              <div key={key} style={{ marginBottom: 11 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, color: '#64748B', fontWeight: 500, letterSpacing: '0.02em' }}>{key}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: cnt > 0 ? color : '#334155' }}>{cnt}</span>
-                </div>
-                <div style={{ height: 2, background: '#F1F5F9', borderRadius: 99 }}>
-                  <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: 99 }} />
+              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid #F8FAFF' }}>
+                <span style={{ fontSize: 11, color: '#64748B' }}>{s}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: Math.max(4,cnt*8), height: 6, background: colors[s], borderRadius: 3 }}/>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: colors[s] }}>{cnt}</span>
                 </div>
               </div>
             )
@@ -575,100 +744,43 @@ function Dashboard({ data, setPage, currentUser }) {
       </div>
 
       {/* Bottom Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'start' }}>
-
-        {/* Active Projects */}
-        <div style={{ ...glass, padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Active Projects</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ ...glass, padding: '18px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Dự án đang hoạt động</div>
             <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Workflow →</button>
           </div>
-          {data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).slice(0, 4).map(p => (
-            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-              <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.campaign || '—'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#10B981', flexShrink: 0 }} />
-                  <div style={{ fontSize: 10, color: '#64748B' }}>{p.client || '—'}</div>
-                </div>
+          {data.projects.filter(p => p.status==='Active').slice(0, 5).map(p => (
+            <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{p.campaign || p.client}</span>
+                <Badge text={p.status}/>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#0EA5E9' }}>{p.revenue ? fmtS(Number(p.revenue)) : '—'}</div>
-                <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.current_stage || p.status || '—'}</div>
-              </div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{p.client} · PM: {p.pm||'—'}</div>
             </div>
           ))}
-          {!data.projects.filter(p => ['Active','EXECUTION','PRE_PRODUCTION'].includes(p.status || p.current_stage || '')).length && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: '#94A3B8', fontSize: 11 }}>No active projects</div>
-          )}
+          {!data.projects.filter(p => p.status==='Active').length && <Empty>Chưa có dự án</Empty>}
         </div>
 
-        {/* Overdue Invoices */}
-        <div style={{ ...glass, padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Outstanding Invoices</div>
+        <div style={{ ...glass, padding: '18px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Hóa đơn quá hạn</div>
             <button onClick={() => setPage('invoices')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View →</button>
           </div>
-          {overdue.slice(0, 4).map(inv => (
-            <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{inv.client}</div>
-                <div style={{ fontSize: 10, color: '#EF4444', marginTop: 1, fontWeight: 500 }}>Overdue</div>
+          {data.invoices.filter(i=>i.status==='Overdue').slice(0, 5).map(i => (
+            <div key={i.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{i.client}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#EF4444' }}>{fmtS(Number(i.amount)-Number(i.paid||0))}</span>
               </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>{fmtS(Number(inv.amount) - Number(inv.paid||0))}</span>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>Hạn: {i.due_date||'—'}</div>
             </div>
           ))}
-          {!overdue.length && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>All clear</div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>No outstanding payments</div>
+          {!data.invoices.filter(i=>i.status==='Overdue').length && (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: '#10B981', fontSize: 12, fontWeight: 600 }}>
+              Không có hóa đơn quá hạn ✓
             </div>
           )}
-        </div>
-
-        {/* Approvals */}
-        <div style={{ ...glass, padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>
-              {currentUser?.isMaster ? 'Approval Queue' : 'My Approvals'}
-            </div>
-            <button onClick={() => setPage('approval')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Review →</button>
-          </div>
-
-          {myPending.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '14px 0' }}>
-              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>Queue clear</div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
-                {!currentUser?.isMaster && pendingAppr.length > 0 ? 'Nothing requires your action' : 'No pending approvals'}
-              </div>
-            </div>
-          ) : (
-            myPending.slice(0, 3).map(a => (
-              <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#0F172A', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.title || a.type || 'Approval'}
-                  </div>
-                  <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}>
-                    PENDING
-                  </span>
-                </div>
-                <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{a.created_at?.slice(0, 10) || '—'}</div>
-              </div>
-            ))
-          )}
-
-          {/* Quick nav */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 14, paddingTop: 12, borderTop: '1px solid #E2E8F0' }}>
-            {[['Quote','quotations','#F59E0B'],['KOL','kols','#8B5CF6'],['Project','projects','#4F8EF7'],['Workflow','workflow','#10B981']].map(([l, pg, c]) => (
-              <button key={pg} onClick={() => setPage(pg)} style={{
-                padding: '7px 8px', borderRadius: 8,
-                border: `1px solid ${c}20`, background: c + '0A',
-                color: c, cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                fontFamily: 'Inter, system-ui, sans-serif', letterSpacing: '0.03em',
-              }}>{l}</button>
-            ))}
-          </div>
         </div>
       </div>
     </div>
@@ -1046,6 +1158,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   const [edit,setEdit]=useState(null)
   const [showAdd,setShowAdd]=useState(false)
   const [hist,setHist]=useState(null)
+  const [kolDetail,setKolDetail]=useState(null)
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'created_at',dir:'desc'})
@@ -1070,7 +1183,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
             <th style={TH}></th>
           </tr></thead>
           <tbody>
-            {list.map((k,i)=>{const used=data.projects.filter(p=>(p.kols||[]).includes(k.name)).length;const stars='★'.repeat(Math.min(5,Number(k.reliability||0)))+'☆'.repeat(Math.max(0,5-Number(k.reliability||0)));return <tr key={k.id}>
+            {list.map((k,i)=>{const used=data.projects.filter(p=>(p.kols||[]).includes(k.name)).length;const stars='★'.repeat(Math.min(5,Number(k.reliability||0)))+'☆'.repeat(Math.max(0,5-Number(k.reliability||0)));return <tr key={k.id} onClick={()=>setKolDetail(k)} style={{cursor:'pointer'}}>
               <td style={{...TD,fontSize:10,color:B.textTer,fontWeight:600}}>KOL-{String(i+1).padStart(3,'0')}</td>
               <td style={{...TD,fontWeight:800,color:B.text,fontSize:12.5}}>{k.name}</td>
               <td style={TD}><span style={{background:B.infoBg,color:B.info,padding:'3px 9px',borderRadius:6,fontSize:10,fontWeight:700,border:`1px solid ${B.borderStrong}`}}>{k.platform}</span></td>
@@ -1114,6 +1227,53 @@ function Kols({data,add,upd,del,log,reload,supabase}){
         {hist.notes&&<div style={{marginTop:14,padding:12,background:B.gradSoft,borderRadius:10,fontSize:11,color:B.textSec,border:`1px solid ${B.border}`}}>{hist.notes}</div>}
         <div style={{textAlign:'right',marginTop:16}}><Btn onClick={()=>setHist(null)}>Close</Btn></div>
       </Modal>}
+
+      {kolDetail&&<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:1999}} onClick={()=>setKolDetail(null)}/>}
+      {kolDetail&&(
+        <div style={{position:'fixed',top:0,right:0,width:'60vw',height:'100vh',background:'#fff',boxShadow:'-8px 0 40px rgba(0,0,0,0.15)',zIndex:2000,display:'flex',flexDirection:'column'}}>
+          <div style={{padding:'20px 24px',borderBottom:'1px solid #E2E8F0',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+            <div>
+              <div style={{fontSize:18,fontWeight:900,color:'#0F172A'}}>{kolDetail.name}</div>
+              <div style={{fontSize:12,color:'#64748B',marginTop:2}}>{kolDetail.platform} · {kolDetail.tier}</div>
+            </div>
+            <button onClick={()=>setKolDetail(null)} style={{background:'#F1F5F9',border:'none',cursor:'pointer',width:32,height:32,borderRadius:8,fontSize:18,color:'#64748B',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+              {[['Followers',fmtS(kolDetail.followers)],['Engagement',kolDetail.engagement+'%'],['Rate/post',fmtS(kolDetail.rate)+' đ'],['Reliability',(kolDetail.reliability||0)+'/5']].map(([l,v])=>(
+                <div key={l} style={{background:'#F8FAFF',borderRadius:10,padding:'12px 14px',border:'1px solid #E2E8F0'}}>
+                  <div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}}>{l}</div>
+                  <div style={{fontSize:20,fontWeight:900,color:'#0F172A'}}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #E2E8F0',textTransform:'uppercase',letterSpacing:'0.06em'}}>Thông tin cơ bản</div>
+              {[['Niche/Chuyên mục',kolDetail.niche||'—'],['Contact',kolDetail.contact||'—'],['Platform',kolDetail.platform||'—'],['Avg Views',fmtS(kolDetail.avg_views)]].map(([l,v])=>(
+                <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid #F8FAFF'}}>
+                  <span style={{fontSize:11,color:'#64748B'}}>{l}</span>
+                  <span style={{fontSize:11,fontWeight:600,color:'#0F172A'}}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #E2E8F0',textTransform:'uppercase',letterSpacing:'0.06em'}}>Lịch sử dự án</div>
+              {data.projects.filter(p=>(p.kols||[]).includes(kolDetail.name)).map(p=>(
+                <div key={p.id} style={{padding:'8px 10px',borderRadius:8,border:'1px solid #E2E8F0',marginBottom:6}}>
+                  <div style={{fontWeight:600,fontSize:12}}>{p.campaign}</div>
+                  <div style={{fontSize:10,color:'#64748B',marginTop:2}}>{p.client} · <Badge text={p.status}/></div>
+                </div>
+              ))}
+              {!data.projects.filter(p=>(p.kols||[]).includes(kolDetail.name)).length&&<Empty>Chưa có dự án nào</Empty>}
+            </div>
+            {kolDetail.notes&&<div style={{marginTop:16,padding:'12px 14px',background:'#F8FAFF',borderRadius:10,border:'1px solid #E2E8F0',fontSize:11,color:'#64748B'}}>{kolDetail.notes}</div>}
+          </div>
+          <div style={{padding:'14px 24px',borderTop:'1px solid #E2E8F0',display:'flex',gap:8,flexShrink:0}}>
+            <Btn primary onClick={()=>{setEdit(kolDetail);setKolDetail(null);setShowAdd(true)}}>Sửa thông tin</Btn>
+            <Btn onClick={()=>setKolDetail(null)}>Đóng</Btn>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
