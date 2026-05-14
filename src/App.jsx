@@ -357,6 +357,7 @@ export default function App(){
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false)
   const [currentUser,setCurrentUser]=useState(null)
   const [authReady,setAuthReady]=useState(false)
+  const [prefill,setPrefill]=useState(null)
 
   useEffect(()=>{
     const stored = localStorage.getItem('kk_session')
@@ -364,7 +365,7 @@ export default function App(){
     setAuthReady(true)
     loadAll()
     function handleNavigate(e){
-      if(e.detail?.page) setPage(e.detail.page)
+      if(e.detail?.page){setPage(e.detail.page);setPrefill(e.detail.prefill||null)}
     }
     window.addEventListener('navigate',handleNavigate)
     return ()=>window.removeEventListener('navigate',handleNavigate)
@@ -377,6 +378,7 @@ export default function App(){
     if(!currentUser) return false
     if(currentUser.isMaster) return true
     const p = currentUser.permissions?.[module]
+    if(!p) return module === 'workflow'
     return p?.can_view||false
   }
 
@@ -565,8 +567,8 @@ export default function App(){
           {page==='pricing'    && <Pricing {...P}/>}
           {page==='invoices'   && <Invoices {...P}/>}
           {page==='approval'   && <Approval {...P} currentUser={currentUser}/>}
-          {page==='contracts'  && <Contracts data={data} supabase={supabase} reload={loadAll} log={log}/>}
-          {page==='bbnt'       && <AcceptanceReports data={data} supabase={supabase} reload={loadAll} log={log}/>}
+          {page==='contracts'  && <Contracts data={data} supabase={supabase} reload={loadAll} log={log} prefill={prefill} onClearPrefill={()=>setPrefill(null)}/>}
+          {page==='bbnt'       && <AcceptanceReports data={data} supabase={supabase} reload={loadAll} log={log} prefill={prefill} onClearPrefill={()=>setPrefill(null)}/>}
           {page==='clients'    && <Clients {...P}/>}
           {page==='kols'       && <Kols {...P}/>}
           {page==='vendors'    && <Vendors {...P}/>}
@@ -1883,11 +1885,12 @@ function clausesHDCTV(form, fee, tax, netFee) {
 // ══════════════════════════════════════════════════════════
 // CONTRACTS PAGE
 // ══════════════════════════════════════════════════════════
-function Contracts({data, supabase, reload, log}) {
+function Contracts({data, supabase, reload, log, prefill, onClearPrefill}) {
   const [tab, setTab] = useState('client')
   const [contracts, setContracts] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState(null)
+  const [localPrefill, setLocalPrefill] = useState(null)
   const [viewItem, setViewItem] = useState(null)
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1896,6 +1899,16 @@ function Contracts({data, supabase, reload, log}) {
   const [sort,setSort]=useState({field:'sign_date',dir:'desc'})
 
   useEffect(() => { loadContracts() }, [tab])
+
+  useEffect(() => {
+    if(prefill) {
+      setLocalPrefill(prefill)
+      setTab('client')
+      setEditItem(null)
+      setShowForm(true)
+      onClearPrefill?.()
+    }
+  }, [])
 
   async function loadContracts() {
     setLoading(true)
@@ -1982,8 +1995,9 @@ function Contracts({data, supabase, reload, log}) {
       {showForm && tab==='client' && (
         <ContractClientForm
           data={data} supabase={supabase} edit={editItem}
-          onClose={()=>{setShowForm(false);setEditItem(null)}}
-          onSaved={()=>{loadContracts();reload();log('Lưu HĐ client')}}
+          prefill={editItem ? null : localPrefill}
+          onClose={()=>{setShowForm(false);setEditItem(null);setLocalPrefill(null)}}
+          onSaved={()=>{loadContracts();reload();log('Lưu HĐ client');setLocalPrefill(null)}}
         />
       )}
       {showForm && tab==='kol' && (
@@ -2004,29 +2018,29 @@ function Contracts({data, supabase, reload, log}) {
 }
 
 // ── HĐ Client Form ────────────────────────────────────────
-function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
+function ContractClientForm({data, supabase, edit, prefill, onClose, onSaved}) {
   const [form, setForm] = useState({
     contract_code: edit?.contract_code || genCode('HDDV'),
     sign_date: edit?.sign_date || new Date().toISOString().slice(0,10),
-    sign_location: edit?.sign_location || 'Văn phòng Công Ty TNHH Quảng cáo K&K',
-    project_id: edit?.project_id || '',
-    party_a_name: edit?.party_a_name || '',
-    party_a_tax: edit?.party_a_tax || '',
-    party_a_address: edit?.party_a_address || '',
-    party_a_rep: edit?.party_a_rep || '',
+    sign_location: edit?.sign_location || prefill?.sign_location || 'Văn phòng Công Ty TNHH Quảng cáo K&K',
+    project_id: edit?.project_id || prefill?.project_id || '',
+    party_a_name: edit?.party_a_name || prefill?.party_a_name || '',
+    party_a_tax: edit?.party_a_tax || prefill?.party_a_tax || '',
+    party_a_address: edit?.party_a_address || prefill?.party_a_address || '',
+    party_a_rep: edit?.party_a_rep || prefill?.party_a_rep || '',
     party_a_title: edit?.party_a_title || 'Giám Đốc',
-    party_a_bank_account: edit?.party_a_bank_account || '',
-    party_a_bank_name: edit?.party_a_bank_name || '',
-    service_type: edit?.service_type || 'KOL/KOC',
-    scope_of_work: edit?.scope_of_work || '',
-    kol_list: edit?.kol_list || [],
-    total_fee: edit?.total_fee || 0,
+    party_a_bank_account: edit?.party_a_bank_account || prefill?.party_a_bank_account || '',
+    party_a_bank_name: edit?.party_a_bank_name || prefill?.party_a_bank_name || '',
+    service_type: edit?.service_type || prefill?.service_type || 'KOL/KOC',
+    scope_of_work: edit?.scope_of_work || prefill?.scope_of_work || '',
+    kol_list: edit?.kol_list || prefill?.kol_list || [],
+    total_fee: edit?.total_fee || prefill?.total_fee || 0,
     vat_rate: edit?.vat_rate || 8,
     total_with_vat: edit?.total_with_vat || 0,
     payment_terms: edit?.payment_terms || 'Thanh toán 100% giá trị hợp đồng trong vòng 30 ngày làm việc sau khi Bên B hoàn tất toàn bộ công việc và Bên A đã nhận đầy đủ chứng từ hợp lệ bao gồm: Hợp đồng, Biên bản nghiệm thu và Hoá đơn GTGT hợp lệ.',
-    start_date: edit?.start_date || '',
+    start_date: edit?.start_date || prefill?.start_date || '',
     status: edit?.status || 'Draft',
-    notes: edit?.notes || '',
+    notes: edit?.notes || prefill?.notes || '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k,v) => setForm(p=>({...p,[k]:v}))
@@ -2120,6 +2134,13 @@ function ContractClientForm({data, supabase, edit, onClose, onSaved}) {
             reference_id: contractData.data.id
           }])
         }
+      }
+    }
+    // Notify admins if ordered from project
+    if(!edit && prefill?._project_campaign) {
+      const admins = (data.team||[]).filter(m=>(m.role||'').toLowerCase().includes('admin')||(m.role||'').toLowerCase().includes('director'))
+      for(const admin of admins) {
+        await supabase.from('notifications').insert([{recipient_email:admin.email||'',recipient_name:admin.name,type:'CONTRACT_FROM_PROJECT',title:`HĐ mới từ dự án ${prefill._project_campaign}`,message:`Đã tạo Hợp đồng ${form.contract_code} từ dự án "${prefill._project_campaign}" - cần Admin xử lý`,data:{project_campaign:prefill._project_campaign},send_email:false,email_sent:false}])
       }
     }
     setSaving(false); onSaved(); onClose()
@@ -2528,12 +2549,14 @@ function ContractPreview({contract:c, type, onClose}) {
 // ══════════════════════════════════════════════════════════
 // BBNT PAGE
 // ══════════════════════════════════════════════════════════
-function AcceptanceReports({data, supabase, reload, log}) {
+function AcceptanceReports({data, supabase, reload, log, prefill, onClearPrefill}) {
   const [reports, setReports] = useState([])
   const [contracts, setContracts] = useState([])
   const [tab, setTab] = useState('client')
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState(null)
+  const [localPrefill, setLocalPrefill] = useState(null)
+  const [prefillContract, setPrefillContract] = useState(null)
   const [viewItem, setViewItem] = useState(null)
   const [loading, setLoading] = useState(false)
   const [dateFrom,setDateFrom]=useState('')
@@ -2541,6 +2564,20 @@ function AcceptanceReports({data, supabase, reload, log}) {
   const [sort,setSort]=useState({field:'sign_date',dir:'desc'})
 
   useEffect(()=>{ loadData() },[tab])
+
+  useEffect(()=>{
+    if(prefill?.project_id) {
+      async function findAndOpen() {
+        setLocalPrefill(prefill)
+        onClearPrefill?.()
+        const {data:linked} = await supabase.from('contracts').select('*').eq('project_id',prefill.project_id).limit(1)
+        setPrefillContract(linked?.[0]||null)
+        setEditItem(null)
+        setShowForm(true)
+      }
+      findAndOpen()
+    }
+  },[])
 
   async function loadData() {
     setLoading(true)
@@ -2601,27 +2638,27 @@ function AcceptanceReports({data, supabase, reload, log}) {
         </table>
       </div>
 
-      {showForm&&<BBNTForm contracts={contracts} data={data} supabase={supabase} edit={editItem} type={tab} onClose={()=>{setShowForm(false);setEditItem(null)}} onSaved={()=>{loadData();reload();log('Lưu BBNT')}}/>}
+      {showForm&&<BBNTForm contracts={contracts} data={data} supabase={supabase} edit={editItem} type={tab} prefill={editItem?null:localPrefill} prefillContract={editItem?null:prefillContract} onClose={()=>{setShowForm(false);setEditItem(null);setLocalPrefill(null);setPrefillContract(null)}} onSaved={()=>{loadData();reload();log('Lưu BBNT');setLocalPrefill(null);setPrefillContract(null)}}/>}
       {viewItem&&<BBNTPreview report={viewItem.report} contract={viewItem.contract} type={viewItem.type} onClose={()=>setViewItem(null)}/>}
     </div>
   )
 }
 
-function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
+function BBNTForm({contracts, data, supabase, edit, type, prefill, prefillContract, onClose, onSaved}) {
   const [form, setForm] = useState({
     report_code: edit?.report_code || genCode('BBNT'),
-    contract_id: edit?.contract_id || '',
+    contract_id: edit?.contract_id || prefillContract?.id || '',
     sign_date: edit?.sign_date || new Date().toISOString().slice(0,10),
-    actual_start_date: edit?.actual_start_date || '',
-    actual_end_date: edit?.actual_end_date || new Date().toISOString().slice(0,10),
-    deliverables: edit?.deliverables || [],
-    contract_value: edit?.contract_value || 0,
-    accepted_value: edit?.accepted_value || 0,
+    actual_start_date: edit?.actual_start_date || prefill?.actual_start_date || prefillContract?.start_date || '',
+    actual_end_date: edit?.actual_end_date || prefill?.actual_end_date || new Date().toISOString().slice(0,10),
+    deliverables: edit?.deliverables || prefill?.deliverables || [],
+    contract_value: edit?.contract_value || prefillContract?.total_with_vat || 0,
+    accepted_value: edit?.accepted_value || prefillContract?.total_with_vat || 0,
     paid_amount: edit?.paid_amount || 0,
     remaining_amount: edit?.remaining_amount || 0,
     payment_deadline: edit?.payment_deadline || (type==='kol'?15:30),
     status: edit?.status || 'Draft',
-    notes: edit?.notes || '',
+    notes: edit?.notes || prefill?.notes || '',
   })
   const set=(k,v)=>setForm(p=>({...p,[k]:v}))
   const selectedContract = contracts.find(c=>c.id===form.contract_id)
@@ -2661,6 +2698,12 @@ function BBNTForm({contracts, data, supabase, edit, type, onClose, onSaved}) {
     if(edit){({error}=await supabase.from('acceptance_reports').update(payload).eq('id',edit.id))}
     else{({error}=await supabase.from('acceptance_reports').insert([payload]))}
     if(error){alert('Lỗi: '+error.message);return}
+    if(!edit && prefill?._project_campaign) {
+      const admins = (data.team||[]).filter(m=>(m.role||'').toLowerCase().includes('admin')||(m.role||'').toLowerCase().includes('director'))
+      for(const admin of admins) {
+        await supabase.from('notifications').insert([{recipient_email:admin.email||'',recipient_name:admin.name,type:'BBNT_FROM_PROJECT',title:`BBNT mới từ dự án ${prefill._project_campaign}`,message:`Đã tạo Biên bản nghiệm thu ${form.report_code} từ dự án "${prefill._project_campaign}" - cần Admin xử lý`,data:{project_campaign:prefill._project_campaign},send_email:false,email_sent:false}])
+      }
+    }
     onSaved();onClose()
   }
 
@@ -2849,19 +2892,20 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
 // ════════════════════════════════════════════════════════════
 
 const MODULES = [
-  {id:'dashboard',label:'Dashboard',grp:'OVERVIEW'},
-  {id:'pipeline',label:'Deal Pipeline',grp:'OVERVIEW'},
-  {id:'projects',label:'Dự án',grp:'OPERATIONS'},
-  {id:'pricing',label:'Pricing Engine',grp:'OPERATIONS'},
-  {id:'invoices',label:'Hóa đơn',grp:'OPERATIONS'},
-  {id:'approval',label:'Approvals',grp:'OPERATIONS'},
-  {id:'contracts',label:'Hợp đồng',grp:'LEGAL'},
-  {id:'bbnt',label:'Biên bản NT',grp:'LEGAL'},
-  {id:'clients',label:'Clients',grp:'DATA'},
-  {id:'kols',label:'KOL / KOC',grp:'DATA'},
-  {id:'vendors',label:'Vendors',grp:'DATA'},
-  {id:'team',label:'Team',grp:'DATA'},
-  {id:'reports',label:'Analytics',grp:'INSIGHTS'},
+  {id:'dashboard',label:'Dashboard',icon:'▣',grp:'OVERVIEW'},
+  {id:'pipeline',label:'Deal Pipeline',icon:'◈',grp:'OVERVIEW'},
+  {id:'workflow',label:'Công việc',icon:'⚡',grp:'OPERATIONS'},
+  {id:'projects',label:'Dự án',icon:'▤',grp:'OPERATIONS'},
+  {id:'pricing',label:'Pricing Engine',icon:'◊',grp:'OPERATIONS'},
+  {id:'invoices',label:'Hóa đơn',icon:'≡',grp:'OPERATIONS'},
+  {id:'approval',label:'Approvals',icon:'✓',grp:'OPERATIONS'},
+  {id:'contracts',label:'Hợp đồng',icon:'⊟',grp:'LEGAL'},
+  {id:'bbnt',label:'Biên bản NT',icon:'☐',grp:'LEGAL'},
+  {id:'clients',label:'Clients',icon:'◉',grp:'DATA'},
+  {id:'kols',label:'KOL / KOC',icon:'◆',grp:'DATA'},
+  {id:'vendors',label:'Vendors',icon:'⬡',grp:'DATA'},
+  {id:'team',label:'Team',icon:'◑',grp:'DATA'},
+  {id:'reports',label:'Analytics',icon:'▦',grp:'INSIGHTS'},
 ]
 
 const AVATAR_COLORS = [
@@ -3014,7 +3058,7 @@ function PermissionManager({account, supabase, onClose}) {
     MODULES.forEach(m => {
       const p = data?.find(d=>d.module===m.id)
       map[m.id] = {
-        can_view: p?.can_view||false,
+        can_view: p ? p.can_view : (m.id==='workflow'),
         can_create: p?.can_create||false,
         can_edit: p?.can_edit||false,
         can_delete: p?.can_delete||false,
@@ -5158,6 +5202,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [editTask, setEditTask] = useState(null)
   const [showStageChange, setShowStageChange] = useState(false)
+  const [pendingStageChange, setPendingStageChange] = useState(null)
+  const [viewingStage, setViewingStage] = useState(project.current_stage||'LEAD')
   const [notifications, setNotifications] = useState([])
   const [taskDetail, setTaskDetail] = useState(null)
   const [taskComments, setTaskComments] = useState([])
@@ -5209,6 +5255,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     const pendingApprovals = approvals.filter(a=>a.stage===currentStage&&a.status==='Pending')
     if(pendingApprovals.length > 0) {
       alert(`⚠️ Còn ${pendingApprovals.length} approval chưa được xử lý ở stage hiện tại!`)
+      setPendingStageChange(null)
       return
     }
 
@@ -5218,6 +5265,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       const dirApproved = approvals.some(a=>a.stage==='PRICING'&&a.approval_type==='DIRECTOR'&&a.status==='Approved')
       if(!plApproved||!dirApproved) {
         alert('⚠️ Cần Finance duyệt P&L và Director duyệt trước khi vào EXECUTION!')
+        setPendingStageChange(null)
         return
       }
     }
@@ -5228,17 +5276,20 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     }).eq('id', project.id)
 
     await initStageTasks(newStage)
-    await reload()
-    onUpdate({...project, current_stage:newStage})
+    const updated = {...project, current_stage:newStage}
+    onUpdate(updated)
+    setViewingStage(newStage)
     log(`Stage: ${project.campaign} → ${newStage}`)
     setShowStageChange(false)
+    setPendingStageChange(null)
+    await loadData()
   }
 
   async function saveTask(taskData) {
     if(editTask) {
       await supabase.from('tasks').update(taskData).eq('id', editTask.id)
     } else {
-      await supabase.from('tasks').insert([{...taskData, project_id:project.id, stage:project.current_stage||'LEAD'}])
+      await supabase.from('tasks').insert([{...taskData, project_id:project.id, stage:viewingStage}])
     }
     // Send notification if assigned
     if(taskData.assigned_to && taskData.assigned_to !== editTask?.assigned_to) {
@@ -5307,7 +5358,10 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
   const currentStageData = STAGES.find(s=>s.id===(project.current_stage||'LEAD'))||STAGES[0]
   const currentStageIdx = STAGES.findIndex(s=>s.id===(project.current_stage||'LEAD'))
-  const stageTasks = tasks.filter(t=>t.stage===project.current_stage||'LEAD')
+  const viewingStageData = STAGES.find(s=>s.id===viewingStage)||STAGES[0]
+  const viewingStageIdx = STAGES.findIndex(s=>s.id===viewingStage)
+  const isViewingPastStage = viewingStageIdx < currentStageIdx
+  const stageTasks = tasks.filter(t=>t.stage===viewingStage)
   const doneTasks = stageTasks.filter(t=>t.status==='Done').length
   const stageCompletion = stageTasks.length ? Math.round(doneTasks/stageTasks.length*100) : 0
   const pendingApprovals = approvals.filter(a=>a.status==='Pending')
@@ -5315,6 +5369,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.7)',display:'flex',alignItems:'stretch',justifyContent:'flex-end',zIndex:2000,backdropFilter:'blur(4px)'}}>
       <div style={{width:'85vw',maxWidth:1100,background:'#F0F4FF',overflowY:'auto',display:'flex',flexDirection:'column',boxShadow:'-20px 0 60px rgba(0,0,0,0.2)'}}>
+
+        {/* Viewing past stage banner */}
+        {viewingStage !== (project.current_stage||'LEAD') && (
+          <div style={{background:'rgba(245,158,11,0.15)',borderBottom:'1px solid rgba(245,158,11,0.3)',padding:'8px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+            <span style={{fontSize:12,fontWeight:600,color:'#92400E'}}>👁 Đang xem: <strong>{viewingStageData.label}</strong> (stage cũ)</span>
+            <button onClick={()=>setViewingStage(project.current_stage||'LEAD')} style={{padding:'4px 12px',borderRadius:6,border:'1px solid rgba(245,158,11,0.4)',background:'rgba(245,158,11,0.1)',color:'#92400E',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Về stage hiện tại ({currentStageData.label})</button>
+          </div>
+        )}
 
         {/* Project header */}
         <div style={{background:`linear-gradient(135deg,#0F172A,${currentStageData.color}88)`,padding:'24px 28px',position:'relative',overflow:'hidden',flexShrink:0}}>
@@ -5339,18 +5401,21 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
             </div>
           </div>
 
-          {/* Stage progress timeline */}
+          {/* Stage progress timeline — click to view that stage */}
           <div style={{display:'flex',alignItems:'center',marginTop:18,gap:0}}>
             {STAGES.map((s,i)=>(
               <div key={s.id} style={{display:'flex',alignItems:'center',flex:i<STAGES.length-1?1:'auto'}}>
-                <div style={{
+                <div onClick={()=>{ if(i<=currentStageIdx) setViewingStage(s.id) }} style={{
                   width:28,height:28,borderRadius:'50%',flexShrink:0,
                   display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,
-                  background:i<currentStageIdx?'#059669':i===currentStageIdx?currentStageData.color:'rgba(255,255,255,0.15)',
-                  border:i===currentStageIdx?`2px solid ${currentStageData.color}`:'2px solid transparent',
-                  boxShadow:i===currentStageIdx?`0 0 10px ${currentStageData.color}80`:'none',
-                  cursor:'pointer',
-                }} title={s.label}>
+                  background:s.id===viewingStage?'rgba(255,255,255,0.9)':(i<currentStageIdx?'#059669':i===currentStageIdx?currentStageData.color:'rgba(255,255,255,0.15)'),
+                  border:s.id===viewingStage?`2px solid #fff`:(i===currentStageIdx?`2px solid ${currentStageData.color}`:'2px solid transparent'),
+                  boxShadow:s.id===viewingStage?'0 0 12px rgba(255,255,255,0.6)':(i===currentStageIdx?`0 0 10px ${currentStageData.color}80`:'none'),
+                  cursor:i<=currentStageIdx?'pointer':'default',
+                  color:s.id===viewingStage?currentStageData.color:'inherit',
+                  fontWeight:s.id===viewingStage?900:400,
+                  transition:'all 0.15s',
+                }} title={i<=currentStageIdx?`Xem stage: ${s.label}`:(s.label+' — chưa đến')}>
                   {i<currentStageIdx?'✓':i===currentStageIdx?s.icon:''}
                 </div>
                 {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<currentStageIdx?'#059669':'rgba(255,255,255,0.1)',margin:'0 2px'}}/>}
@@ -5387,13 +5452,20 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
             <div>
               {/* Quick action buttons */}
               <div style={{display:'flex',gap:8,marginBottom:16}}>
-                <button onClick={()=>{window.dispatchEvent(new CustomEvent('navigate',{detail:{page:'contracts',prefill:{party_a_name:project.client,project_id:project.id}}}))}} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(59,130,246,0.25)',background:'rgba(59,130,246,0.08)',color:'#3B82F6',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>📄 Order Hợp đồng</button>
-                <button onClick={()=>{window.dispatchEvent(new CustomEvent('navigate',{detail:{page:'bbnt',prefill:{project_id:project.id}}}))}} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(16,185,129,0.25)',background:'rgba(16,185,129,0.08)',color:'#10B981',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>✅ Order BBNT</button>
+                <button onClick={()=>{
+                  const client=data.clients.find(c=>c.name===project.client)
+                  const kolList=(project.kols||[]).map(kn=>{const k=data.kols.find(x=>x.name===kn);return{name:kn,tiktok:k?.tiktok_url||'',work:'Sản xuất 1 video theo yêu cầu của nhãn hàng',fee:k?.pricing?.length?Math.min(...k.pricing.map(p=>Number(p.amount||0))):Number(k?.rate||0)}})
+                  window.dispatchEvent(new CustomEvent('navigate',{detail:{page:'contracts',prefill:{party_a_name:project.client,party_a_tax:client?.tax_code||'',party_a_address:client?.address||'',party_a_rep:client?.legal_rep||'',party_a_bank_account:client?.bank_account||'',party_a_bank_name:client?.bank_name||'',project_id:project.id,service_type:project.service||'KOL/KOC',kol_list:kolList,scope_of_work:project.brief||'',start_date:project.start_date||'',notes:`Ordered from project: ${project.campaign}`,_project_campaign:project.campaign}}}))
+                }} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(59,130,246,0.25)',background:'rgba(59,130,246,0.08)',color:'#3B82F6',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>📄 Order Hợp đồng</button>
+                <button onClick={()=>{
+                  const deliverables=(project.kols||[]).map((kn,i)=>({stt:i+1,name:kn,link:'',result:'Hoàn thành 100%'}))
+                  window.dispatchEvent(new CustomEvent('navigate',{detail:{page:'bbnt',prefill:{project_id:project.id,actual_start_date:project.start_date||'',actual_end_date:project.end_date||'',deliverables,_project_campaign:project.campaign}}}))
+                }} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(16,185,129,0.25)',background:'rgba(16,185,129,0.08)',color:'#10B981',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>✅ Order BBNT</button>
               </div>
               {/* KPI cards */}
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
                 {[
-                  ['Stage hiện tại',currentStageData.label+' ('+Math.round((currentStageIdx+1)/STAGES.length*100)+'%)',currentStageData.label,currentStageData.color],
+                  ['Đang xem stage',viewingStageData.label+' ('+Math.round((viewingStageIdx+1)/STAGES.length*100)+'%)',isViewingPastStage?'Stage đã hoàn thành':'Stage hiện tại',viewingStageData.color],
                   ['Tasks stage này',`${doneTasks}/${stageTasks.length} done (${stageCompletion}%)`,stageTasks.filter(t=>t.status==='In Progress').length+' đang làm','#1A56DB'],
                   ['Pending approvals',pendingApprovals.length,pendingApprovals.length?'Cần xử lý':'OK ✓',pendingApprovals.length?'#DC2626':'#059669'],
                   ['Revenue',project.revenue?Number(project.revenue).toLocaleString('vi-VN'):'—','VND','#059669'],
@@ -5409,28 +5481,28 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
               {/* Stage tasks summary */}
               <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid #E2E8F0'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {currentStageData.label}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {viewingStageData.label}{isViewingPastStage&&<span style={{fontSize:10,color:'#10B981',marginLeft:8,fontWeight:600}}>✓ Đã hoàn thành</span>}</div>
                   <div style={{display:'flex',gap:8}}>
-                    {stageTasks.length===0&&(
-                      <button onClick={()=>initStageTasks(project.current_stage||'LEAD')} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                    {!isViewingPastStage && stageTasks.length===0&&(
+                      <button onClick={()=>initStageTasks(viewingStage)} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                         ⚡ Khởi tạo tasks cho stage này
                       </button>
                     )}
-                    <button onClick={()=>{setEditTask(null);setShowTaskForm(true)}} style={{padding:'6px 14px',borderRadius:8,border:'1px solid rgba(99,102,241,0.25)',background:'rgba(99,102,241,0.08)',color:'#6366F1',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                    {!isViewingPastStage&&<button onClick={()=>{setEditTask(null);setShowTaskForm(true)}} style={{padding:'6px 14px',borderRadius:8,border:'1px solid rgba(99,102,241,0.25)',background:'rgba(99,102,241,0.08)',color:'#6366F1',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                       + Task
-                    </button>
+                    </button>}
                   </div>
                 </div>
-                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={updateTaskStatus} onEdit={()=>openTaskDetail(t)}/>)}
+                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={isViewingPastStage?()=>{}:updateTaskStatus} onEdit={()=>openTaskDetail(t)} readOnly={isViewingPastStage}/>)}
                 {stageTasks.length>5&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',marginTop:8,cursor:'pointer'}} onClick={()=>setActiveTab('tasks')}>+ {stageTasks.length-5} tasks khác → Xem tất cả</div>}
-                {!stageTasks.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có tasks. Click "Khởi tạo tasks" để tạo tự động.</div>}
+                {!stageTasks.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>{isViewingPastStage?'Không có tasks nào ở stage này.':'Chưa có tasks. Click "Khởi tạo tasks" để tạo tự động.'}</div>}
               </div>
 
               {/* Required approvals for current stage */}
               <ApprovalPanel
-                project={project} stage={project.current_stage||'LEAD'}
+                project={project} stage={viewingStage}
                 approvals={approvals} currentUser={currentUser}
-                onRequest={requestApproval} onResolve={resolveApproval}
+                onRequest={isViewingPastStage?()=>{}:requestApproval} onResolve={isViewingPastStage?()=>{}:resolveApproval}
               />
             </div>
           )}
@@ -5442,8 +5514,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
               onStatusChange={updateTaskStatus}
               onEdit={(t)=>{setEditTask(t);setShowTaskForm(true)}}
               onAdd={()=>{setEditTask(null);setShowTaskForm(true)}}
-              onInit={()=>initStageTasks(project.current_stage||'LEAD')}
-              currentStage={project.current_stage||'LEAD'}
+              onInit={()=>initStageTasks(viewingStage)}
+              currentStage={viewingStage}
             />
           )}
 
@@ -5472,30 +5544,45 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
         <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',zIndex:100}}>
           <div style={{background:'#FFFFFF',borderRadius:18,padding:'24px 28px',width:480,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.5)',border:'1px solid #E2E8F0'}}>
             <div style={{fontSize:15,fontWeight:800,color:'#0F172A',marginBottom:16}}>Chuyển Stage dự án</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
-              {STAGES.map((s,i)=>{
-                const isCurrent = s.id===(project.current_stage||'LEAD')
-                const isPrev = i < STAGES.findIndex(st=>st.id===(project.current_stage||'LEAD'))
-                return <button key={s.id} onClick={()=>changeStage(s.id)}
-                  disabled={isCurrent}
-                  style={{
-                    padding:'10px 12px',borderRadius:10,border:`1.5px solid ${isCurrent?s.color:isPrev?'rgba(5,150,105,0.3)':'#E2E8F0'}`,
-                    background:isCurrent?s.color+'18':isPrev?'rgba(5,150,105,0.06)':'#F8FAFF',
-                    color:isCurrent?s.color:isPrev?'#059669':'#94A3B8',
-                    cursor:isCurrent?'default':'pointer',
-                    fontSize:12,fontWeight:isCurrent?700:500,
-                    fontFamily:"'Plus Jakarta Sans',sans-serif",
-                    textAlign:'left',
-                  }}>
-                  <span style={{marginRight:6}}>{s.icon}</span>{s.label}
-                  {isCurrent&&<span style={{marginLeft:6,fontSize:10,opacity:0.7}}>(hiện tại)</span>}
-                </button>
-              })}
-            </div>
-            <div style={{padding:'10px 14px',background:'rgba(245,158,11,0.08)',borderRadius:8,border:'1px solid rgba(245,158,11,0.25)',fontSize:11,color:'#F59E0B',marginBottom:14}}>
-              ⚠️ Vào EXECUTION cần Finance & Director đã approve P&L. Vào PAYMENT cần có BBNT.
-            </div>
-            <button onClick={()=>setShowStageChange(false)} style={{width:'100%',padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+            {!pendingStageChange ? (
+              <>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
+                  {STAGES.map((s,i)=>{
+                    const isCurrent = s.id===(project.current_stage||'LEAD')
+                    const isPrev = i < STAGES.findIndex(st=>st.id===(project.current_stage||'LEAD'))
+                    return <button key={s.id} onClick={()=>!isCurrent&&setPendingStageChange(s)}
+                      disabled={isCurrent}
+                      style={{
+                        padding:'10px 12px',borderRadius:10,border:`1.5px solid ${isCurrent?s.color:isPrev?'rgba(5,150,105,0.3)':'#E2E8F0'}`,
+                        background:isCurrent?s.color+'18':isPrev?'rgba(5,150,105,0.06)':'#F8FAFF',
+                        color:isCurrent?s.color:isPrev?'#059669':'#94A3B8',
+                        cursor:isCurrent?'default':'pointer',
+                        fontSize:12,fontWeight:isCurrent?700:500,
+                        fontFamily:"'Plus Jakarta Sans',sans-serif",
+                        textAlign:'left',
+                      }}>
+                      <span style={{marginRight:6}}>{s.icon}</span>{s.label}
+                      {isCurrent&&<span style={{marginLeft:6,fontSize:10,opacity:0.7}}>(hiện tại)</span>}
+                    </button>
+                  })}
+                </div>
+                <div style={{padding:'10px 14px',background:'rgba(245,158,11,0.08)',borderRadius:8,border:'1px solid rgba(245,158,11,0.25)',fontSize:11,color:'#F59E0B',marginBottom:14}}>
+                  ⚠️ Vào EXECUTION cần Finance & Director đã approve P&L. Vào PAYMENT cần có BBNT.
+                </div>
+                <button onClick={()=>setShowStageChange(false)} style={{width:'100%',padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
+              </>
+            ) : (
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:'#0F172A',marginBottom:8}}>Xác nhận chuyển stage</div>
+                <div style={{background:'rgba(99,102,241,0.06)',borderRadius:10,padding:'14px 16px',marginBottom:16,fontSize:13,color:'#1F2937'}}>
+                  Bạn có chắc muốn chuyển dự án <strong>"{project.campaign}"</strong> sang stage <strong>{pendingStageChange.icon} {pendingStageChange.label}</strong>?
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={()=>setPendingStageChange(null)} style={{flex:1,padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>← Quay lại</button>
+                  <button onClick={()=>changeStage(pendingStageChange.id)} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:`linear-gradient(135deg,${pendingStageChange.color},${pendingStageChange.color}cc)`,color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xác nhận chuyển</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -5506,7 +5593,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
           task={editTask} project={project} data={data}
           onSave={saveTask}
           onClose={()=>{setShowTaskForm(false);setEditTask(null)}}
-          currentStage={project.current_stage||'LEAD'}
+          currentStage={viewingStage}
         />
       )}
 
@@ -5516,14 +5603,17 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 }
 
 // ── TASK ROW ─────────────────────────────────────────────
-function TaskRow({task:t, onStatusChange, onEdit}) {
+function TaskRow({task:t, onStatusChange, onEdit, readOnly}) {
   const isLate = t.due_date && new Date(t.due_date)<new Date() && t.status!=='Done'
   return (
-    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
-      <select value={t.status} onChange={e=>onStatusChange(t.id,e.target.value)}
-        style={{padding:'3px 6px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-        {['Todo','In Progress','Review','Done','Blocked'].map(s=><option key={s}>{s}</option>)}
-      </select>
+    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9',opacity:readOnly?0.75:1}}>
+      {readOnly
+        ? <span style={{padding:'3px 10px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,minWidth:60,textAlign:'center',display:'inline-block'}}>{t.status}</span>
+        : <select value={t.status} onChange={e=>onStatusChange(t.id,e.target.value)}
+            style={{padding:'3px 6px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+            {['Todo','In Progress','Review','Done','Blocked'].map(s=><option key={s}>{s}</option>)}
+          </select>
+      }
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:12,fontWeight:600,color:t.status==='Done'?'#475569':'#CBD5E1',textDecoration:t.status==='Done'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
           {t.requires_approval&&<span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:4,background:'rgba(99,102,241,0.15)',color:'#6366F1',flexShrink:0}}>APR</span>}
