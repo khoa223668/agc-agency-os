@@ -378,7 +378,7 @@ export default function App(){
     if(!currentUser) return false
     if(currentUser.isMaster) return true
     const p = currentUser.permissions?.[module]
-    if(!p) return module === 'workflow'
+    if(!p) return module === 'workflow' || module === 'quotations'
     return p?.can_view||false
   }
 
@@ -2896,6 +2896,7 @@ const MODULES = [
   {id:'pipeline',label:'Deal Pipeline',icon:'◈',grp:'OVERVIEW'},
   {id:'workflow',label:'Công việc',icon:'⚡',grp:'OPERATIONS'},
   {id:'projects',label:'Dự án',icon:'▤',grp:'OPERATIONS'},
+  {id:'quotations',label:'Báo giá',icon:'💰',grp:'OPERATIONS'},
   {id:'pricing',label:'Pricing Engine',icon:'◊',grp:'OPERATIONS'},
   {id:'invoices',label:'Hóa đơn',icon:'≡',grp:'OPERATIONS'},
   {id:'approval',label:'Approvals',icon:'✓',grp:'OPERATIONS'},
@@ -3057,9 +3058,11 @@ function PermissionManager({account, supabase, onClose}) {
     const map = {}
     MODULES.forEach(m => {
       const p = data?.find(d=>d.module===m.id)
+      const defaultView = m.id==='workflow' || m.id==='quotations'
+      const defaultCreate = m.id==='quotations'
       map[m.id] = {
-        can_view: p ? p.can_view : (m.id==='workflow'),
-        can_create: p?.can_create||false,
+        can_view: p ? p.can_view : defaultView,
+        can_create: p ? p.can_create : defaultCreate,
         can_edit: p?.can_edit||false,
         can_delete: p?.can_delete||false,
       }
@@ -4145,7 +4148,7 @@ function calcItem(item) {
   return { basePrice, priceAfterTax, sellPrice, lineBeforeVAT, lineVAT, lineTotal }
 }
 
-function QuotationForm({data, supabase, edit, onClose, onSaved}) {
+function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
   const genQCode = () => {
     const d = new Date()
     return `KK-BG-${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getFullYear()).slice(2)}-${Math.floor(Math.random()*900+100)}`
@@ -4166,11 +4169,11 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
 
   const [form, setForm] = useState({
     quote_code: edit?.quote_code || genQCode(),
-    client_name: edit?.client_name || '',
+    client_name: edit?.client_name || prefill?.client_name || '',
     brand_name: edit?.brand_name || '',
-    campaign_name: edit?.campaign_name || '',
+    campaign_name: edit?.campaign_name || prefill?.campaign_name || '',
     service_type: edit?.service_type || 'KOL/KOC',
-    project_id: edit?.project_id || '',
+    project_id: edit?.project_id || prefill?.project_id || '',
     prepared_by: edit?.prepared_by || 'Tô Nguyễn Đăng Khoa',
     valid_days: edit?.valid_days || 30,
     items: edit?.items?.length ? edit.items : [defaultItem()],
@@ -4180,7 +4183,24 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
   })
   const [saving, setSaving] = useState(false)
   const [markupError, setMarkupError] = useState(false)
+  const [showPicker, setShowPicker] = useState(null) // {idx, type:'KOL'|'Vendor'}
+  const [pickerSearch, setPickerSearch] = useState('')
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  function selectFromPicker(item) {
+    const idx = showPicker.idx
+    const arr = [...form.items]
+    if (showPicker.type === 'KOL') {
+      const rate = item.pricing?.length ? Math.min(...item.pricing.map(p=>Number(p.amount||0))) : Number(item.rate||0)
+      const unit = item.platform==='YouTube' ? 'Video' : item.platform==='Instagram' ? 'Post' : 'Video'
+      arr[idx] = { ...arr[idx], source_name: item.name, base_price: rate, unit, item_type:'KOL', tax_type:'PIT', tax_rate:10 }
+    } else {
+      arr[idx] = { ...arr[idx], source_name: item.name, description: item.services_detail||item.type||'', item_type:'Vendor', tax_type:'VAT', tax_rate:8 }
+    }
+    set('items', arr)
+    setShowPicker(null)
+    setPickerSearch('')
+  }
 
   // Compute totals
   const itemCalcs = form.items.map(calcItem)
@@ -4205,16 +4225,18 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
     } else if (k === 'source_name') {
       // Auto-fill base price from KOL/Vendor DB
       if (arr[i].item_type === 'KOL') {
-        const kol = data.kols.find(k => k.name === v || k.real_name === v)
+        const kol = data.kols.find(x => x.name === v || x.real_name === v)
         if (kol) {
-          arr[i] = { ...arr[i], source_name: v, base_price: kol.rate || 0 }
+          const rate = kol.pricing?.length ? Math.min(...kol.pricing.map(p=>Number(p.amount||0))) : Number(kol.rate||0)
+          const unit = kol.platform==='YouTube' ? 'Video' : kol.platform==='Instagram' ? 'Post' : 'Video'
+          arr[i] = { ...arr[i], source_name: v, base_price: rate, unit }
         } else {
           arr[i] = { ...arr[i], source_name: v }
         }
       } else if (arr[i].item_type === 'Vendor') {
         const vendor = data.vendors.find(vd => vd.name === v)
         if (vendor) {
-          arr[i] = { ...arr[i], source_name: v, base_price: 0 }
+          arr[i] = { ...arr[i], source_name: v, description: vendor.services_detail || vendor.type || '' }
         } else {
           arr[i] = { ...arr[i], source_name: v }
         }
@@ -4268,6 +4290,12 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
       ({ error } = await supabase.from('quotations').insert([payload]))
     }
     if (error) { alert('Lỗi: ' + error.message); setSaving(false); return }
+    // Audit log
+    await supabase.from('audit_log').insert([{
+      message: `[${form.project_id||''}] Quote ${edit?'updated':'created'}: ${form.quote_code} | project: ${form.campaign_name||form.client_name}`,
+      role: 'User', entity_type:'quotation', entity_name:form.quote_code,
+      action: edit?'quote_updated':'quote_created', changes_json:{total:grandTotal,client:form.client_name}
+    }])
     setSaving(false); onSaved(); onClose()
   }
 
@@ -4280,6 +4308,7 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
   const LABEL = { fontSize: 10, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }
 
   return (
+    <>
     <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.65)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}}
       onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
       <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:1000,maxWidth:'98vw',maxHeight:'94vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.18)'}}>
@@ -4368,17 +4397,31 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
                   <div style={{display:'flex',flexDirection:'column',gap:3}}>
                     {item.item_type==='KOL' ? (
                       <>
-                        <input value={item.source_name} onChange={e=>updItem(i,'source_name',e.target.value)}
-                          list={`kol-list-${i}`} style={{...INP_S,fontSize:11,padding:'4px 7px'}} placeholder="Tên KOL..."/>
+                        <div style={{display:'flex',gap:4}}>
+                          <input value={item.source_name} onChange={e=>updItem(i,'source_name',e.target.value)}
+                            list={`kol-list-${i}`} style={{...INP_S,fontSize:11,padding:'4px 7px',flex:1}} placeholder="Tên KOL..."/>
+                          <button type="button" onClick={()=>{setShowPicker({idx:i,type:'KOL'});setPickerSearch('')}}
+                            style={{padding:'4px 8px',borderRadius:6,border:'1px solid rgba(26,86,219,0.25)',background:'rgba(26,86,219,0.08)',color:'#1A56DB',cursor:'pointer',fontSize:10,fontWeight:600,whiteSpace:'nowrap',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                            📋 DS
+                          </button>
+                        </div>
                         <datalist id={`kol-list-${i}`}>{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist>
+                        {(()=>{const kol=data.kols.find(x=>x.name===item.source_name||x.real_name===item.source_name);return kol?(<div style={{fontSize:9,color:'#059669',fontWeight:600,display:'flex',gap:6}}><span>{kol.tier||'—'}</span><span>·</span><span>{Number(kol.followers||0).toLocaleString('vi-VN')} followers</span><span>·</span><span>{kol.platform}</span></div>):null})()}
                         <input value={item.description} onChange={e=>updItem(i,'description',e.target.value)}
                           style={{...INP_S,fontSize:10,padding:'3px 7px',color:'#94A3B8'}} placeholder="Nội dung công việc..."/>
                       </>
                     ) : item.item_type==='Vendor' ? (
                       <>
-                        <input value={item.source_name} onChange={e=>updItem(i,'source_name',e.target.value)}
-                          list={`vd-list-${i}`} style={{...INP_S,fontSize:11,padding:'4px 7px'}} placeholder="Tên NCC..."/>
+                        <div style={{display:'flex',gap:4}}>
+                          <input value={item.source_name} onChange={e=>updItem(i,'source_name',e.target.value)}
+                            list={`vd-list-${i}`} style={{...INP_S,fontSize:11,padding:'4px 7px',flex:1}} placeholder="Tên NCC..."/>
+                          <button type="button" onClick={()=>{setShowPicker({idx:i,type:'Vendor'});setPickerSearch('')}}
+                            style={{padding:'4px 8px',borderRadius:6,border:'1px solid rgba(5,150,105,0.25)',background:'rgba(5,150,105,0.08)',color:'#059669',cursor:'pointer',fontSize:10,fontWeight:600,whiteSpace:'nowrap',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                            📋 DS
+                          </button>
+                        </div>
                         <datalist id={`vd-list-${i}`}>{data.vendors.map(v=><option key={v.id} value={v.name}/>)}</datalist>
+                        {(()=>{const vd=data.vendors.find(x=>x.name===item.source_name);return vd?(<div style={{fontSize:9,color:'#059669',fontWeight:600}}>{vd.type||''}{vd.price_range?` · ${vd.price_range}`:''}</div>):null})()}
                         <input value={item.description} onChange={e=>updItem(i,'description',e.target.value)}
                           style={{...INP_S,fontSize:10,padding:'3px 7px',color:'#94A3B8'}} placeholder="Mô tả dịch vụ..."/>
                       </>
@@ -4548,6 +4591,54 @@ function QuotationForm({data, supabase, edit, onClose, onSaved}) {
         </form>
       </div>
     </div>
+
+    {/* KOL / Vendor picker modal */}
+
+    {showPicker&&(
+      <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.7)',zIndex:3000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={e=>{if(e.target===e.currentTarget)setShowPicker(null)}}>
+        <div style={{background:'#fff',borderRadius:18,padding:'22px 24px',width:600,maxWidth:'95vw',maxHeight:'80vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 80px rgba(0,0,0,0.2)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <div style={{fontSize:15,fontWeight:800,color:'#0F172A'}}>Chọn {showPicker.type==='KOL'?'KOL / KOC':'Nhà cung cấp'}</div>
+            <button onClick={()=>setShowPicker(null)} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,color:'#94A3B8'}}>×</button>
+          </div>
+          <input value={pickerSearch} onChange={e=>setPickerSearch(e.target.value)} placeholder={`Tìm ${showPicker.type==='KOL'?'KOL...':'vendor...'}`}
+            style={{padding:'8px 12px',border:'1.5px solid rgba(26,86,219,0.15)',borderRadius:9,fontSize:12,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',marginBottom:12}}/>
+          <div style={{overflowY:'auto',flex:1}}>
+            {showPicker.type==='KOL' ? (
+              data.kols.filter(k=>!pickerSearch||k.name?.toLowerCase().includes(pickerSearch.toLowerCase())).map(k=>{
+                const minRate=k.pricing?.length?Math.min(...k.pricing.map(p=>Number(p.amount||0))):Number(k.rate||0)
+                return <div key={k.id} onClick={()=>selectFromPicker(k)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:10,cursor:'pointer',marginBottom:4,border:'1px solid rgba(26,86,219,0.08)',background:'#F8FAFF',transition:'background 0.1s'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(26,86,219,0.08)'} onMouseLeave={e=>e.currentTarget.style.background='#F8FAFF'}>
+                  <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:14,fontWeight:700,flexShrink:0}}>
+                    {(k.name||'K')[0]}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'#0F172A'}}>{k.name}</div>
+                    <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{k.tier||'—'} · {k.platform} · {Number(k.followers||0).toLocaleString('vi-VN')} followers</div>
+                  </div>
+                  <div style={{fontSize:12,fontWeight:800,color:'#1A56DB',textAlign:'right'}}>
+                    {vnd(minRate)}
+                    <div style={{fontSize:9,color:'#94A3B8',fontWeight:400}}>/ {k.platform==='Instagram'?'Post':'Video'}</div>
+                  </div>
+                </div>
+              })
+            ) : (
+              data.vendors.filter(v=>!pickerSearch||v.name?.toLowerCase().includes(pickerSearch.toLowerCase())).map(v=>(
+                <div key={v.id} onClick={()=>selectFromPicker(v)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:10,cursor:'pointer',marginBottom:4,border:'1px solid rgba(5,150,105,0.1)',background:'#F0FDF4',transition:'background 0.1s'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(5,150,105,0.1)'} onMouseLeave={e=>e.currentTarget.style.background='#F0FDF4'}>
+                  <div style={{width:36,height:36,borderRadius:10,background:'rgba(5,150,105,0.15)',display:'flex',alignItems:'center',justifyContent:'center',color:'#059669',fontSize:16,flexShrink:0}}>⬡</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'#0F172A'}}>{v.name}</div>
+                    <div style={{fontSize:10,color:'#94A3B8',marginTop:1}}>{v.type||'—'}{v.price_range?` · ${v.price_range}`:''}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
@@ -5207,6 +5298,11 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   const [notifications, setNotifications] = useState([])
   const [taskDetail, setTaskDetail] = useState(null)
   const [taskComments, setTaskComments] = useState([])
+  const [quotations, setQuotations] = useState([])
+  const [auditLog, setAuditLog] = useState([])
+  const [showQuoteForm, setShowQuoteForm] = useState(false)
+  const [viewQuote, setViewQuote] = useState(null)
+  const [incompleteTasks, setIncompleteTasks] = useState(null)
 
   async function openTaskDetail(task) {
     setTaskDetail(task)
@@ -5218,14 +5314,18 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
   async function loadData() {
     setLoading(true)
-    const [t, a, n] = await Promise.all([
+    const [t, a, n, q, al] = await Promise.all([
       supabase.from('tasks').select('*').eq('project_id', project.id).order('created_at'),
       supabase.from('stage_approvals').select('*').eq('project_id', project.id).order('created_at',{ascending:false}),
       supabase.from('notifications').select('*').eq('data->>project_id', project.id).order('created_at',{ascending:false}).limit(20),
+      supabase.from('quotations').select('*').eq('project_id', project.id).order('created_at',{ascending:false}),
+      supabase.from('audit_log').select('*').ilike('message','%'+project.id+'%').order('created_at',{ascending:false}).limit(50),
     ])
     setTasks(t.data||[])
     setApprovals(a.data||[])
     setNotifications(n.data||[])
+    setQuotations(q.data||[])
+    setAuditLog(al.data||[])
     setLoading(false)
   }
 
@@ -5249,14 +5349,23 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     await loadData()
   }
 
-  async function changeStage(newStage) {
+  async function changeStage(newStage, force=false) {
     // Check if required approvals are done
     const currentStage = project.current_stage||'LEAD'
-    const pendingApprovals = approvals.filter(a=>a.stage===currentStage&&a.status==='Pending')
-    if(pendingApprovals.length > 0) {
-      alert(`⚠️ Còn ${pendingApprovals.length} approval chưa được xử lý ở stage hiện tại!`)
+    const pendingApprovalsList = approvals.filter(a=>a.stage===currentStage&&a.status==='Pending')
+    if(pendingApprovalsList.length > 0) {
+      alert(`⚠️ Còn ${pendingApprovalsList.length} approval chưa được xử lý ở stage hiện tại!`)
       setPendingStageChange(null)
       return
+    }
+
+    // Check incomplete tasks (unless force=true)
+    if(!force) {
+      const undoneTasks = tasks.filter(t=>t.stage===currentStage&&t.status!=='Done')
+      if(undoneTasks.length > 0) {
+        setIncompleteTasks({tasks: undoneTasks, targetStage: newStage})
+        return
+      }
     }
 
     // Special checks
@@ -5275,6 +5384,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       stage_history: [...(project.stage_history||[]), {stage:currentStage, completed_at:new Date().toISOString(), moved_by:currentUser?.name}]
     }).eq('id', project.id)
 
+    // Audit log
+    await supabase.from('audit_log').insert([{
+      message: `[${project.id}] Stage changed: ${currentStage} → ${newStage} | project: ${project.campaign}`,
+      role: currentUser?.name||'User',
+      entity_type:'project', entity_id:project.id, entity_name:project.campaign,
+      action:'stage_changed', changes_json:{from:currentStage,to:newStage,forced:force}
+    }])
+
     await initStageTasks(newStage)
     const updated = {...project, current_stage:newStage}
     onUpdate(updated)
@@ -5282,6 +5399,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     log(`Stage: ${project.campaign} → ${newStage}`)
     setShowStageChange(false)
     setPendingStageChange(null)
+    setIncompleteTasks(null)
     await loadData()
   }
 
@@ -5311,21 +5429,24 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     log(`Task: ${taskData.title}`)
   }
 
-  async function updateTaskStatus(taskId, status) {
-    const updates = {status}
-    if(status==='Done') updates.completed_at = new Date().toISOString()
-    if(status==='Done') {
-      // Calculate if late
-      const task = tasks.find(t=>t.id===taskId)
-      if(task?.due_date) {
-        const due = new Date(task.due_date)
-        const now = new Date()
-        if(now > due) {
-          updates.late_minutes = Math.round((now-due)/60000)
-        }
-      }
+  async function updateTaskStatus(taskId, newStatus) {
+    const task = tasks.find(t=>t.id===taskId)
+    const oldStatus = task?.status||'Todo'
+    const updates = {status:newStatus}
+    if(newStatus==='Done') updates.completed_at = new Date().toISOString()
+    if(newStatus==='Done' && task?.due_date) {
+      const due = new Date(task.due_date)
+      const now = new Date()
+      if(now > due) updates.late_minutes = Math.round((now-due)/60000)
     }
     await supabase.from('tasks').update(updates).eq('id', taskId)
+    // Audit
+    await supabase.from('audit_log').insert([{
+      message: `[${project.id}] Task "${task?.title}" status: ${oldStatus} → ${newStatus} | project: ${project.campaign}`,
+      role: currentUser?.name||'User',
+      entity_type:'task', entity_id:taskId, entity_name:task?.title||'',
+      action:'task_status_changed', changes_json:{from:oldStatus,to:newStatus}
+    }])
     await loadData()
   }
 
@@ -5416,7 +5537,19 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   fontWeight:s.id===viewingStage?900:400,
                   transition:'all 0.15s',
                 }} title={i<=currentStageIdx?`Xem stage: ${s.label}`:(s.label+' — chưa đến')}>
-                  {i<currentStageIdx?'✓':i===currentStageIdx?s.icon:''}
+                  {(()=>{
+                    const stageTasks = tasks.filter(t=>t.stage===s.id)
+                    if(i>currentStageIdx) return <span style={{fontSize:10,opacity:0.5}}>{s.icon}</span>
+                    if(stageTasks.length===0) return i===currentStageIdx?s.icon:'✓'
+                    const allDone = stageTasks.every(t=>t.status==='Done')
+                    const today = new Date().toISOString().slice(0,10)
+                    const hasOverdue = stageTasks.some(t=>t.status!=='Done'&&t.due_date&&t.due_date<today)
+                    const anyInProgress = stageTasks.some(t=>t.status==='In Progress'||t.status==='Review')
+                    if(allDone) return <span style={{color:'#10B981',fontSize:14}}>✓</span>
+                    if(hasOverdue) return <span style={{fontSize:14}}>🔴</span>
+                    if(anyInProgress) return <span style={{fontSize:12}}>🟡</span>
+                    return <span style={{fontSize:12}}>⚪</span>
+                  })()}
                 </div>
                 {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<currentStageIdx?'#059669':'rgba(255,255,255,0.1)',margin:'0 2px'}}/>}
               </div>
@@ -5426,7 +5559,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
         {/* Tabs */}
         <div style={{background:'rgba(255,255,255,0.7)',borderBottom:'1px solid rgba(26,86,219,0.1)',padding:'0 28px',display:'flex',gap:0,flexShrink:0}}>
-          {[['overview','Tổng quan'],['tasks','Tasks'],['approvals','Approvals'],['kpi','KPIs'],['activity','Activity']].map(([id,label])=>(
+          {[['overview','Tổng quan'],['tasks','Tasks'],['approvals','Approvals'],['quotations','Báo giá'],['kpi','KPIs'],['history','Lịch sử']].map(([id,label])=>(
             <button key={id} onClick={()=>setActiveTab(id)} style={{
               padding:'12px 18px',border:'none',background:'transparent',cursor:'pointer',
               fontSize:12,fontWeight:activeTab===id?700:500,
@@ -5504,6 +5637,21 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                 approvals={approvals} currentUser={currentUser}
                 onRequest={isViewingPastStage?()=>{}:requestApproval} onResolve={isViewingPastStage?()=>{}:resolveApproval}
               />
+
+              {/* Báo giá liên quan */}
+              {quotations.length>0&&(
+                <div style={{background:'#FFFFFF',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(26,86,219,0.12)',marginTop:12}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                    <div style={{fontSize:12,fontWeight:800,color:'#0F172A'}}>💰 Báo giá liên quan ({quotations.length})</div>
+                    <button onClick={()=>setActiveTab('quotations')} style={{fontSize:11,color:'#1A56DB',background:'none',border:'none',cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xem tất cả →</button>
+                  </div>
+                  <div style={{display:'flex',gap:12}}>
+                    <div><div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}}>Tổng giá trị</div><div style={{fontSize:14,fontWeight:900,color:'#1A56DB'}}>{vnd(quotations.reduce((a,q)=>a+Number(q.total||0),0))}</div></div>
+                    <div><div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}}>Đã gửi</div><div style={{fontSize:14,fontWeight:900,color:'#F59E0B'}}>{quotations.filter(q=>q.status==='Sent'||q.status==='Accepted').length}</div></div>
+                    <div><div style={{fontSize:9,fontWeight:700,color:'#94A3B8',textTransform:'uppercase'}}>Chấp thuận</div><div style={{fontSize:14,fontWeight:900,color:'#10B981'}}>{quotations.filter(q=>q.status==='Accepted').length}</div></div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -5527,14 +5675,52 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
             />
           )}
 
+          {/* QUOTATIONS TAB */}
+          {!loading&&activeTab==='quotations'&&(
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Báo giá dự án</div>
+                <button onClick={()=>setShowQuoteForm(true)} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#1A56DB,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>+ Tạo báo giá mới</button>
+              </div>
+              {quotations.length===0&&<div style={{textAlign:'center',padding:'28px 0',color:'#94A3B8',fontSize:12}}>Chưa có báo giá nào cho dự án này.</div>}
+              {quotations.map(q=>(
+                <div key={q.id} style={{background:'#FFFFFF',borderRadius:12,padding:'14px 16px',marginBottom:8,border:'1px solid #E2E8F0',display:'flex',alignItems:'center',gap:12}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:800,color:'#1A56DB'}}>{q.quote_code}</div>
+                    <div style={{fontSize:11,color:'#475569',marginTop:2}}>{q.client_name} · {q.campaign_name||'—'}</div>
+                    <div style={{fontSize:11,color:'#94A3B8',marginTop:2}}>{q.created_at?.slice(0,10)}</div>
+                  </div>
+                  <div style={{fontSize:14,fontWeight:900,color:'#0F172A'}}>{vnd(q.total)}</div>
+                  <span style={{padding:'3px 10px',borderRadius:99,fontSize:10,fontWeight:700,background:q.status==='Accepted'?'rgba(16,185,129,0.1)':q.status==='Draft'?'rgba(148,163,184,0.1)':'rgba(245,158,11,0.1)',color:q.status==='Accepted'?'#10B981':q.status==='Draft'?'#94A3B8':'#F59E0B'}}>{q.status}</span>
+                  <button onClick={()=>setViewQuote(q)} style={{padding:'5px 12px',borderRadius:7,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#374151',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xem</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* KPI TAB */}
           {!loading&&activeTab==='kpi'&&(
             <KPITab tasks={tasks} project={project} data={data}/>
           )}
 
-          {/* ACTIVITY TAB */}
-          {!loading&&activeTab==='activity'&&(
-            <ActivityTab notifications={notifications} project={project}/>
+          {/* HISTORY TAB */}
+          {!loading&&activeTab==='history'&&(
+            <div>
+              <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>📋 Lịch sử thay đổi</div>
+              {auditLog.length===0&&<div style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có lịch sử nào</div>}
+              {auditLog.map((entry,i)=>{
+                const actionColor={stage_changed:'#1A56DB',task_status_changed:'#10B981',contract_created:'#7C3AED',quote_created:'#F59E0B'}[entry.action]||'#94A3B8'
+                const actionIcon={stage_changed:'🔄',task_status_changed:'✅',contract_created:'📄',quote_created:'💰'}[entry.action]||'📝'
+                return <div key={entry.id||i} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #F1F5F9'}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',background:actionColor+'15',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>{actionIcon}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11.5,fontWeight:600,color:'#0F172A'}}>{entry.role||'System'}</div>
+                    <div style={{fontSize:11,color:'#64748B',marginTop:2}}>{entry.message?.split('|').pop()?.trim()||entry.message}</div>
+                    <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{entry.created_at?new Date(entry.created_at).toLocaleString('vi-VN'):''}</div>
+                  </div>
+                </div>
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -5598,6 +5784,35 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       )}
 
       {taskDetail&&<TaskDetailPanel task={taskDetail} comments={taskComments} supabase={supabase} currentUser={currentUser} onClose={()=>setTaskDetail(null)} onUpdate={()=>{}}/>}
+
+      {/* Incomplete tasks blocking modal */}
+      {incompleteTasks&&(
+        <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,background:'rgba(0,0,0,0.4)'}}>
+          <div style={{background:'#FFFFFF',borderRadius:18,padding:'24px 28px',width:480,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)',border:'1px solid #E2E8F0'}}>
+            <div style={{fontSize:15,fontWeight:800,color:'#DC2626',marginBottom:8}}>⚠️ Tasks chưa hoàn thành</div>
+            <div style={{fontSize:12,color:'#475569',marginBottom:12}}>Còn <strong>{incompleteTasks.tasks.length}</strong> task chưa Done trong stage hiện tại:</div>
+            <div style={{maxHeight:180,overflowY:'auto',marginBottom:14}}>
+              {incompleteTasks.tasks.map(t=>(
+                <div key={t.id} style={{display:'flex',justifyContent:'space-between',padding:'6px 10px',borderRadius:7,marginBottom:4,background:'rgba(239,68,68,0.05)',border:'1px solid rgba(239,68,68,0.12)'}}>
+                  <span style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{t.title}</span>
+                  <span style={{fontSize:10,color:'#94A3B8'}}>{t.assigned_to||'Unassigned'} · {t.status}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:11,color:'#64748B',marginBottom:14}}>Bạn có muốn tiếp tục chuyển sang <strong>{STAGES.find(s=>s.id===incompleteTasks.targetStage)?.label}</strong>?</div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setIncompleteTasks(null)} style={{flex:1,padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Quay lại hoàn thành task</button>
+              {(currentUser?.isMaster||(currentUser?.role||'').toLowerCase().includes('director'))&&(
+                <button onClick={()=>{setShowStageChange(false);setPendingStageChange(null);changeStage(incompleteTasks.targetStage,true)}} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#DC2626,#EF4444)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Bắt buộc chuyển</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quotation form from project */}
+      {showQuoteForm&&<QuotationForm data={data} supabase={supabase} edit={null} prefill={{project_id:project.id,client_name:project.client,campaign_name:project.campaign}} onClose={()=>setShowQuoteForm(false)} onSaved={()=>{loadData();setShowQuoteForm(false)}}/>}
+      {viewQuote&&<QuotationPreview quote={viewQuote} onClose={()=>setViewQuote(null)} onStatusChange={async(status)=>{await supabase.from('quotations').update({status}).eq('id',viewQuote.id);loadData();setViewQuote({...viewQuote,status})}}/>}
     </div>
   )
 }
