@@ -359,11 +359,39 @@ export default function App(){
   const [authReady,setAuthReady]=useState(false)
   const [prefill,setPrefill]=useState(null)
 
+  const [notifs, setNotifs] = useState([])
+  const [showNotifs, setShowNotifs] = useState(false)
+  const unreadCount = notifs.filter(n=>!n.is_read).length
+
+  async function loadNotifs(user) {
+    const u = user || currentUser
+    if(!u?.email) return
+    const {data:rows} = await supabase.from('notifications').select('*').eq('recipient_email',u.email).order('created_at',{ascending:false}).limit(30)
+    setNotifs(rows||[])
+  }
+
+  async function markAllRead() {
+    if(!currentUser?.email) return
+    await supabase.from('notifications').update({is_read:true}).eq('recipient_email',currentUser.email).eq('is_read',false)
+    setNotifs(prev=>prev.map(n=>({...n,is_read:true})))
+  }
+
+  async function initStorage() {
+    const buckets = ['kol-documents','contracts','invoices']
+    for(const bucket of buckets){
+      const {error} = await supabase.storage.getBucket(bucket)
+      if(error) await supabase.storage.createBucket(bucket,{public:true,fileSizeLimit:10485760})
+    }
+  }
+
   useEffect(()=>{
     const stored = localStorage.getItem('kk_session')
-    if(stored){try{setCurrentUser(JSON.parse(stored))}catch(e){}}
+    let parsedUser = null
+    if(stored){try{parsedUser=JSON.parse(stored);setCurrentUser(parsedUser)}catch(e){}}
     setAuthReady(true)
+    initStorage()
     loadAll()
+    if(parsedUser) loadNotifs(parsedUser)
     function handleNavigate(e){
       if(e.detail?.page){setPage(e.detail.page);setPrefill(e.detail.prefill||null)}
     }
@@ -537,6 +565,40 @@ export default function App(){
             <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'#F8FAFC',border:'1px solid #E2E8F0',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setPage('approval')}>
               <span style={{fontSize:15,color:'#64748B',lineHeight:1}}>○</span>
               {pending>0&&<div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:'#EF4444'}}/>}
+            </div>
+            {/* Notification Bell */}
+            <div style={{position:'relative'}}>
+              <div style={{position:'relative',cursor:'pointer',width:34,height:34,borderRadius:9,background:'#F8FAFC',border:'1px solid #E2E8F0',display:'flex',alignItems:'center',justifyContent:'center'}}
+                onClick={()=>{setShowNotifs(v=>!v);loadNotifs()}}>
+                <span style={{fontSize:16,lineHeight:1}}>🔔</span>
+                {unreadCount>0&&<div style={{position:'absolute',top:-4,right:-4,minWidth:16,height:16,borderRadius:99,background:'#EF4444',color:'#fff',fontSize:9,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 4px',border:'2px solid #fff'}}>{unreadCount>9?'9+':unreadCount}</div>}
+              </div>
+              {showNotifs&&(
+                <div style={{position:'absolute',top:42,right:0,width:360,maxHeight:480,overflowY:'auto',background:'#fff',border:'1px solid #E2E8F0',borderRadius:14,boxShadow:'0 8px 32px rgba(0,0,0,0.12)',zIndex:2000}}>
+                  <div style={{padding:'12px 16px',borderBottom:'1px solid #F1F5F9',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'#0F172A'}}>Thông báo</span>
+                    {unreadCount>0&&<button onClick={markAllRead} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:'#3B82F6',fontWeight:600,padding:0}}>Đánh dấu tất cả đã đọc</button>}
+                  </div>
+                  {notifs.length===0&&<div style={{padding:'24px 16px',textAlign:'center',color:'#94A3B8',fontSize:12}}>Không có thông báo</div>}
+                  {notifs.map(n=>(
+                    <div key={n.id} style={{padding:'10px 16px',borderBottom:'1px solid #F8FAFC',background:n.is_read?'#fff':'rgba(59,130,246,0.04)',cursor:'pointer'}}
+                      onClick={async()=>{
+                        if(!n.is_read){await supabase.from('notifications').update({is_read:true}).eq('id',n.id);setNotifs(prev=>prev.map(x=>x.id===n.id?{...x,is_read:true}:x))}
+                        setShowNotifs(false)
+                      }}>
+                      <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+                        <span style={{fontSize:18,flexShrink:0}}>{n.type==='TASK_ASSIGNED'?'📋':n.type==='APPROVAL'?'✅':'💬'}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:n.is_read?500:700,color:'#0F172A',marginBottom:2}}>{n.title}</div>
+                          <div style={{fontSize:11,color:'#64748B',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.message}</div>
+                          <div style={{fontSize:9,color:'#94A3B8',marginTop:3}}>{new Date(n.created_at).toLocaleString('vi-VN')}</div>
+                        </div>
+                        {!n.is_read&&<div style={{width:7,height:7,borderRadius:'50%',background:'#3B82F6',flexShrink:0,marginTop:4}}/>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderRadius:9,background:'#F8FAFC',border:'1px solid #E2E8F0'}}>
               <div style={{width:24,height:24,borderRadius:7,background:`linear-gradient(135deg,${currentUser?.avatar_color||'#3B82F6'},#0EA5E9)`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:800}}>
@@ -1000,11 +1062,13 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
   const [sort,setSort]=useState({field:'start_date',dir:'desc'})
   const [projClient, setProjClient] = useState('')
   const [projClientLinked, setProjClientLinked] = useState(false)
+  const [newClientFields, setNewClientFields] = useState({tax_code:'',address:'',contact_person:'',phone:'',email:''})
 
   useEffect(()=>{
     const name = edit?.client||''
     setProjClient(name)
     setProjClientLinked(!!name && data.clients.some(c=>c.name?.toLowerCase()===name.toLowerCase()))
+    setNewClientFields({tax_code:'',address:'',contact_person:'',phone:'',email:''})
   },[edit, showAdd])
 
   const {list:accessProjects, hidden:hiddenProjects} = filterByAccess(data.projects, currentUser, 'projects', data.projects)
@@ -1012,12 +1076,18 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
 
   async function save(e){
     e.preventDefault();const fd=new FormData(e.target)
-    const r={project_code:fd.get('code'),client:projClient,campaign:fd.get('campaign'),service:fd.get('service'),pm:fd.get('pm'),budget_plan:Number(fd.get('budget_plan')||0),actual_cost:Number(fd.get('actual_cost')||0),revenue:Number(fd.get('revenue')||0),start_date:fd.get('start_date')||null,end_date:fd.get('end_date')||null,status:fd.get('status'),kols:fd.get('kols').split(',').map(s=>s.trim()).filter(Boolean),vendors:fd.get('vendors').split(',').map(s=>s.trim()).filter(Boolean),notes:fd.get('notes')}
-    edit?await upd('projects',edit.id,r):await add('projects',r)
-    if(!edit && projClient && !data.clients.some(c=>c.name?.toLowerCase()===projClient.toLowerCase())) {
-      await supabase.from('clients').insert([{name:projClient,since:new Date().toISOString().slice(0,10),source:'Auto-created from project'}])
+    let clientId = data.clients.find(c=>c.name?.toLowerCase()===projClient.toLowerCase())?.id || null
+    if(!edit && projClient && !clientId) {
+      const {data:newClient} = await supabase.from('clients').insert([{
+        name:projClient, since:new Date().toISOString().slice(0,10), source:'Auto-created from project',
+        tax_code:newClientFields.tax_code||null, address:newClientFields.address||null,
+        contact_person:newClientFields.contact_person||null, phone:newClientFields.phone||null, email:newClientFields.email||null
+      }]).select().single()
+      clientId = newClient?.id || null
       await reload()
     }
+    const r={project_code:fd.get('code'),client:projClient,client_id:clientId,campaign:fd.get('campaign'),service:fd.get('service'),pm:fd.get('pm'),budget_plan:Number(fd.get('budget_plan')||0),actual_cost:Number(fd.get('actual_cost')||0),revenue:Number(fd.get('revenue')||0),start_date:fd.get('start_date')||null,end_date:fd.get('end_date')||null,status:fd.get('status'),kols:fd.get('kols').split(',').map(s=>s.trim()).filter(Boolean),vendors:fd.get('vendors').split(',').map(s=>s.trim()).filter(Boolean),notes:fd.get('notes')}
+    edit?await upd('projects',edit.id,r):await add('projects',r)
     log((edit?'Cập nhật':'Thêm')+': '+r.campaign);setEdit(null);setShowAdd(false)
   }
   const totRev=filtered.reduce((a,p)=>a+Number(p.revenue||0),0)
@@ -1082,9 +1152,21 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
           <FG label="Client">
             <input name="client" value={projClient} onChange={e=>{const v=e.target.value;setProjClient(v);setProjClientLinked(!!v&&data.clients.some(c=>c.name?.toLowerCase()===v.toLowerCase()))}} list="cl-list-proj" required {...inp()}/>
             <datalist id="cl-list-proj">{data.clients.map(c=><option key={c.id} value={c.name}/>)}</datalist>
-            {projClient&&<div style={{fontSize:10,marginTop:3,fontWeight:600,color:projClientLinked?'#10B981':'#F59E0B'}}>{projClientLinked?'✓ Đã liên kết với khách hàng':'+ Sẽ tạo khách hàng mới'}</div>}
+            {projClient&&<div style={{fontSize:10,marginTop:3,fontWeight:600,color:projClientLinked?'#10B981':'#F59E0B'}}>{projClientLinked?'✓ Đã liên kết với khách hàng':'⚡ Khách hàng mới — sẽ được tạo tự động'}</div>}
           </FG>
         </Row2>
+        {projClient && !projClientLinked && (
+          <div style={{marginBottom:14,padding:'12px 14px',background:'rgba(245,158,11,0.06)',borderRadius:10,border:'1px solid rgba(245,158,11,0.25)'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#92400E',marginBottom:10}}>Thông tin khách hàng mới (tuỳ chọn)</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <FG label="Mã số thuế"><input value={newClientFields.tax_code} onChange={e=>setNewClientFields(p=>({...p,tax_code:e.target.value}))} placeholder="MST..." {...inp()}/></FG>
+              <FG label="Người liên hệ"><input value={newClientFields.contact_person} onChange={e=>setNewClientFields(p=>({...p,contact_person:e.target.value}))} placeholder="Họ tên..." {...inp()}/></FG>
+              <FG label="Số điện thoại"><input value={newClientFields.phone} onChange={e=>setNewClientFields(p=>({...p,phone:e.target.value}))} placeholder="0909..." {...inp()}/></FG>
+              <FG label="Email"><input value={newClientFields.email} onChange={e=>setNewClientFields(p=>({...p,email:e.target.value}))} placeholder="email@..." type="email" {...inp()}/></FG>
+            </div>
+            <FG label="Địa chỉ"><input value={newClientFields.address} onChange={e=>setNewClientFields(p=>({...p,address:e.target.value}))} placeholder="Địa chỉ công ty..." {...inp()}/></FG>
+          </div>
+        )}
         <FG label="Campaign Name"><input name="campaign" defaultValue={edit?.campaign||''} required {...inp()}/></FG>
         <Row2><FG label="Service"><select name="service" defaultValue={edit?.service||'KOL/KOC'} {...inp()}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select></FG><FG label="PM"><select name="pm" defaultValue={edit?.pm||''} {...inp()}><option value="">—</option>{data.team.map(t=><option key={t.id}>{t.name}</option>)}</select></FG></Row2>
         <Row2><FG label="Budget Plan (VND)"><input name="budget_plan" type="number" defaultValue={edit?.budget_plan||0} {...inp()}/></FG><FG label="Actual Cost (VND)"><input name="actual_cost" type="number" defaultValue={edit?.actual_cost||0} {...inp()}/></FG></Row2>
@@ -4337,6 +4419,25 @@ function numWords(n) {
 // QUOTATION FORM & PREVIEW — Full pricing logic
 // ════════════════════════════════════════════════════════════
 
+function getPricing(sourceType, sourceName, platform, data) {
+  if(sourceType === 'KOL') {
+    const kol = data.kols.find(k => k.name === sourceName || k.real_name === sourceName)
+    if(!kol) return null
+    if(kol.pricing?.length) {
+      const match = platform ? kol.pricing.find(p => p.platform?.toLowerCase() === platform?.toLowerCase()) : null
+      if(match) return Number(match.amount||0)
+      return Math.min(...kol.pricing.map(p => Number(p.amount||0)))
+    }
+    return Number(kol.rate||0) || null
+  }
+  if(sourceType === 'Vendor') {
+    const vendor = data.vendors.find(v => v.name === sourceName)
+    if(!vendor) return null
+    return Number(vendor.min_price||vendor.rate||0) || null
+  }
+  return null
+}
+
 const TAX_TYPES = ['PIT','VAT']
 const TAX_RATES = [0, 5, 8, 10]
 
@@ -4667,10 +4768,24 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                   <div style={{position:'relative'}}>
                     <input type="text" value={fmtNum(item.base_price)} onChange={e=>updItem(i,'base_price',Number(parseNum(e.target.value)))}
                       style={{...INP_S,fontSize:11,padding:'6px 7px',textAlign:'right',
-                        background: item.item_type==='KOL'&&item.source_name?'rgba(5,150,105,0.06)':'#fff',
-                        borderColor: item.item_type==='KOL'&&item.source_name?'rgba(5,150,105,0.3)':'rgba(26,86,219,0.12)',
+                        background: (item.item_type==='KOL'||item.item_type==='Vendor')&&item.source_name?'rgba(5,150,105,0.06)':'#fff',
+                        borderColor: (item.item_type==='KOL'||item.item_type==='Vendor')&&item.source_name?'rgba(5,150,105,0.3)':'rgba(26,86,219,0.12)',
                       }}/>
-                    {item.item_type==='KOL'&&item.source_name&&<div style={{position:'absolute',right:5,top:2,fontSize:8,color:'#059669',fontWeight:700}}>🔒</div>}
+                    {(()=>{
+                      if(!item.source_name||(item.item_type!=='KOL'&&item.item_type!=='Vendor')) return null
+                      const dbPrice = getPricing(item.item_type, item.source_name, null, data)
+                      if(dbPrice===null) return null
+                      const synced = Number(item.base_price)===dbPrice
+                      return (
+                        <div style={{marginTop:2}}>
+                          <div style={{fontSize:8,color:synced?'#059669':'#D97706',fontWeight:700}}>DB: {vnd(dbPrice)}{synced?' ✓':''}</div>
+                          {!synced&&<button type="button" onClick={()=>updItem(i,'base_price',dbPrice)}
+                            style={{fontSize:8,padding:'1px 6px',borderRadius:4,border:'1px solid rgba(26,86,219,0.3)',background:'rgba(26,86,219,0.08)',color:'#1A56DB',cursor:'pointer',fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",marginTop:1}}>
+                            Sync giá từ DB
+                          </button>}
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {/* Loại thuế */}
@@ -5633,11 +5748,15 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     }
     // Send notification if assigned
     if(taskData.assigned_to && taskData.assigned_to !== editTask?.assigned_to) {
-      const member = data.team.find(m=>m.name===taskData.assigned_to)
-      if(member?.email) {
+      let recipientEmail = data.team.find(m=>m.name===taskData.assigned_to)?.email
+      if(!recipientEmail) {
+        const {data:acct} = await supabase.from('team_accounts').select('email').eq('name',taskData.assigned_to).single()
+        recipientEmail = acct?.email
+      }
+      if(recipientEmail) {
         await sendNotification(supabase, {
-          recipient_email: member.email,
-          recipient_name: member.name,
+          recipient_email: recipientEmail,
+          recipient_name: taskData.assigned_to,
           type: 'TASK_ASSIGNED',
           title: `Task mới được assign: ${taskData.title}`,
           message: `Bạn được assign task "${taskData.title}" trong dự án "${project.campaign}". Deadline: ${taskData.due_date||'Chưa có'}`,
