@@ -55,7 +55,7 @@ function vnd(n){return Number(n||0).toLocaleString('vi-VN')+' đ'}
 const fmtNum = fmt
 const parseNum = (v) => String(v||'').replace(/\./g,'').replace(/[^\d]/g,'')
 
-const INP = {style:{width:'100%',padding:'8px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
+const INP = {style:{width:'100%',padding:'10px 14px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:13,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
 
 function Card({title,children,action,glow}){
   return <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 22px',marginBottom:16,position:'relative',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
@@ -75,13 +75,13 @@ function Btn({children,onClick,primary,sm,danger,ghost,type,style:s}){
   return<button type={type||'button'} onClick={onClick} style={{...base,background:'#F8FAFC',color:'#374151',border:'1px solid #E2E8F0'}}>{children}</button>
 }
 
-function FG({label,children}){return<div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:700,color:'#94A3B8',marginBottom:5,display:'block',letterSpacing:'0.07em',textTransform:'uppercase'}}>{label}</label>{children}</div>}
+function FG({label,children}){return<div style={{marginBottom:14}}><label style={{fontSize:10.5,fontWeight:700,color:'#64748B',marginBottom:5,display:'block',letterSpacing:'0.06em',textTransform:'uppercase'}}>{label}</label>{children}</div>}
 function Row2({children}){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{children}</div>}
 function Empty({children}){return <div style={{textAlign:'center',padding:'28px 0',color:B.textTer,fontSize:12,fontWeight:500}}>{children}</div>}
 
-function Modal({title,children,onClose,wide}){
+function Modal({title,children,onClose,wide,lg}){
   return<div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose?.()}}>
-    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:wide?900:520,maxHeight:'90vh',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
+    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:lg?'min(1100px,97vw)':wide?'min(900px,96vw)':'min(600px,95vw)',maxHeight:'92vh',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
       <div style={{padding:'18px 22px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
         <span style={{fontSize:15,fontWeight:700,color:'#0F172A'}}>{title}</span>
         <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8',fontSize:18,lineHeight:1,padding:4,borderRadius:6}}>×</button>
@@ -419,7 +419,7 @@ export default function App(){
   if(!authReady) return null
   if(!currentUser) return <LoginScreen supabase={supabase} onLogin={handleLogin}/>
 
-  const P={data,add,upd,del,log,reload:loadAll,supabase}
+  const P={data,add,upd,del,log,reload:loadAll,supabase,currentUser}
   const visibleNAV = currentUser?.isMaster ? NAV : NAV.filter(n=>canAccess(n.id))
   const groups=[...new Set(visibleNAV.map(n=>n.grp))]
 
@@ -911,7 +911,85 @@ function Pipeline({data,add,upd,del,log,reload,supabase}){
   )
 }
 
-function Projects({data,add,upd,del,log,reload,supabase}){
+// ── File Upload Component ──────────────────────────────────
+function FileUpload({supabase, bucket, folder, label, accept, maxMB, value, onChange, multiple}) {
+  const [uploading, setUploading] = useState(false)
+  const isImg = url => /\.(jpg|jpeg|png|gif|webp)$/i.test((url||'').split('?')[0])
+  const urls = multiple ? (Array.isArray(value)?value:[]).filter(Boolean) : (value?[value]:[])
+
+  async function handleFile(e) {
+    const files = Array.from(e.target.files); if(!files.length) return
+    setUploading(true)
+    const result = []
+    for(const file of files) {
+      if(maxMB && file.size > maxMB*1024*1024) { alert(`File ${file.name} quá lớn (tối đa ${maxMB}MB)`); continue }
+      const ext = file.name.split('.').pop().toLowerCase()
+      const path = `${folder||'uploads'}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`
+      const {error} = await supabase.storage.from(bucket).upload(path, file, {upsert:true})
+      if(error) { alert('Upload lỗi: '+error.message); continue }
+      const {data:{publicUrl}} = supabase.storage.from(bucket).getPublicUrl(path)
+      result.push(publicUrl)
+    }
+    if(multiple) onChange([...urls, ...result])
+    else if(result.length) onChange(result[0])
+    setUploading(false)
+    e.target.value = ''
+  }
+
+  async function handleDelete(url) {
+    if(!confirm('Xóa file này?')) return
+    const marker = '/storage/v1/object/public/'+bucket+'/'
+    const idx = url.indexOf(marker)
+    if(idx>=0) await supabase.storage.from(bucket).remove([decodeURIComponent(url.slice(idx+marker.length))])
+    if(multiple) onChange(urls.filter(u=>u!==url))
+    else onChange('')
+  }
+
+  return (
+    <div>
+      {urls.map((url,i) => (
+        <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'7px 10px',background:'#F8FAFF',borderRadius:8,border:'1px solid #E2E8F0'}}>
+          {isImg(url)
+            ? <img src={url} alt="" style={{width:44,height:44,objectFit:'cover',borderRadius:6,flexShrink:0}}/>
+            : <span style={{fontSize:20,flexShrink:0}}>📄</span>}
+          <a href={url} target="_blank" rel="noreferrer" style={{fontSize:11,color:'#3B82F6',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0}}>
+            {decodeURIComponent((url.split('/').pop()||url).split('?')[0])}
+          </a>
+          <button type="button" onClick={()=>handleDelete(url)} style={{background:'none',border:'none',cursor:'pointer',color:'#EF4444',fontSize:16,lineHeight:1,padding:2,flexShrink:0}}>×</button>
+        </div>
+      ))}
+      <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:8,border:'1.5px dashed #CBD5E1',cursor:uploading?'not-allowed':'pointer',fontSize:12,color:'#64748B',background:'#FAFAFA',fontWeight:600}}>
+        <span>{uploading?'Đang upload...':'⬆ '+(label||'Chọn file')}</span>
+        <input type="file" style={{display:'none'}} accept={accept||'*'} multiple={!!multiple} onChange={handleFile} disabled={uploading}/>
+      </label>
+    </div>
+  )
+}
+
+// ── Access filter for data security ───────────────────────
+function filterByAccess(items, currentUser, type, projects) {
+  if(!currentUser || currentUser.isMaster) return {list:items, hidden:0}
+  const role = (currentUser.role||'').toLowerCase()
+  if((role.includes('finance')||role.includes('kế toán')) && (type==='invoices'||type==='payments')) {
+    return {list:items, hidden:0}
+  }
+  let filtered = items
+  if(type === 'projects') {
+    filtered = items.filter(p => p.pm === currentUser.name || (Array.isArray(p.team_members)&&p.team_members.includes(currentUser.name)))
+  } else if(type === 'invoices') {
+    const vis = new Set((projects||[]).filter(p=>p.pm===currentUser.name||(Array.isArray(p.team_members)&&p.team_members.includes(currentUser.name))).map(p=>p.client))
+    filtered = items.filter(i => vis.has(i.client))
+  } else if(type === 'contracts') {
+    const vis = new Set((projects||[]).filter(p=>p.pm===currentUser.name||(Array.isArray(p.team_members)&&p.team_members.includes(currentUser.name))).map(p=>p.id))
+    filtered = items.filter(c => !c.project_id || vis.has(c.project_id))
+  } else if(type === 'quotations') {
+    const vis = new Set((projects||[]).filter(p=>p.pm===currentUser.name||(Array.isArray(p.team_members)&&p.team_members.includes(currentUser.name))).map(p=>p.id))
+    filtered = items.filter(q => q.prepared_by===currentUser.name || !q.project_id || vis.has(q.project_id))
+  }
+  return {list:filtered, hidden:items.length - filtered.length}
+}
+
+function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
   const [search,setSearch]=useState('')
   const [stF,setStF]=useState('')
   const [svF,setSvF]=useState('')
@@ -920,11 +998,26 @@ function Projects({data,add,upd,del,log,reload,supabase}){
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'start_date',dir:'desc'})
-  const filtered=applySortDate(applyDateFilter(data.projects.filter(p=>(!search||(p.client+''+p.campaign).toLowerCase().includes(search.toLowerCase()))&&(!stF||p.status===stF)&&(!svF||p.service===svF)),'start_date',dateFrom,dateTo),sort)
+  const [projClient, setProjClient] = useState('')
+  const [projClientLinked, setProjClientLinked] = useState(false)
+
+  useEffect(()=>{
+    const name = edit?.client||''
+    setProjClient(name)
+    setProjClientLinked(!!name && data.clients.some(c=>c.name?.toLowerCase()===name.toLowerCase()))
+  },[edit, showAdd])
+
+  const {list:accessProjects, hidden:hiddenProjects} = filterByAccess(data.projects, currentUser, 'projects', data.projects)
+  const filtered=applySortDate(applyDateFilter(accessProjects.filter(p=>(!search||(p.client+''+p.campaign).toLowerCase().includes(search.toLowerCase()))&&(!stF||p.status===stF)&&(!svF||p.service===svF)),'start_date',dateFrom,dateTo),sort)
+
   async function save(e){
     e.preventDefault();const fd=new FormData(e.target)
-    const r={project_code:fd.get('code'),client:fd.get('client'),campaign:fd.get('campaign'),service:fd.get('service'),pm:fd.get('pm'),budget_plan:Number(fd.get('budget_plan')||0),actual_cost:Number(fd.get('actual_cost')||0),revenue:Number(fd.get('revenue')||0),start_date:fd.get('start_date')||null,end_date:fd.get('end_date')||null,status:fd.get('status'),kols:fd.get('kols').split(',').map(s=>s.trim()).filter(Boolean),vendors:fd.get('vendors').split(',').map(s=>s.trim()).filter(Boolean),notes:fd.get('notes')}
+    const r={project_code:fd.get('code'),client:projClient,campaign:fd.get('campaign'),service:fd.get('service'),pm:fd.get('pm'),budget_plan:Number(fd.get('budget_plan')||0),actual_cost:Number(fd.get('actual_cost')||0),revenue:Number(fd.get('revenue')||0),start_date:fd.get('start_date')||null,end_date:fd.get('end_date')||null,status:fd.get('status'),kols:fd.get('kols').split(',').map(s=>s.trim()).filter(Boolean),vendors:fd.get('vendors').split(',').map(s=>s.trim()).filter(Boolean),notes:fd.get('notes')}
     edit?await upd('projects',edit.id,r):await add('projects',r)
+    if(!edit && projClient && !data.clients.some(c=>c.name?.toLowerCase()===projClient.toLowerCase())) {
+      await supabase.from('clients').insert([{name:projClient,since:new Date().toISOString().slice(0,10),source:'Auto-created from project'}])
+      await reload()
+    }
     log((edit?'Cập nhật':'Thêm')+': '+r.campaign);setEdit(null);setShowAdd(false)
   }
   const totRev=filtered.reduce((a,p)=>a+Number(p.revenue||0),0)
@@ -933,7 +1026,13 @@ function Projects({data,add,upd,del,log,reload,supabase}){
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle'}
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Quản lý dự án</h2><div style={{display:'flex',gap:8}}><ImportBtn module="projects" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Dự án mới</Btn></div></div>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}>
+        <div>
+          <h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Quản lý dự án</h2>
+          {!currentUser?.isMaster && hiddenProjects>0 && <div style={{fontSize:10,color:B.textTer,marginTop:3,fontWeight:600}}>Đang hiển thị {accessProjects.length}/{data.projects.length} dự án được phân công</div>}
+        </div>
+        <div style={{display:'flex',gap:8}}><ImportBtn module="projects" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Dự án mới</Btn></div>
+      </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:18}}>
         {[['Dự án',filtered.length,'',B.primary],['Revenue',fmtS(totRev),'VND',B.accent],['Profit',fmtS(totProfit),'',B.success],['Avg Margin',totRev?Math.round(totProfit/totRev*100)+'%':'—','','#7C3AED']].map(([l,v,s,c])=>(
           <StatCard key={l} label={l} value={v} sub={s} color={c}/>
@@ -977,8 +1076,15 @@ function Projects({data,add,upd,del,log,reload,supabase}){
           </tbody>
         </table>
       </div>
-      {(showAdd||edit)&&<Modal title={edit?'Edit Project':'New Project'} onClose={()=>{setEdit(null);setShowAdd(false)}}><form onSubmit={save}>
-        <Row2><FG label="Project Code"><input name="code" defaultValue={edit?.project_code||'KK-'+String(data.projects.length+1).padStart(3,'0')} {...inp()}/></FG><FG label="Client"><input name="client" defaultValue={edit?.client||''} list="cl-list" required {...inp()}/><datalist id="cl-list">{data.clients.map(c=><option key={c.id}>{c.name}</option>)}</datalist></FG></Row2>
+      {(showAdd||edit)&&<Modal title={edit?'Edit Project':'New Project'} onClose={()=>{setEdit(null);setShowAdd(false)}} wide><form onSubmit={save}>
+        <Row2>
+          <FG label="Project Code"><input name="code" defaultValue={edit?.project_code||'KK-'+String(data.projects.length+1).padStart(3,'0')} {...inp()}/></FG>
+          <FG label="Client">
+            <input name="client" value={projClient} onChange={e=>{const v=e.target.value;setProjClient(v);setProjClientLinked(!!v&&data.clients.some(c=>c.name?.toLowerCase()===v.toLowerCase()))}} list="cl-list-proj" required {...inp()}/>
+            <datalist id="cl-list-proj">{data.clients.map(c=><option key={c.id} value={c.name}/>)}</datalist>
+            {projClient&&<div style={{fontSize:10,marginTop:3,fontWeight:600,color:projClientLinked?'#10B981':'#F59E0B'}}>{projClientLinked?'✓ Đã liên kết với khách hàng':'+ Sẽ tạo khách hàng mới'}</div>}
+          </FG>
+        </Row2>
         <FG label="Campaign Name"><input name="campaign" defaultValue={edit?.campaign||''} required {...inp()}/></FG>
         <Row2><FG label="Service"><select name="service" defaultValue={edit?.service||'KOL/KOC'} {...inp()}><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select></FG><FG label="PM"><select name="pm" defaultValue={edit?.pm||''} {...inp()}><option value="">—</option>{data.team.map(t=><option key={t.id}>{t.name}</option>)}</select></FG></Row2>
         <Row2><FG label="Budget Plan (VND)"><input name="budget_plan" type="number" defaultValue={edit?.budget_plan||0} {...inp()}/></FG><FG label="Actual Cost (VND)"><input name="actual_cost" type="number" defaultValue={edit?.actual_cost||0} {...inp()}/></FG></Row2>
@@ -1075,17 +1181,19 @@ function Pricing({data,add,log}){
   )
 }
 
-function Invoices({data,add,upd,log,reload,supabase}){
+function Invoices({data,add,upd,log,reload,supabase,currentUser}){
   const [filter,setFilter]=useState('')
   const [showAdd,setShowAdd]=useState(false)
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'due_date',dir:'asc'})
-  const invs=applySortDate(applyDateFilter(data.invoices.filter(i=>!filter||i.status===filter),'due_date',dateFrom,dateTo),sort)
+  const [invFiles, setInvFiles] = useState({invoice_file_url:'', payment_proof_url:''})
+  const {list:accessInvoices} = filterByAccess(data.invoices, currentUser, 'invoices', data.projects)
+  const invs=applySortDate(applyDateFilter(accessInvoices.filter(i=>!filter||i.status===filter),'due_date',dateFrom,dateTo),sort)
   const tA=data.invoices.reduce((a,i)=>a+Number(i.amount||0),0)
   const tP=data.invoices.reduce((a,i)=>a+Number(i.paid||0),0)
   const ov=data.invoices.filter(i=>i.status==='Overdue').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
-  async function save(e){e.preventDefault();const fd=new FormData(e.target);const a=Number(fd.get('amount')||0),p=Number(fd.get('paid')||0),d=fd.get('due_date');const od=d&&new Date(d)<new Date()&&p<a;await add('invoices',{invoice_code:'KK-'+String(data.invoices.length+1).padStart(3,'0'),client:fd.get('client'),project:fd.get('project'),amount:a,paid:p,due_date:d||null,status:p>=a?'Paid':od?'Overdue':p>0?'Partial':'Unpaid',notes:fd.get('notes')});log('HĐ: '+fd.get('client'));setShowAdd(false)}
+  async function save(e){e.preventDefault();const fd=new FormData(e.target);const a=Number(fd.get('amount')||0),p=Number(fd.get('paid')||0),d=fd.get('due_date');const od=d&&new Date(d)<new Date()&&p<a;await add('invoices',{invoice_code:'KK-'+String(data.invoices.length+1).padStart(3,'0'),client:fd.get('client'),project:fd.get('project'),amount:a,paid:p,due_date:d||null,status:p>=a?'Paid':od?'Overdue':p>0?'Partial':'Unpaid',notes:fd.get('notes'),invoice_file_url:invFiles.invoice_file_url,payment_proof_url:invFiles.payment_proof_url});log('HĐ: '+fd.get('client'));setInvFiles({invoice_file_url:'',payment_proof_url:''});setShowAdd(false)}
   async function markPaid(inv){const a=Number(prompt('Thu từ '+inv.client+'\nCòn: '+fmt(Number(inv.amount)-Number(inv.paid))+' VND\nSố tiền:',Number(inv.amount)-Number(inv.paid))||0);if(!a)return;const np=Math.min(Number(inv.paid)+a,Number(inv.amount));await upd('invoices',inv.id,{paid:np,status:np>=Number(inv.amount)?'Paid':np>0?'Partial':'Unpaid'});log('Thu: '+fmt(a))}
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
@@ -1125,13 +1233,19 @@ function Invoices({data,add,upd,log,reload,supabase}){
           </tbody>
         </table>
       </div>
-      {showAdd&&<Modal title="New Invoice" onClose={()=>setShowAdd(false)}><form onSubmit={save}>
-        <FG label="Client"><select name="client" {...inp()}><option value="">— Select —</option>{data.clients.map(c=><option key={c.id}>{c.name}</option>)}</select></FG>
-        <FG label="Project"><input name="project" {...inp()}/></FG>
+      {showAdd&&<Modal title="New Invoice" onClose={()=>{setShowAdd(false);setInvFiles({invoice_file_url:'',payment_proof_url:''})}} wide><form onSubmit={save}>
+        <Row2>
+          <FG label="Client"><select name="client" {...inp()}><option value="">— Select —</option>{data.clients.map(c=><option key={c.id}>{c.name}</option>)}</select></FG>
+          <FG label="Project"><input name="project" {...inp()}/></FG>
+        </Row2>
         <Row2><FG label="Amount (VND)"><input name="amount" type="number" required {...inp()}/></FG><FG label="Deposit Paid"><input name="paid" type="number" defaultValue={0} {...inp()}/></FG></Row2>
         <FG label="Due Date"><input name="due_date" type="date" {...inp()}/></FG>
+        <Row2>
+          <FG label="Hóa đơn VAT (PDF)"><FileUpload supabase={supabase} bucket="invoices" folder="vat" label="Upload PDF" accept=".pdf,image/*" maxMB={20} value={invFiles.invoice_file_url} onChange={v=>setInvFiles(p=>({...p,invoice_file_url:v}))}/></FG>
+          <FG label="Chứng từ thanh toán"><FileUpload supabase={supabase} bucket="invoices" folder="proofs" label="Upload ảnh/PDF" accept=".pdf,image/*" maxMB={10} value={invFiles.payment_proof_url} onChange={v=>setInvFiles(p=>({...p,payment_proof_url:v}))}/></FG>
+        </Row2>
         <FG label="Notes"><textarea name="notes" {...inp({style:{...INP.style,minHeight:60}})}/></FG>
-        <MFoot onClose={()=>setShowAdd(false)}/>
+        <MFoot onClose={()=>{setShowAdd(false);setInvFiles({invoice_file_url:'',payment_proof_url:''})}}/>
       </form></Modal>}
     </div>
   )
@@ -1241,12 +1355,14 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'created_at',dir:'desc'})
   const [pricing,setPricing]=useState(KOL_PRICING_DEFAULT())
+  const [kolFiles, setKolFiles] = useState({avatar_url:'',cccd_front_url:'',cccd_back_url:'',contract_files:[]})
 
   useEffect(()=>{
-    if(showAdd){setPricing(KOL_PRICING_DEFAULT())}
+    if(showAdd){setPricing(KOL_PRICING_DEFAULT());setKolFiles({avatar_url:'',cccd_front_url:'',cccd_back_url:'',contract_files:[]})}
     if(edit){
       const p=edit.pricing&&edit.pricing.length?edit.pricing:(edit.rate?[{platform:edit.platform||'TikTok',type:'Video Post',amount:Number(edit.rate||0)}]:KOL_PRICING_DEFAULT())
       setPricing(p)
+      setKolFiles({avatar_url:edit.avatar_url||'',cccd_front_url:edit.cccd_front_url||'',cccd_back_url:edit.cccd_back_url||'',contract_files:edit.contract_files||[]})
     }
   },[edit,showAdd])
 
@@ -1258,7 +1374,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
     e.preventDefault()
     const fd=new FormData(e.target)
     const minRate=pricing.length?Math.min(...pricing.map(p=>Number(p.amount||0))):0
-    const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:minRate,pricing:pricing,avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes'),phone:fd.get('phone'),email:fd.get('email'),cccd:fd.get('cccd'),tax_code:fd.get('tax_code'),address:fd.get('address'),tiktok_url:fd.get('tiktok_url'),instagram_url:fd.get('instagram_url'),youtube_url:fd.get('youtube_url'),facebook_url:fd.get('facebook_url'),audience_age:fd.get('audience_age'),audience_gender:fd.get('audience_gender'),audience_location:fd.get('audience_location'),bank_account:fd.get('bank_account'),bank_name:fd.get('bank_name'),bank_branch:fd.get('bank_branch')}
+    const r={name:fd.get('name'),platform:fd.get('platform'),tier:fd.get('tier'),niche:fd.get('niche'),followers:Number(fd.get('followers')||0),engagement:Number(fd.get('engagement')||0),rate:minRate,pricing:pricing,avg_views:Number(fd.get('avg_views')||0),reliability:Number(fd.get('reliability')||5),available:fd.get('available')==='true',contact:fd.get('contact'),notes:fd.get('notes'),phone:fd.get('phone'),email:fd.get('email'),cccd:fd.get('cccd'),tax_code:fd.get('tax_code'),address:fd.get('address'),tiktok_url:fd.get('tiktok_url'),instagram_url:fd.get('instagram_url'),youtube_url:fd.get('youtube_url'),facebook_url:fd.get('facebook_url'),audience_age:fd.get('audience_age'),audience_gender:fd.get('audience_gender'),audience_location:fd.get('audience_location'),bank_account:fd.get('bank_account'),bank_name:fd.get('bank_name'),bank_branch:fd.get('bank_branch'),avatar_url:kolFiles.avatar_url,cccd_front_url:kolFiles.cccd_front_url,cccd_back_url:kolFiles.cccd_back_url,contract_files:kolFiles.contract_files}
     edit?await upd('kols',edit.id,r):await add('kols',r)
     log('KOL: '+r.name)
     setEdit(null)
@@ -1302,7 +1418,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
           </tbody>
         </table>
       </div>
-      {(showAdd||edit)&&<Modal title={edit?'Edit KOL':'Add KOL / KOC'} onClose={()=>{setEdit(null);setShowAdd(false)}} wide>
+      {(showAdd||edit)&&<Modal title={edit?'Edit KOL':'Add KOL / KOC'} onClose={()=>{setEdit(null);setShowAdd(false)}} lg>
   <form onSubmit={save}>
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0}}>
       <div style={{padding:'0 16px 0 0',borderRight:'1px solid #F1F5F9'}}>
@@ -1358,6 +1474,21 @@ function Kols({data,add,upd,del,log,reload,supabase}){
         <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Thông tin ngân hàng</div>
         <FG label="Số tài khoản"><input name="bank_account" defaultValue={edit?.bank_account||''} {...inp()}/></FG>
         <Row2><FG label="Tên ngân hàng"><input name="bank_name" defaultValue={edit?.bank_name||''} {...inp()}/></FG><FG label="Chi nhánh"><input name="bank_branch" defaultValue={edit?.bank_branch||''} {...inp()}/></FG></Row2>
+        <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Ảnh & Tài liệu</div>
+        <FG label="Ảnh đại diện">
+          <FileUpload supabase={supabase} bucket="kol-documents" folder="avatars" label="Upload ảnh" accept="image/*" maxMB={5} value={kolFiles.avatar_url} onChange={v=>setKolFiles(p=>({...p,avatar_url:v}))}/>
+        </FG>
+        <Row2>
+          <FG label="CCCD mặt trước">
+            <FileUpload supabase={supabase} bucket="kol-documents" folder="cccd" label="Upload ảnh" accept="image/*" maxMB={5} value={kolFiles.cccd_front_url} onChange={v=>setKolFiles(p=>({...p,cccd_front_url:v}))}/>
+          </FG>
+          <FG label="CCCD mặt sau">
+            <FileUpload supabase={supabase} bucket="kol-documents" folder="cccd" label="Upload ảnh" accept="image/*" maxMB={5} value={kolFiles.cccd_back_url} onChange={v=>setKolFiles(p=>({...p,cccd_back_url:v}))}/>
+          </FG>
+        </Row2>
+        <FG label="Hợp đồng / Tài liệu">
+          <FileUpload supabase={supabase} bucket="kol-documents" folder="contracts" label="Upload PDF/ảnh" accept=".pdf,image/*" maxMB={20} value={kolFiles.contract_files} onChange={v=>setKolFiles(p=>({...p,contract_files:v}))} multiple/>
+        </FG>
         <div style={{fontSize:10,fontWeight:800,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #F1F5F9',marginTop:14}}>Ghi chú</div>
         <FG label="Notes"><textarea name="notes" defaultValue={edit?.notes||''} {...inp({style:{...INP.style,minHeight:80}})}/></FG>
       </div>
@@ -1716,11 +1847,11 @@ function genCode(prefix) {
 }
 
 // ── UI Components ─────────────────────────────────────────
-function CModal({title,children,onClose,wide}) {
+function CModal({title,children,onClose,wide,lg}) {
   return (
     <div onClick={e=>{if(e.target===e.currentTarget)onClose()}}
       style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}}>
-      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:wide?880:600,maxWidth:'96vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15)',border:'1px solid rgba(26,86,219,0.1)'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:'100%',maxWidth:lg?'min(1100px,97vw)':wide?'min(920px,96vw)':'min(640px,95vw)',maxHeight:'92vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(26,86,219,0.15)',border:'1px solid rgba(26,86,219,0.1)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
           <span style={{fontSize:16,fontWeight:800,color:CB.navy}}>{title}</span>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:22,color:CB.textTer,lineHeight:1}}>×</button>
@@ -2043,6 +2174,8 @@ function ContractClientForm({data, supabase, edit, prefill, onClose, onSaved}) {
     notes: edit?.notes || prefill?.notes || '',
   })
   const [saving, setSaving] = useState(false)
+  const [clientContractFile, setClientContractFile] = useState(edit?.contract_file_url||'')
+  const [clientAttachments, setClientAttachments] = useState(edit?.attachment_urls||[])
   const set = (k,v) => setForm(p=>({...p,[k]:v}))
 
   useEffect(()=>{
@@ -2093,7 +2226,8 @@ function ContractClientForm({data, supabase, edit, prefill, onClose, onSaved}) {
       vat_rate: Number(form.vat_rate||8), total_with_vat: Number(form.total_with_vat||0),
       payment_terms: form.payment_terms, start_date: form.start_date||null,
       sign_date: form.sign_date||null, sign_location: form.sign_location,
-      status: form.status, notes: form.notes, created_by: 'User'
+      status: form.status, notes: form.notes, created_by: 'User',
+      contract_file_url: clientContractFile, attachment_urls: clientAttachments
     }
     let error
     if(edit) { ({error} = await supabase.from('contracts').update(payload).eq('id',edit.id)) }
@@ -2147,7 +2281,7 @@ function ContractClientForm({data, supabase, edit, prefill, onClose, onSaved}) {
   }
 
   return (
-    <CModal title={edit?'Sửa HĐ Dịch vụ':'Tạo HĐ Dịch vụ — Bên A: Client | Bên B: K&K'} onClose={onClose} wide>
+    <CModal title={edit?'Sửa HĐ Dịch vụ':'Tạo HĐ Dịch vụ — Bên A: Client | Bên B: K&K'} onClose={onClose} lg>
       <form onSubmit={handleSubmit}>
         <CSec title="Thông tin hợp đồng">
           <CRow3>
@@ -2238,6 +2372,17 @@ function ContractClientForm({data, supabase, edit, prefill, onClose, onSaved}) {
           <input type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} style={{...CINP_S,maxWidth:200}}/>
         </CFG>
 
+        <CSec title="File hợp đồng">
+          <CRow2>
+            <CFG label="HĐ đã ký (PDF)">
+              <FileUpload supabase={supabase} bucket="contracts" folder="client-signed" label="Upload PDF" accept=".pdf,image/*" maxMB={20} value={clientContractFile} onChange={setClientContractFile}/>
+            </CFG>
+            <CFG label="Tài liệu đính kèm">
+              <FileUpload supabase={supabase} bucket="contracts" folder="client-attachments" label="Upload file" accept=".pdf,image/*" maxMB={20} value={clientAttachments} onChange={setClientAttachments} multiple/>
+            </CFG>
+          </CRow2>
+        </CSec>
+
         <CMFoot onClose={onClose} label={saving?'Đang lưu...':'Lưu hợp đồng'} onDelete={edit?async()=>{await supabase.from('contracts').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
       </form>
     </CModal>
@@ -2268,6 +2413,10 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
     notes: edit?.notes || '',
   })
   const [saving, setSaving] = useState(false)
+  const [cccdUrls, setCccdUrls] = useState({front:edit?.cccd_front_url||'', back:edit?.cccd_back_url||''})
+  const [includeCccd, setIncludeCccd] = useState(edit?.include_cccd||false)
+  const [contractFileUrl, setContractFileUrl] = useState(edit?.contract_file_url||'')
+  const [attachmentUrls, setAttachmentUrls] = useState(edit?.attachment_urls||[])
   const set = (k,v) => setForm(p=>({...p,[k]:v}))
 
   useEffect(()=>{
@@ -2287,6 +2436,9 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
         party_b_cccd: k.cccd||p.party_b_cccd,
         channels: k.platform||p.channels,
       }))
+      if(k.cccd_front_url || k.cccd_back_url) {
+        setCccdUrls({front:k.cccd_front_url||'', back:k.cccd_back_url||''})
+      }
     }
   }
 
@@ -2311,7 +2463,9 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
       payment_terms: form.payment_terms, start_date: form.start_date||null,
       sign_date: form.sign_date||null,
       sign_location: 'Văn phòng Công Ty TNHH Quảng cáo K&K',
-      status: form.status, notes: form.notes, created_by: 'User'
+      status: form.status, notes: form.notes, created_by: 'User',
+      include_cccd: includeCccd, cccd_front_url: cccdUrls.front, cccd_back_url: cccdUrls.back,
+      contract_file_url: contractFileUrl, attachment_urls: attachmentUrls
     }
     let error
     if(edit) { ({error} = await supabase.from('contracts').update(payload).eq('id',edit.id)) }
@@ -2341,7 +2495,7 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
   }
 
   return (
-    <CModal title={edit?'Sửa HĐ Cộng tác viên':'Tạo HĐ Cộng tác viên — Bên A: K&K | Bên B: KOL'} onClose={onClose} wide>
+    <CModal title={edit?'Sửa HĐ Cộng tác viên':'Tạo HĐ Cộng tác viên — Bên A: K&K | Bên B: KOL'} onClose={onClose} lg>
       <form onSubmit={handleSubmit}>
         <CSec title="Bên A — K&K Advertising (cố định)">
           <div style={{background:'rgba(26,86,219,0.05)',borderRadius:10,padding:'12px 16px',fontSize:12,color:CB.textSec,border:'1px solid rgba(26,86,219,0.1)'}}>
@@ -2379,6 +2533,37 @@ function ContractKOLForm({data, supabase, edit, onClose, onSaved}) {
           <CRow2>
             <CFG label="Số tài khoản"><input value={form.party_b_bank_account} onChange={e=>set('party_b_bank_account',e.target.value)} style={CINP_S}/></CFG>
             <CFG label="Ngân hàng"><input value={form.party_b_bank_name} onChange={e=>set('party_b_bank_name',e.target.value)} style={CINP_S}/></CFG>
+          </CRow2>
+          {(cccdUrls.front||cccdUrls.back) && (
+            <div style={{background:'rgba(26,86,219,0.04)',borderRadius:10,padding:'12px',border:'1px solid rgba(26,86,219,0.1)',marginTop:8}}>
+              <label style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,cursor:'pointer',fontSize:12,fontWeight:600,color:CB.textSec}}>
+                <input type="checkbox" checked={includeCccd} onChange={e=>setIncludeCccd(e.target.checked)} style={{width:15,height:15}}/>
+                Đính kèm ảnh CCCD trong hợp đồng
+              </label>
+              <div style={{display:'flex',gap:12}}>
+                {cccdUrls.front && <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:9,fontWeight:700,color:CB.textTer,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4}}>MẶT TRƯỚC</div>
+                  <img src={cccdUrls.front} alt="" style={{width:130,height:85,objectFit:'cover',borderRadius:6,border:'1px solid #E2E8F0'}}/>
+                  <a href={cccdUrls.front} target="_blank" rel="noreferrer" style={{display:'block',fontSize:10,color:CB.primary,marginTop:3,fontWeight:600}}>Xem</a>
+                </div>}
+                {cccdUrls.back && <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:9,fontWeight:700,color:CB.textTer,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4}}>MẶT SAU</div>
+                  <img src={cccdUrls.back} alt="" style={{width:130,height:85,objectFit:'cover',borderRadius:6,border:'1px solid #E2E8F0'}}/>
+                  <a href={cccdUrls.back} target="_blank" rel="noreferrer" style={{display:'block',fontSize:10,color:CB.primary,marginTop:3,fontWeight:600}}>Xem</a>
+                </div>}
+              </div>
+            </div>
+          )}
+        </CSec>
+
+        <CSec title="File hợp đồng">
+          <CRow2>
+            <CFG label="File HĐ đã ký (PDF)">
+              <FileUpload supabase={supabase} bucket="contracts" folder="kol-signed" label="Upload PDF" accept=".pdf,image/*" maxMB={20} value={contractFileUrl} onChange={setContractFileUrl}/>
+            </CFG>
+            <CFG label="Tài liệu đính kèm">
+              <FileUpload supabase={supabase} bucket="contracts" folder="kol-attachments" label="Upload file" accept=".pdf,image/*" maxMB={20} value={attachmentUrls} onChange={setAttachmentUrls} multiple/>
+            </CFG>
           </CRow2>
         </CSec>
 
@@ -2473,6 +2658,14 @@ function ContractPreview({contract:c, type, onClose}) {
       ${pB.bank?`<p>Số tài khoản: ${pB.bank} &nbsp; Ngân hàng: ${pB.bankName}</p>`:''}
       <p><em>(Sau đây gọi là "Bên B")</em></p>
     </div>
+    ${!isClient && c.include_cccd && (c.cccd_front_url||c.cccd_back_url) ? `
+    <div style="margin:12px 0;padding:10px;border:1px solid #ccc;border-radius:4px;background:#f9f9f9">
+      <div style="font-weight:bold;text-transform:uppercase;margin-bottom:8px;font-size:12px">GIẤY TỜ TÙY THÂN</div>
+      <div style="display:flex;gap:16px">
+        ${c.cccd_front_url?`<div><div style="font-size:11px;color:#666;margin-bottom:4px">CCCD Mặt trước</div><img src="${c.cccd_front_url}" style="width:200px;height:125px;object-fit:cover;border:1px solid #ccc"/></div>`:''}
+        ${c.cccd_back_url?`<div><div style="font-size:11px;color:#666;margin-bottom:4px">CCCD Mặt sau</div><img src="${c.cccd_back_url}" style="width:200px;height:125px;object-fit:cover;border:1px solid #ccc"/></div>`:''}
+      </div>
+    </div>` : ''}
     ${kolTable}
     ${clauses}
     <div class="sig">
@@ -2517,6 +2710,21 @@ function ContractPreview({contract:c, type, onClose}) {
           {pB.bank&&<div>STK: {pB.bank} — {pB.bankName}</div>}
           <div style={{fontSize:12,color:'#666',marginTop:2}}>(Sau đây gọi là "Bên B")</div>
         </div>
+        {!isClient && c.include_cccd && (c.cccd_front_url || c.cccd_back_url) && (
+          <div style={{marginBottom:14,padding:'12px',background:'#f8f9fa',borderRadius:8,border:'1px solid #e0e0e0'}}>
+            <div style={{fontWeight:700,fontSize:13,textTransform:'uppercase',marginBottom:8,letterSpacing:'0.04em'}}>GIẤY TỜ TÙY THÂN</div>
+            <div style={{display:'flex',gap:16}}>
+              {c.cccd_front_url && <div>
+                <div style={{fontSize:11,color:'#64748B',marginBottom:4,fontWeight:600}}>CCCD Mặt trước</div>
+                <img src={c.cccd_front_url} alt="CCCD mặt trước" style={{width:180,height:115,objectFit:'cover',border:'1px solid #ccc',borderRadius:4}}/>
+              </div>}
+              {c.cccd_back_url && <div>
+                <div style={{fontSize:11,color:'#64748B',marginBottom:4,fontWeight:600}}>CCCD Mặt sau</div>
+                <img src={c.cccd_back_url} alt="CCCD mặt sau" style={{width:180,height:115,objectFit:'cover',border:'1px solid #ccc',borderRadius:4}}/>
+              </div>}
+            </div>
+          </div>
+        )}
         {isClient&&kolList.length>0&&(
           <div style={{margin:'12px 0'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
@@ -2661,6 +2869,8 @@ function BBNTForm({contracts, data, supabase, edit, type, prefill, prefillContra
     notes: edit?.notes || prefill?.notes || '',
   })
   const set=(k,v)=>setForm(p=>({...p,[k]:v}))
+  const [bbntFileUrl, setBbntFileUrl] = useState(edit?.bbnt_file_url||'')
+  const [evidenceUrls, setEvidenceUrls] = useState(edit?.evidence_urls||[])
   const selectedContract = contracts.find(c=>c.id===form.contract_id)
 
   useEffect(()=>{
@@ -2692,7 +2902,8 @@ function BBNTForm({contracts, data, supabase, edit, type, prefill, prefillContra
       actual_end_date:form.actual_end_date||null, deliverables:form.deliverables,
       contract_value:Number(form.contract_value||0), accepted_value:Number(form.accepted_value||0),
       paid_amount:Number(form.paid_amount||0), remaining_amount:Number(form.remaining_amount||0),
-      payment_deadline:Number(form.payment_deadline||30), status:form.status, notes:form.notes
+      payment_deadline:Number(form.payment_deadline||30), status:form.status, notes:form.notes,
+      bbnt_file_url:bbntFileUrl, evidence_urls:evidenceUrls
     }
     let error
     if(edit){({error}=await supabase.from('acceptance_reports').update(payload).eq('id',edit.id))}
@@ -2708,7 +2919,7 @@ function BBNTForm({contracts, data, supabase, edit, type, prefill, prefillContra
   }
 
   return (
-    <CModal title={edit?'Sửa BBNT':'Tạo biên bản nghiệm thu'} onClose={onClose} wide>
+    <CModal title={edit?'Sửa BBNT':'Tạo biên bản nghiệm thu'} onClose={onClose} lg>
       <form onSubmit={handleSubmit}>
         <CSec title="Thông tin biên bản">
           <CRow3>
@@ -2773,6 +2984,17 @@ function BBNTForm({contracts, data, supabase, edit, type, prefill, prefillContra
         </CSec>
 
         <CFG label="Ghi chú"><textarea value={form.notes} onChange={e=>set('notes',e.target.value)} style={{...CINP_S,minHeight:60}}/></CFG>
+
+        <CSec title="File biên bản">
+          <CRow2>
+            <CFG label="BBNT đã ký (PDF)">
+              <FileUpload supabase={supabase} bucket="contracts" folder="bbnt-signed" label="Upload PDF" accept=".pdf,image/*" maxMB={20} value={bbntFileUrl} onChange={setBbntFileUrl}/>
+            </CFG>
+            <CFG label="Bằng chứng / Screenshots">
+              <FileUpload supabase={supabase} bucket="contracts" folder="bbnt-evidence" label="Upload ảnh/PDF" accept=".pdf,image/*" maxMB={10} value={evidenceUrls} onChange={setEvidenceUrls} multiple/>
+            </CFG>
+          </CRow2>
+        </CSec>
 
         <CMFoot onClose={onClose} label="Lưu BBNT" onDelete={edit?async()=>{await supabase.from('acceptance_reports').delete().eq('id',edit.id);onSaved();onClose()}:null}/>
       </form>
@@ -3037,7 +3259,7 @@ function LoginScreen({supabase, onLogin}) {
             </button>
           </form>
           <div style={{marginTop:20,padding:'12px 14px',background:'rgba(59,130,246,0.05)',borderRadius:8,fontSize:11,color:'#64748B',textAlign:'center',border:'1px solid #E2E8F0'}}>
-            Tài khoản CEO: <strong style={{color:'#3B82F6'}}>admin@knk.com</strong> / <strong style={{color:'#3B82F6'}}>KnK@2026!</strong>
+            Liên hệ admin để được cấp tài khoản
           </div>
         </div>
       </div>
@@ -4311,7 +4533,7 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
     <>
     <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.65)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}}
       onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:1000,maxWidth:'98vw',maxHeight:'94vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.18)'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:'100%',maxWidth:'min(1100px,98vw)',maxHeight:'95vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.18)'}}>
 
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
