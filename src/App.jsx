@@ -379,8 +379,16 @@ export default function App(){
   async function initStorage() {
     const buckets = ['kol-documents','contracts','invoices']
     for(const bucket of buckets){
-      const {error} = await supabase.storage.getBucket(bucket)
-      if(error) await supabase.storage.createBucket(bucket,{public:true,fileSizeLimit:10485760})
+      const {data:bkt, error} = await supabase.storage.getBucket(bucket)
+      if(bkt) { console.log('[Storage] Bucket OK:', bucket); continue }
+      const msg = error?.message?.toLowerCase()||''
+      if(msg.includes('not found')||msg.includes('does not exist')||error?.status===404||error?.statusCode==='404') {
+        const {error:ce} = await supabase.storage.createBucket(bucket,{public:true,fileSizeLimit:10485760})
+        if(ce) console.warn('[Storage] Create failed:', bucket, ce.message)
+        else console.log('[Storage] Created bucket:', bucket)
+      } else {
+        console.warn('[Storage] getBucket error:', bucket, error?.message)
+      }
     }
   }
 
@@ -986,10 +994,13 @@ function FileUpload({supabase, bucket, folder, label, accept, maxMB, value, onCh
     for(const file of files) {
       if(maxMB && file.size > maxMB*1024*1024) { alert(`File ${file.name} quá lớn (tối đa ${maxMB}MB)`); continue }
       const ext = file.name.split('.').pop().toLowerCase()
-      const path = `${folder||'uploads'}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`
-      const {error} = await supabase.storage.from(bucket).upload(path, file, {upsert:true})
-      if(error) { alert('Upload lỗi: '+error.message); continue }
-      const {data:{publicUrl}} = supabase.storage.from(bucket).getPublicUrl(path)
+      const filePath = `${folder||'uploads'}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`
+      const {error: uploadError} = await supabase.storage.from(bucket).upload(filePath, file, {upsert:true})
+      if(uploadError) { alert(`Upload lỗi (${bucket}/${filePath}): ${uploadError.message}`); continue }
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath)
+      const publicUrl = urlData?.publicUrl
+      console.log('[FileUpload] bucket:', bucket, '| path:', filePath, '| url:', publicUrl)
+      if(!publicUrl) { alert('Không tạo được URL file. Kiểm tra lại bucket: '+bucket); continue }
       result.push(publicUrl)
     }
     if(multiple) onChange([...urls, ...result])
@@ -1012,11 +1023,11 @@ function FileUpload({supabase, bucket, folder, label, accept, maxMB, value, onCh
       {urls.map((url,i) => (
         <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,padding:'7px 10px',background:'#F8FAFF',borderRadius:8,border:'1px solid #E2E8F0'}}>
           {isImg(url)
-            ? <img src={url} alt="" style={{width:44,height:44,objectFit:'cover',borderRadius:6,flexShrink:0}}/>
+            ? <img src={url} alt="" onClick={()=>window.open(url,'_blank')} style={{width:44,height:44,objectFit:'cover',borderRadius:6,flexShrink:0,cursor:'pointer'}}/>
             : <span style={{fontSize:20,flexShrink:0}}>📄</span>}
-          <a href={url} target="_blank" rel="noreferrer" style={{fontSize:11,color:'#3B82F6',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0}}>
+          <span onClick={()=>window.open(url,'_blank')} style={{fontSize:11,color:'#3B82F6',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0,cursor:'pointer',textDecoration:'underline'}}>
             {decodeURIComponent((url.split('/').pop()||url).split('?')[0])}
-          </a>
+          </span>
           <button type="button" onClick={()=>handleDelete(url)} style={{background:'none',border:'none',cursor:'pointer',color:'#EF4444',fontSize:16,lineHeight:1,padding:2,flexShrink:0}}>×</button>
         </div>
       ))}
