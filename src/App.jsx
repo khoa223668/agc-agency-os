@@ -1073,14 +1073,30 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
   const [sort,setSort]=useState({field:'start_date',dir:'desc'})
   const [projClient, setProjClient] = useState('')
   const [projClientLinked, setProjClientLinked] = useState(false)
+  const [projClientObj, setProjClientObj] = useState(null)
   const [newClientFields, setNewClientFields] = useState({tax_code:'',address:'',contact_person:'',phone:'',email:''})
+  const [clientDropOpen, setClientDropOpen] = useState(false)
 
   useEffect(()=>{
     const name = edit?.client||''
     setProjClient(name)
-    setProjClientLinked(!!name && data.clients.some(c=>c.name?.toLowerCase()===name.toLowerCase()))
+    const found = data.clients.find(c=>c.name?.toLowerCase()===name.toLowerCase())
+    setProjClientLinked(!!found)
+    setProjClientObj(found||null)
     setNewClientFields({tax_code:'',address:'',contact_person:'',phone:'',email:''})
   },[edit, showAdd])
+
+  function handleClientInput(v) {
+    setProjClient(v)
+    const found = data.clients.find(c=>c.name?.toLowerCase()===v.toLowerCase())
+    setProjClientLinked(!!found)
+    setProjClientObj(found||null)
+    setClientDropOpen(v.length>0)
+  }
+
+  const clientSuggestions = projClient.length>0
+    ? data.clients.filter(c=>(c.name||'').toLowerCase().includes(projClient.toLowerCase())||(c.tax_code||'').includes(projClient)).slice(0,8)
+    : []
 
   const {list:accessProjects, hidden:hiddenProjects} = filterByAccess(data.projects, currentUser, 'projects', data.projects)
   const filtered=applySortDate(applyDateFilter(accessProjects.filter(p=>(!search||(p.client+''+p.campaign).toLowerCase().includes(search.toLowerCase()))&&(!stF||p.status===stF)&&(!svF||p.service===svF)),'start_date',dateFrom,dateTo),sort)
@@ -1088,14 +1104,26 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
   async function save(e){
     e.preventDefault();const fd=new FormData(e.target)
     let clientId = data.clients.find(c=>c.name?.toLowerCase()===projClient.toLowerCase())?.id || null
-    if(!edit && projClient && !clientId) {
-      const {data:newClient} = await supabase.from('clients').insert([{
-        name:projClient, since:new Date().toISOString().slice(0,10), source:'Auto-created from project',
-        tax_code:newClientFields.tax_code||null, address:newClientFields.address||null,
-        contact_person:newClientFields.contact_person||null, phone:newClientFields.phone||null, email:newClientFields.email||null
-      }]).select().single()
-      clientId = newClient?.id || null
+    const today = new Date().toISOString().slice(0,10)
+    if(projClient && !clientId) {
+      // Check by name + tax_code to avoid duplicates
+      const taxCode = newClientFields.tax_code||null
+      const dupCheck = data.clients.find(c=>c.name?.toLowerCase()===projClient.toLowerCase()||(taxCode&&c.tax_code===taxCode))
+      if(dupCheck) {
+        clientId = dupCheck.id
+      } else {
+        const {data:newClient} = await supabase.from('clients').insert([{
+          name:projClient, since:today, source:'Auto-created from project',
+          tax_code:taxCode, address:newClientFields.address||null,
+          contact_person:newClientFields.contact_person||null, phone:newClientFields.phone||null, email:newClientFields.email||null
+        }]).select().single()
+        clientId = newClient?.id || null
+      }
       await reload()
+    }
+    // Sync client stats on every save
+    if(clientId) {
+      await supabase.from('clients').update({last_project_date:today}).eq('id',clientId)
     }
     const r={project_code:fd.get('code'),client:projClient,client_id:clientId,campaign:fd.get('campaign'),service:fd.get('service'),pm:fd.get('pm'),budget_plan:Number(fd.get('budget_plan')||0),actual_cost:Number(fd.get('actual_cost')||0),revenue:Number(fd.get('revenue')||0),start_date:fd.get('start_date')||null,end_date:fd.get('end_date')||null,status:fd.get('status'),kols:fd.get('kols').split(',').map(s=>s.trim()).filter(Boolean),vendors:fd.get('vendors').split(',').map(s=>s.trim()).filter(Boolean),notes:fd.get('notes')}
     edit?await upd('projects',edit.id,r):await add('projects',r)
@@ -1119,10 +1147,11 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
           <StatCard key={l} label={l} value={v} sub={s} color={c}/>
         ))}
       </div>
-      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
         <input placeholder="Search projects..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:240}})}/>
         <select value={stF} onChange={e=>setStF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Status</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option></select>
         <select value={svF} onChange={e=>setSvF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Services</option><option>KOL/KOC</option><option>Performance</option><option>Creative</option><option>Event</option><option>PR</option><option>Consulting</option></select>
+        {(search||stF||svF)&&<span style={{fontSize:11,color:B.textSec,fontWeight:600,marginLeft:4}}>{filtered.length} kết quả</span>}
       </div>
       <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
@@ -1161,9 +1190,35 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
         <Row2>
           <FG label="Project Code"><input name="code" defaultValue={edit?.project_code||'KK-'+String(data.projects.length+1).padStart(3,'0')} {...inp()}/></FG>
           <FG label="Client">
-            <input name="client" value={projClient} onChange={e=>{const v=e.target.value;setProjClient(v);setProjClientLinked(!!v&&data.clients.some(c=>c.name?.toLowerCase()===v.toLowerCase()))}} list="cl-list-proj" required {...inp()}/>
-            <datalist id="cl-list-proj">{data.clients.map(c=><option key={c.id} value={c.name}/>)}</datalist>
+            <div style={{position:'relative'}}>
+              <input value={projClient} onChange={e=>handleClientInput(e.target.value)} onFocus={()=>setClientDropOpen(projClient.length>0)} onBlur={()=>setTimeout(()=>setClientDropOpen(false),180)} required {...inp()} placeholder="Tìm hoặc nhập tên khách hàng..."/>
+              {clientDropOpen && clientSuggestions.length>0 && (
+                <div style={{position:'absolute',top:'100%',left:0,right:0,background:'#fff',border:'1px solid #E2E8F0',borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',zIndex:100,maxHeight:220,overflowY:'auto'}}>
+                  {clientSuggestions.map(c=>(
+                    <div key={c.id} onMouseDown={()=>{setProjClient(c.name);setProjClientLinked(true);setProjClientObj(c);setClientDropOpen(false)}}
+                      style={{padding:'8px 12px',cursor:'pointer',borderBottom:'1px solid #F8FAFC',fontSize:12}}
+                      onMouseEnter={e=>e.currentTarget.style.background='#F0F9FF'}
+                      onMouseLeave={e=>e.currentTarget.style.background=''}>
+                      <div style={{fontWeight:700,color:'#0F172A'}}>{c.name}</div>
+                      {c.tax_code&&<div style={{fontSize:10,color:'#64748B',marginTop:1}}>MST: {c.tax_code}{c.address?` · ${c.address.slice(0,40)}`:''}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {projClient&&<div style={{fontSize:10,marginTop:3,fontWeight:600,color:projClientLinked?'#10B981':'#F59E0B'}}>{projClientLinked?'✓ Đã liên kết với khách hàng':'⚡ Khách hàng mới — sẽ được tạo tự động'}</div>}
+            {projClientLinked && projClientObj && (
+              <div style={{marginTop:6,padding:'8px 10px',background:'rgba(16,185,129,0.06)',borderRadius:8,border:'1px solid rgba(16,185,129,0.2)',fontSize:11}}>
+                <div style={{fontWeight:700,color:'#065F46',marginBottom:3}}>{projClientObj.name}</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 8px',color:'#064E3B'}}>
+                  {projClientObj.tax_code&&<span>MST: {projClientObj.tax_code}</span>}
+                  {projClientObj.contact_person&&<span>ĐD: {projClientObj.contact_person}</span>}
+                  {projClientObj.phone&&<span>📞 {projClientObj.phone}</span>}
+                  {projClientObj.email&&<span>✉ {projClientObj.email}</span>}
+                  {projClientObj.address&&<span style={{gridColumn:'span 2',color:'#475569'}}>📍 {projClientObj.address}</span>}
+                </div>
+              </div>
+            )}
           </FG>
         </Row2>
         {projClient && !projClientLinked && (
@@ -1505,10 +1560,11 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>KOL / KOC Database</h2><div style={{display:'flex',gap:8}}><ImportBtn module="kols" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Add KOL</Btn></div></div>
-      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:10,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
         <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} {...inp({style:{...INP.style,maxWidth:220}})}/>
         <select value={platF} onChange={e=>setPlatF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Platforms</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Facebook</option></select>
         <select value={tierF} onChange={e=>setTierF(e.target.value)} {...inp({style:{...INP.style,width:'auto'}})}><option value="">All Tiers</option><option>Mega</option><option>Macro</option><option>Mid</option><option>Micro</option><option>Nano/KOC</option></select>
+        {(search||platF||tierF)&&<span style={{fontSize:11,color:B.textSec,fontWeight:600,marginLeft:4}}>{list.length} kết quả</span>}
       </div>
       <div style={{marginBottom:14}}><DateFilterBar from={dateFrom} setFrom={setDateFrom} to={dateTo} setTo={setDateTo}/></div>
       <div style={{background:'#FFFFFF',border:`1px solid #E2E8F0`,borderRadius:14,overflow:'auto'}}>
@@ -2794,6 +2850,8 @@ function ContractPreview({contract:c, type, onClose}) {
       .party-name{font-weight:bold;text-transform:uppercase;margin:10px 0 4px}
       .sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}
       .footer{font-size:11px;color:#666;margin-top:20px;border-top:1px solid #ccc;padding-top:8px}
+      .cccd-section{margin-top:20px;padding:14px;border:1px solid #E2E8F0;border-radius:8px}
+      .cccd-images{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
       @media print{body{margin:20px 25px}}
     </style></head><body>
     <div class="logo">K&K advertising</div>
@@ -2816,12 +2874,12 @@ function ContractPreview({contract:c, type, onClose}) {
       ${pB.bank?`<p>Số tài khoản: ${pB.bank} &nbsp; Ngân hàng: ${pB.bankName}</p>`:''}
       <p><em>(Sau đây gọi là "Bên B")</em></p>
     </div>
-    ${!isClient && c.include_cccd && (c.cccd_front_url||c.cccd_back_url) ? `
-    <div style="margin:12px 0;padding:10px;border:1px solid #ccc;border-radius:4px;background:#f9f9f9">
-      <div style="font-weight:bold;text-transform:uppercase;margin-bottom:8px;font-size:12px">GIẤY TỜ TÙY THÂN</div>
-      <div style="display:flex;gap:16px">
-        ${c.cccd_front_url?`<div><div style="font-size:11px;color:#666;margin-bottom:4px">CCCD Mặt trước</div><img src="${c.cccd_front_url}" style="width:200px;height:125px;object-fit:cover;border:1px solid #ccc"/></div>`:''}
-        ${c.cccd_back_url?`<div><div style="font-size:11px;color:#666;margin-bottom:4px">CCCD Mặt sau</div><img src="${c.cccd_back_url}" style="width:200px;height:125px;object-fit:cover;border:1px solid #ccc"/></div>`:''}
+    ${!isClient && (c.cccd_front_url||c.cccd_back_url) ? `
+    <div class="cccd-section">
+      <h3>GIẤY TỜ TÙY THÂN - BÊN B</h3>
+      <div class="cccd-images">
+        ${c.cccd_front_url?`<div><p><strong>CCCD Mặt trước:</strong></p><img src="${c.cccd_front_url}" style="max-width:280px;border:1px solid #ccc;border-radius:4px"/></div>`:''}
+        ${c.cccd_back_url?`<div><p><strong>CCCD Mặt sau:</strong></p><img src="${c.cccd_back_url}" style="max-width:280px;border:1px solid #ccc;border-radius:4px"/></div>`:''}
       </div>
     </div>` : ''}
     ${kolTable}
@@ -3179,6 +3237,17 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
       <tbody>${dels.map((d,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${d.name}</td><td>${d.link}</td><td>${d.result}</td></tr>`).join('')}
       </tbody></table>` : ''
 
+    const evidenceHtml = (r.evidence_urls||[]).length ? `
+      <h3>Bằng chứng thực hiện / Air links evidence</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px">
+        ${(r.evidence_urls||[]).map((url,i)=>{
+          const isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test((url||'').split('?')[0])
+          return isImg
+            ? `<div style="text-align:center"><img src="${url}" style="max-width:100%;max-height:160px;object-fit:cover;border:1px solid #ccc;border-radius:4px"/><div style="font-size:10px;color:#666;margin-top:3px">Ảnh ${i+1}</div></div>`
+            : `<div style="text-align:center;padding:16px;background:#f5f5f5;border-radius:4px"><div style="font-size:28px">📄</div><a href="${url}" style="font-size:11px;color:#1A56DB">File ${i+1}</a></div>`
+        }).join('')}
+      </div>` : ''
+
     w.document.write(`<html><head><title>${r.report_code}</title>
     <style>body{font-family:'Times New Roman',serif;font-size:13px;margin:40px 50px;color:#000;line-height:1.7}h1{text-align:center;font-size:17px;font-weight:bold;text-transform:uppercase;margin:10px 0 4px}h2{text-align:center;font-size:13px;margin:0 0 12px;font-style:italic}h3{font-size:13px;font-weight:bold;margin:14px 0 6px;text-transform:uppercase}p{margin:5px 0;text-align:justify}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #000;padding:5px 8px;font-size:12px}th{background:#f0f0f0;font-weight:bold;text-align:center}.logo{font-size:20px;font-weight:900;color:#1A56DB;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:16px}.sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}.footer{font-size:11px;color:#666;margin-top:20px;border-top:1px solid #ccc;padding-top:8px}@media print{body{margin:20px 25px}}</style>
     </head><body>
@@ -3205,6 +3274,7 @@ function BBNTPreview({report:r, contract:c, type, onClose}) {
     <p>Bên ${isClient?'B':'A'} đã hoàn thành dịch vụ theo thỏa thuận tại Hợp Đồng và yêu cầu của Bên ${isClient?'A':'B'}.</p>
     <p>Thời gian thực hiện thực tế: ${fmtDate(r.actual_start_date)} đến ${fmtDate(r.actual_end_date)}</p>
     ${delTable}
+    ${evidenceHtml}
     <h3>ĐIỀU 2. ĐIỀU KHOẢN THANH TOÁN</h3>
     <p>- Phí dịch vụ theo Hợp đồng đã ký: <strong>${cfmt(r.contract_value)} đồng</strong></p>
     <p>- Giá trị nghiệm thu: <strong>${cfmt(r.accepted_value)} đồng</strong></p>
@@ -5482,6 +5552,14 @@ const PRIORITY_COLOR = { Urgent:'#DC2626', High:'#F59E0B', Normal:'#1A56DB', Low
 const TASK_STATUS_COLOR = { Todo:'#94A3B8', 'In Progress':'#1A56DB', Review:'#F59E0B', Done:'#059669', Blocked:'#DC2626' }
 const APPROVAL_ROLES = { Finance:'#059669', Director:'#1A56DB', Admin:'#7C3AED', AM:'#F59E0B', PM:'#06B6D4' }
 
+const MEMBER_COLORS = ['#4F8EF7','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#F97316','#EC4899','#14B8A6','#6366F1']
+function getMemberColor(name) {
+  if(!name) return '#94A3B8'
+  let hash = 0
+  for(let i=0; i<name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length]
+}
+
 // ── NOTIFICATION HELPER ──────────────────────────────────
 async function sendNotification(supabase, {recipient_email, recipient_name, type, title, message, data={}, send_email=false}) {
   await supabase.from('notifications').insert([{
@@ -6239,8 +6317,9 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 // ── TASK ROW ─────────────────────────────────────────────
 function TaskRow({task:t, onStatusChange, onEdit, readOnly}) {
   const isLate = t.due_date && new Date(t.due_date)<new Date() && t.status!=='Done'
+  const memberColor = getMemberColor(t.assigned_to)
   return (
-    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9',opacity:readOnly?0.75:1}}>
+    <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9',opacity:readOnly?0.75:1,borderLeft:`3px solid ${memberColor}40`,paddingLeft:8}}>
       {readOnly
         ? <span style={{padding:'3px 10px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,minWidth:60,textAlign:'center',display:'inline-block'}}>{t.status}</span>
         : <select value={t.status} onChange={e=>onStatusChange(t.id,e.target.value)}
@@ -6254,9 +6333,10 @@ function TaskRow({task:t, onStatusChange, onEdit, readOnly}) {
           {t.priority==='Urgent'&&<span style={{width:5,height:5,borderRadius:'50%',background:'#EF4444',flexShrink:0,display:'inline-block'}}/>}
           {t.title}
         </div>
-        <div style={{fontSize:10,color:'#475569',marginTop:1}}>
-          {t.assigned_to||'Unassigned'}
-          {t.due_date&&<span style={{marginLeft:8,color:isLate?'#EF4444':'#475569'}}>{t.due_date}{isLate?' · Late':''}</span>}
+        <div style={{fontSize:10,color:'#475569',marginTop:1,display:'flex',alignItems:'center',gap:5}}>
+          <span style={{width:14,height:14,borderRadius:'50%',background:memberColor,display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:7,fontWeight:800,flexShrink:0}}>{(t.assigned_to||'?').charAt(0).toUpperCase()}</span>
+          <span style={{color:memberColor,fontWeight:600}}>{t.assigned_to||'Unassigned'}</span>
+          {t.due_date&&<span style={{marginLeft:4,color:isLate?'#EF4444':'#94A3B8'}}>{t.due_date}{isLate?' · Late':''}</span>}
         </div>
       </div>
       <span style={{background:(PRIORITY_COLOR[t.priority]||'#94A3B8')+'15',color:PRIORITY_COLOR[t.priority]||'#94A3B8',padding:'2px 8px',borderRadius:99,fontSize:9,fontWeight:700,flexShrink:0}}>{t.priority}</span>
@@ -6665,10 +6745,20 @@ function TaskForm({task, project, data, onSave, onClose, currentStage}) {
             </div>
             <div>
               <label style={{fontSize:11,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Assign cho</label>
-              <select value={form.assigned_to} onChange={e=>set('assigned_to',e.target.value)} style={INP}>
-                <option value="">— Chọn thành viên —</option>
-                {data.team.map(m=><option key={m.id} value={m.name}>{m.name} ({m.role})</option>)}
-              </select>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,padding:'6px 0'}}>
+                {['', ...data.team.map(m=>m.name)].map(name=>{
+                  const color = getMemberColor(name)
+                  const active = form.assigned_to === name
+                  return <div key={name||'__none'} onClick={()=>set('assigned_to',name)}
+                    style={{display:'flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:99,cursor:'pointer',border:`1.5px solid ${active?color:'#E2E8F0'}`,background:active?color+'18':'#F8FAFC',transition:'all 0.12s'}}>
+                    {name
+                      ? <span style={{width:18,height:18,borderRadius:'50%',background:color,display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:800}}>{name.charAt(0)}</span>
+                      : <span style={{fontSize:12}}>—</span>
+                    }
+                    <span style={{fontSize:11,fontWeight:active?700:500,color:active?color:'#374151'}}>{name||'Chưa assign'}</span>
+                  </div>
+                })}
+              </div>
             </div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:13}}>
