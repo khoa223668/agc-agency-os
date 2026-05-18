@@ -54,6 +54,15 @@
 ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.25); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.45); }
 
+@media (max-width: 1024px) {
+  .sidebar-expanded { width: 68px !important; }
+  .sidebar-label { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .modal-content { width: calc(100vw - 16px) !important; max-height: calc(100vh - 16px) !important; }
+}
+
 input, select, textarea {
   color-scheme: light;
   font-family: 'Inter', system-ui, sans-serif;

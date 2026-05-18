@@ -81,7 +81,7 @@ function Empty({children}){return <div style={{textAlign:'center',padding:'28px 
 
 function Modal({title,children,onClose,wide,lg}){
   return<div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose?.()}}>
-    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:lg?'min(1100px,97vw)':wide?'min(900px,96vw)':'min(600px,95vw)',maxHeight:'92vh',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
+    <div style={{background:'#FFFFFF',borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.15)',width:'100%',maxWidth:lg?'min(1100px,97vw)':wide?'min(900px,96vw)':'min(600px,95vw)',maxHeight:'calc(100vh - 32px)',display:'flex',flexDirection:'column',overflow:'hidden',border:'1px solid #E2E8F0'}}>
       <div style={{padding:'18px 22px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
         <span style={{fontSize:15,fontWeight:700,color:'#0F172A'}}>{title}</span>
         <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8',fontSize:18,lineHeight:1,padding:4,borderRadius:6}}>×</button>
@@ -279,7 +279,7 @@ function Payment({data, supabase, reload, log, currentUser}) {
         ))}
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:16}}>
         {[
           ['Tổng phải '+(tab==='thu'?'thu':'chi'),totalAmt,'#3B82F6'],
           ['Đã '+(tab==='thu'?'thu':'chi'),totalPaid,'#10B981'],
@@ -478,7 +478,7 @@ export default function App(){
     <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden',background:'#F8FAFF',fontFamily:"'Inter',system-ui,sans-serif",position:'fixed',inset:0}}>
 
       {/* SIDEBAR */}
-      <div style={{width:sidebarCollapsed?68:235,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'linear-gradient(180deg,#1E3A5F 0%,#1a2d4a 100%)',position:'relative',zIndex:10}}>
+      <div style={{width:sidebarCollapsed?68:240,borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0,transition:'width 0.25s ease',background:'linear-gradient(180deg,#1E3A5F 0%,#1a2d4a 100%)',position:'relative',zIndex:10}}>
         {/* Logo */}
         <div style={{padding:'18px 14px 14px',borderBottom:'1px solid #F1F5F9',display:'flex',alignItems:'center',gap:10,justifyContent:sidebarCollapsed?'center':'flex-start'}}>
           <div style={{width:36,height:36,borderRadius:11,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 4px 16px rgba(59,130,246,0.3)'}}>
@@ -559,7 +559,7 @@ export default function App(){
       </div>
 
       {/* MAIN */}
-      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative',zIndex:1}}>
+      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative',zIndex:1}}>
         {/* Topbar */}
         <div style={{height:52,borderBottom:'1px solid #E2E8F0',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',background:'rgba(255,255,255,0.9)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -620,7 +620,7 @@ export default function App(){
           </div>
         </div>
         {/* Content */}
-        <div style={{flex:1,overflow:'auto',padding:'16px 20px'}}>
+        <div style={{flex:1,minWidth:0,overflowY:'auto',overflowX:'hidden',padding:'16px 20px'}}>
           <style>{`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
             * { box-sizing: border-box; }
@@ -1142,7 +1142,7 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
         </div>
         <div style={{display:'flex',gap:8}}><ImportBtn module="projects" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Dự án mới</Btn></div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:18}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:18}}>
         {[['Dự án',filtered.length,'',B.primary],['Revenue',fmtS(totRev),'VND',B.accent],['Profit',fmtS(totProfit),'',B.success],['Avg Margin',totRev?Math.round(totProfit/totRev*100)+'%':'—','','#7C3AED']].map(([l,v,s,c])=>(
           <StatCard key={l} label={l} value={v} sub={s} color={c}/>
         ))}
@@ -1367,7 +1367,7 @@ function Invoices({data,add,upd,del,log,reload,supabase,currentUser}){
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}><h2 style={{margin:0,fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Hóa đơn & Công nợ</h2><div style={{display:'flex',gap:8}}><ImportBtn module="invoices" data={data} supabase={supabase} reload={reload} log={log}/><Btn primary onClick={()=>setShowAdd(true)}>+ Tạo hóa đơn</Btn></div></div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:18}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:18}}>
         <StatCard label="Tổng HĐ" value={fmtS(tA)} color={B.primary}/>
         <StatCard label="Đã thu" value={fmtS(tP)} color={B.success}/>
         <StatCard label="Còn phải thu" value={fmtS(tA-tP)} color={B.warning}/>
@@ -1672,7 +1672,7 @@ function Kols({data,add,upd,del,log,reload,supabase}){
   </form>
 </Modal>}
       {hist&&<Modal title={'History: '+hist.name} onClose={()=>setHist(null)}>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:18}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10,marginBottom:18}}>
           {[['Campaigns',data.projects.filter(p=>(p.kols||[]).includes(hist.name)).length],['Base Rate',vnd(hist.pricing?.length?Math.min(...hist.pricing.map(p=>Number(p.amount||0))):hist.rate)],['Stars',hist.reliability+'/5']].map(([l,v])=>(
             <div key={l} style={{background:B.gradSoft,borderRadius:12,padding:'12px 14px',border:`1px solid ${B.border}`}}><div style={{fontSize:9,fontWeight:800,color:B.textTer,textTransform:'uppercase',marginBottom:5}}>{l}</div><div style={{fontSize:17,fontWeight:900,color:B.navy}}>{v}</div></div>
           ))}
@@ -1941,7 +1941,7 @@ function Reports({data}){
   return(
     <div>
       <h2 style={{margin:'0 0 20px',fontSize:18,fontWeight:900,color:B.navy,letterSpacing:'-0.03em'}}>Analytics & Reports</h2>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
         <StatCard label="Total Revenue" value={fmtS(tR)} sub="VND" color={B.primary}/>
         <StatCard label="Total Profit" value={fmtS(tPr)} color={B.success}/>
         <StatCard label="Avg Margin" value={mg+'%'} color="#7C3AED"/>
@@ -2284,7 +2284,7 @@ function Contracts({data, supabase, reload, log, prefill, onClearPrefill}) {
         ))}
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:16}}>
         {[
           ['Tổng HĐ', contracts.length],
           ['Draft', contracts.filter(c=>c.status==='Draft').length],
@@ -4485,7 +4485,7 @@ function Quotations({data, supabase, reload, log}) {
         </button>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:14}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:14}}>
         {[['Tổng báo giá',quotes.length,'',B.primary],['Draft',quotes.filter(q=>q.status==='Draft').length,'',B.textTer],['Đã gửi',quotes.filter(q=>q.status==='Sent').length,'',B.warning],['Tổng giá trị',cfmtS(total)+' VND','',B.success]].map(([l,v,s,c])=>(
           <div key={l} style={{background:'rgba(255,255,255,0.9)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(26,86,219,0.1)'}}>
             <div style={{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</div>
@@ -6093,7 +6093,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                 }} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(16,185,129,0.25)',background:'rgba(16,185,129,0.08)',color:'#10B981',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>✅ Order BBNT</button>
               </div>
               {/* KPI cards */}
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
                 {[
                   ['Đang xem stage',viewingStageData.label+' ('+Math.round((viewingStageIdx+1)/STAGES.length*100)+'%)',isViewingPastStage?'Stage đã hoàn thành':'Stage hiện tại',viewingStageData.color],
                   ['Tasks stage này',`${doneTasks}/${stageTasks.length} done (${stageCompletion}%)`,stageTasks.filter(t=>t.status==='In Progress').length+' đang làm','#1A56DB'],
@@ -6638,7 +6638,7 @@ function KPITab({tasks, project, data}) {
               </div>
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10}}>
               {[
                 ['Tasks tổng',kpi.total,'','#94A3B8'],
                 ['Hoàn thành',kpi.done+'/'+kpi.total+' ('+kpi.completionRate+'%)','',kpi.completionRate>=80?'#059669':kpi.completionRate>=50?'#D97706':'#DC2626'],
