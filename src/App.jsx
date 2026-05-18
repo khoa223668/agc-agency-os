@@ -1274,19 +1274,38 @@ function Pricing({data,add,log}){
   )
 }
 
-function Invoices({data,add,upd,log,reload,supabase,currentUser}){
+function Invoices({data,add,upd,del,log,reload,supabase,currentUser}){
   const [filter,setFilter]=useState('')
   const [showAdd,setShowAdd]=useState(false)
+  const [editInv,setEditInv]=useState(null)
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
   const [sort,setSort]=useState({field:'due_date',dir:'asc'})
   const [invFiles, setInvFiles] = useState({invoice_file_url:'', payment_proof_url:''})
+  useEffect(()=>{
+    if(editInv) setInvFiles({invoice_file_url:editInv.invoice_file_url||'',payment_proof_url:editInv.payment_proof_url||''})
+    else setInvFiles({invoice_file_url:'',payment_proof_url:''})
+  },[editInv])
   const {list:accessInvoices} = filterByAccess(data.invoices, currentUser, 'invoices', data.projects)
   const invs=applySortDate(applyDateFilter(accessInvoices.filter(i=>!filter||i.status===filter),'due_date',dateFrom,dateTo),sort)
   const tA=data.invoices.reduce((a,i)=>a+Number(i.amount||0),0)
   const tP=data.invoices.reduce((a,i)=>a+Number(i.paid||0),0)
   const ov=data.invoices.filter(i=>i.status==='Overdue').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
-  async function save(e){e.preventDefault();const fd=new FormData(e.target);const a=Number(fd.get('amount')||0),p=Number(fd.get('paid')||0),d=fd.get('due_date');const od=d&&new Date(d)<new Date()&&p<a;await add('invoices',{invoice_code:'KK-'+String(data.invoices.length+1).padStart(3,'0'),client:fd.get('client'),project:fd.get('project'),amount:a,paid:p,due_date:d||null,status:p>=a?'Paid':od?'Overdue':p>0?'Partial':'Unpaid',notes:fd.get('notes'),invoice_file_url:invFiles.invoice_file_url,payment_proof_url:invFiles.payment_proof_url});log('HĐ: '+fd.get('client'));setInvFiles({invoice_file_url:'',payment_proof_url:''});setShowAdd(false)}
+  function closeForm(){setShowAdd(false);setEditInv(null)}
+  async function save(e){
+    e.preventDefault();const fd=new FormData(e.target)
+    const a=Number(fd.get('amount')||0),p=Number(fd.get('paid')||0),d=fd.get('due_date')
+    const od=d&&new Date(d)<new Date()&&p<a
+    const status=p>=a?'Paid':od?'Overdue':p>0?'Partial':'Unpaid'
+    if(editInv){
+      await upd('invoices',editInv.id,{client:fd.get('client'),project:fd.get('project'),amount:a,paid:p,due_date:d||null,status,notes:fd.get('notes'),invoice_file_url:invFiles.invoice_file_url,payment_proof_url:invFiles.payment_proof_url})
+      log('Cập nhật HĐ: '+fd.get('client'))
+    } else {
+      await add('invoices',{invoice_code:'KK-'+String(data.invoices.length+1).padStart(3,'0'),client:fd.get('client'),project:fd.get('project'),amount:a,paid:p,due_date:d||null,status,notes:fd.get('notes'),invoice_file_url:invFiles.invoice_file_url,payment_proof_url:invFiles.payment_proof_url})
+      log('HĐ: '+fd.get('client'))
+    }
+    closeForm()
+  }
   async function markPaid(inv){const a=Number(prompt('Thu từ '+inv.client+'\nCòn: '+fmt(Number(inv.amount)-Number(inv.paid))+' VND\nSố tiền:',Number(inv.amount)-Number(inv.paid))||0);if(!a)return;const np=Math.min(Number(inv.paid)+a,Number(inv.amount));await upd('invoices',inv.id,{paid:np,status:np>=Number(inv.amount)?'Paid':np>0?'Partial':'Unpaid'});log('Thu: '+fmt(a))}
   const TH={padding:'10px 14px',fontSize:9,fontWeight:800,color:'#374151',borderBottom:`1px solid #E2E8F0`,textAlign:'left',background:'#F1F5F9',textTransform:'uppercase',letterSpacing:'0.06em'}
   const TD={padding:'11px 14px',borderBottom:`1px solid ${B.border}`,verticalAlign:'middle',color:'#1F2937'}
@@ -1320,25 +1339,32 @@ function Invoices({data,add,upd,log,reload,supabase,currentUser}){
               <td style={{...TD,fontSize:11,fontWeight:700,color:Number(i.amount)-Number(i.paid)>0?B.warning:B.success}}>{vnd(Number(i.amount)-Number(i.paid))}</td>
               <td style={{...TD,fontSize:10,color:B.textTer}}>{i.due_date||'—'}</td>
               <td style={TD}><Badge text={i.status}/></td>
-              <td style={TD}><Btn sm onClick={()=>markPaid(i)}>Thu tiền</Btn></td>
+              <td style={TD}>
+                <div style={{display:'flex',gap:4,alignItems:'center',flexWrap:'wrap'}}>
+                  {i.invoice_file_url&&<span title="Hóa đơn VAT" onClick={()=>window.open(i.invoice_file_url,'_blank')} style={{cursor:'pointer',fontSize:14}}>📄</span>}
+                  {i.payment_proof_url&&<span title="Chứng từ TT" onClick={()=>window.open(i.payment_proof_url,'_blank')} style={{cursor:'pointer',fontSize:14}}>🧾</span>}
+                  <Btn sm onClick={()=>markPaid(i)}>Thu tiền</Btn>
+                  <Btn sm onClick={()=>setEditInv(i)}>Sửa</Btn>
+                </div>
+              </td>
             </tr>)}
             {!invs.length&&<tr><td colSpan={9} style={{textAlign:'center',padding:40,color:B.textTer,fontSize:12}}>No invoices</td></tr>}
           </tbody>
         </table>
       </div>
-      {showAdd&&<Modal title="New Invoice" onClose={()=>{setShowAdd(false);setInvFiles({invoice_file_url:'',payment_proof_url:''})}} wide><form onSubmit={save}>
+      {(showAdd||editInv)&&<Modal title={editInv?'Sửa hóa đơn':'New Invoice'} onClose={closeForm} wide><form onSubmit={save}>
         <Row2>
-          <FG label="Client"><select name="client" {...inp()}><option value="">— Select —</option>{data.clients.map(c=><option key={c.id}>{c.name}</option>)}</select></FG>
-          <FG label="Project"><input name="project" {...inp()}/></FG>
+          <FG label="Client"><select name="client" defaultValue={editInv?.client||''} {...inp()}><option value="">— Select —</option>{data.clients.map(c=><option key={c.id}>{c.name}</option>)}</select></FG>
+          <FG label="Project"><input name="project" defaultValue={editInv?.project||''} {...inp()}/></FG>
         </Row2>
-        <Row2><FG label="Amount (VND)"><input name="amount" type="number" required {...inp()}/></FG><FG label="Deposit Paid"><input name="paid" type="number" defaultValue={0} {...inp()}/></FG></Row2>
-        <FG label="Due Date"><input name="due_date" type="date" {...inp()}/></FG>
+        <Row2><FG label="Amount (VND)"><input name="amount" type="number" required defaultValue={editInv?.amount||''} {...inp()}/></FG><FG label="Deposit Paid"><input name="paid" type="number" defaultValue={editInv?.paid||0} {...inp()}/></FG></Row2>
+        <FG label="Due Date"><input name="due_date" type="date" defaultValue={editInv?.due_date||''} {...inp()}/></FG>
         <Row2>
           <FG label="Hóa đơn VAT (PDF)"><FileUpload supabase={supabase} bucket="invoices" folder="vat" label="Upload PDF" accept=".pdf,image/*" maxMB={20} value={invFiles.invoice_file_url} onChange={v=>setInvFiles(p=>({...p,invoice_file_url:v}))}/></FG>
           <FG label="Chứng từ thanh toán"><FileUpload supabase={supabase} bucket="invoices" folder="proofs" label="Upload ảnh/PDF" accept=".pdf,image/*" maxMB={10} value={invFiles.payment_proof_url} onChange={v=>setInvFiles(p=>({...p,payment_proof_url:v}))}/></FG>
         </Row2>
-        <FG label="Notes"><textarea name="notes" {...inp({style:{...INP.style,minHeight:60}})}/></FG>
-        <MFoot onClose={()=>{setShowAdd(false);setInvFiles({invoice_file_url:'',payment_proof_url:''})}}/>
+        <FG label="Notes"><textarea name="notes" defaultValue={editInv?.notes||''} {...inp({style:{...INP.style,minHeight:60}})}/></FG>
+        <MFoot onClose={closeForm} onDelete={editInv?()=>{del('invoices',editInv.id);closeForm()}:null}/>
       </form></Modal>}
     </div>
   )
@@ -1610,9 +1636,15 @@ function Kols({data,add,upd,del,log,reload,supabase}){
       {kolDetail&&(
         <div style={{position:'fixed',top:0,right:0,width:'60vw',height:'100vh',background:'#fff',boxShadow:'-8px 0 40px rgba(0,0,0,0.15)',zIndex:2000,display:'flex',flexDirection:'column'}}>
           <div style={{padding:'20px 24px',borderBottom:'1px solid #E2E8F0',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
-            <div>
-              <div style={{fontSize:18,fontWeight:900,color:'#0F172A'}}>{kolDetail.name}</div>
-              <div style={{fontSize:12,color:'#64748B',marginTop:2}}>{kolDetail.platform} · {kolDetail.tier}</div>
+            <div style={{display:'flex',alignItems:'center',gap:14}}>
+              {kolDetail.avatar_url
+                ? <img src={kolDetail.avatar_url} alt="" onClick={()=>window.open(kolDetail.avatar_url,'_blank')} style={{width:52,height:52,borderRadius:12,objectFit:'cover',border:'2px solid #E2E8F0',cursor:'pointer',flexShrink:0}}/>
+                : <div style={{width:52,height:52,borderRadius:12,background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:20,fontWeight:900,flexShrink:0}}>{(kolDetail.name||'K').charAt(0)}</div>
+              }
+              <div>
+                <div style={{fontSize:18,fontWeight:900,color:'#0F172A'}}>{kolDetail.name}</div>
+                <div style={{fontSize:12,color:'#64748B',marginTop:2}}>{kolDetail.platform} · {kolDetail.tier}</div>
+              </div>
             </div>
             <button onClick={()=>setKolDetail(null)} style={{background:'#F1F5F9',border:'none',cursor:'pointer',width:32,height:32,borderRadius:8,fontSize:18,color:'#64748B',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
           </div>
@@ -1665,6 +1697,37 @@ function Kols({data,add,upd,del,log,reload,supabase}){
               ))}
               {!data.projects.filter(p=>(p.kols||[]).includes(kolDetail.name)).length&&<Empty>Chưa có dự án nào</Empty>}
             </div>
+            {(kolDetail.cccd_front_url||kolDetail.cccd_back_url)&&(
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #E2E8F0',textTransform:'uppercase',letterSpacing:'0.06em'}}>CCCD / CMND</div>
+                <div style={{display:'flex',gap:12}}>
+                  {kolDetail.cccd_front_url&&<div style={{textAlign:'center'}}>
+                    <img src={kolDetail.cccd_front_url} alt="CCCD mặt trước" onClick={()=>window.open(kolDetail.cccd_front_url,'_blank')} style={{width:160,height:100,objectFit:'cover',borderRadius:8,border:'1px solid #E2E8F0',cursor:'pointer'}}/>
+                    <div style={{fontSize:10,color:'#64748B',marginTop:4}}>Mặt trước</div>
+                  </div>}
+                  {kolDetail.cccd_back_url&&<div style={{textAlign:'center'}}>
+                    <img src={kolDetail.cccd_back_url} alt="CCCD mặt sau" onClick={()=>window.open(kolDetail.cccd_back_url,'_blank')} style={{width:160,height:100,objectFit:'cover',borderRadius:8,border:'1px solid #E2E8F0',cursor:'pointer'}}/>
+                    <div style={{fontSize:10,color:'#64748B',marginTop:4}}>Mặt sau</div>
+                  </div>}
+                </div>
+              </div>
+            )}
+            {kolDetail.contract_files?.length>0&&(
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10,paddingBottom:6,borderBottom:'1px solid #E2E8F0',textTransform:'uppercase',letterSpacing:'0.06em'}}>Tài liệu hợp đồng</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                  {kolDetail.contract_files.map((url,i)=>{
+                    const isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test((url||'').split('?')[0])
+                    return <div key={i} onClick={()=>window.open(url,'_blank')} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'#F8FAFF',borderRadius:8,border:'1px solid #E2E8F0'}}>
+                      <span style={{fontSize:16}}>{isImg?'🖼️':'📄'}</span>
+                      <span style={{fontSize:11,color:'#3B82F6',textDecoration:'underline',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {decodeURIComponent((url.split('/').pop()||'').split('?')[0])||`File ${i+1}`}
+                      </span>
+                    </div>
+                  })}
+                </div>
+              </div>
+            )}
             {kolDetail.notes&&<div style={{marginTop:16,padding:'12px 14px',background:'#F8FAFF',borderRadius:10,border:'1px solid #E2E8F0',fontSize:11,color:'#64748B'}}>{kolDetail.notes}</div>}
           </div>
           <div style={{padding:'14px 24px',borderTop:'1px solid #E2E8F0',display:'flex',gap:8,flexShrink:0}}>
@@ -2203,7 +2266,9 @@ function Contracts({data, supabase, reload, log, prefill, onClearPrefill}) {
                 <td style={{...TD,fontWeight:700}}>{vnd(c.total_with_vat)}</td>
                 <td style={{...TD,fontSize:11,color:'#475569'}}>{c.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={c.status}/></td>
-                <td style={{...TD,display:'flex',gap:6}}>
+                <td style={{...TD,display:'flex',gap:6,alignItems:'center'}}>
+                  {c.contract_file_url&&<span title="File HĐ đã ký" onClick={()=>window.open(c.contract_file_url,'_blank')} style={{cursor:'pointer',fontSize:14}}>📄</span>}
+                  {(c.attachment_urls||[]).length>0&&<span title={`${(c.attachment_urls||[]).length} đính kèm`} style={{fontSize:11,color:'#94A3B8'}}>+{(c.attachment_urls||[]).length}</span>}
                   <CBtn sm onClick={()=>setViewItem({contract:c,type:tab})}>Xem</CBtn>
                   <CBtn sm onClick={()=>{setEditItem(c);setShowForm(true)}}>Sửa</CBtn>
                 </td>
@@ -2928,7 +2993,9 @@ function AcceptanceReports({data, supabase, reload, log, prefill, onClearPrefill
                 <td style={{...TD,fontWeight:700,color:Number(r.remaining_amount)>0?'#F59E0B':'#10B981'}}>{vnd(r.remaining_amount)}</td>
                 <td style={{...TD,fontSize:11,color:'#475569'}}>{r.sign_date||'—'}</td>
                 <td style={TD}><CBadge text={r.status}/></td>
-                <td style={{...TD,display:'flex',gap:6}}>
+                <td style={{...TD,display:'flex',gap:6,alignItems:'center'}}>
+                  {r.bbnt_file_url&&<span title="File BBNT" onClick={()=>window.open(r.bbnt_file_url,'_blank')} style={{cursor:'pointer',fontSize:14}}>📄</span>}
+                  {(r.evidence_urls||[]).length>0&&<span title={`${(r.evidence_urls||[]).length} bằng chứng`} onClick={()=>window.open(r.evidence_urls[0],'_blank')} style={{cursor:'pointer',fontSize:14}}>🖼️</span>}
                   <CBtn sm onClick={()=>setViewItem({report:r,contract:ct,type:tab})}>Xem</CBtn>
                   <CBtn sm onClick={()=>{setEditItem(r);setShowForm(true)}}>Sửa</CBtn>
                 </td>
