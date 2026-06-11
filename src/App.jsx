@@ -421,7 +421,11 @@ export default function App(){
   async function loadAll(){
     setLoading(true)
     const tables=['projects','clients','kols','team','invoices','deals','deal_history','vendors','approvals']
-    const res=await Promise.all(tables.map(t=>supabase.from(t).select('*').order('created_at',{ascending:false})))
+    const res=await Promise.all(tables.map(t=>
+      supabase.from(t).select('*').order('created_at',{ascending:false})
+        .then(r=>{ if(r.error){console.error('[loadAll] Failed table:',t,r.error.message)} return r })
+        .catch(e=>{ console.error('[loadAll] Network error on table:',t,e.message); return {data:null} })
+    ))
     setData({projects:res[0].data||[],clients:res[1].data||[],kols:res[2].data||[],team:res[3].data||[],invoices:res[4].data||[],deals:res[5].data||[],dealHistory:res[6].data||[],vendors:res[7].data||[],approvals:res[8].data||[]})
     setLoading(false)
   }
@@ -890,7 +894,7 @@ function Dashboard({ data, setPage, currentUser }) {
       {/* Meetings Widget */}
       <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 22px',marginBottom:16}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-          <div style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>📅 Cuộc họp tuần này</div>
+          <div style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>Cuộc họp tuần này</div>
           <button onClick={()=>setShowMeetingForm(true)} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>+ Thêm</button>
         </div>
         {meetings.length===0&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Không có cuộc họp nào trong 7 ngày tới</div>}
@@ -902,8 +906,8 @@ function Dashboard({ data, setPage, currentUser }) {
             </div>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:12,color:'#0F172A',marginBottom:2}}>{m.title}</div>
-              <div style={{fontSize:11,color:'#64748B'}}>{m.meeting_time&&`${m.meeting_time} · `}{m.location&&`📍 ${m.location}`}</div>
-              {m.attendees&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>👥 {m.attendees}</div>}
+              <div style={{fontSize:11,color:'#64748B'}}>{m.meeting_time&&`${m.meeting_time} · `}{m.location&&m.location}</div>
+              {m.attendees&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{m.attendees}</div>}
             </div>
           </div>
         ))}
