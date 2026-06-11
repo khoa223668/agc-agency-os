@@ -4836,7 +4836,7 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
   }
 
   const INP_S = {
-    width: '100%', padding: '7px 10px',
+    width: '100%', padding: '8px 12px',
     border: '1.5px solid rgba(26,86,219,0.12)', borderRadius: 7,
     fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif",
     background: '#fff', color: '#0F172A', outline: 'none', boxSizing: 'border-box'
@@ -4847,7 +4847,7 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
     <>
     <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.65)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,backdropFilter:'blur(4px)'}}
       onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:'100%',maxWidth:'min(1100px,98vw)',maxHeight:'95vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.18)'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'24px 28px',width:'100%',maxWidth:'min(1400px,98vw)',maxHeight:'95vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.18)'}}>
 
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingBottom:14,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
@@ -4909,10 +4909,12 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
               <div style={{fontSize:10,color:'#DC2626',fontWeight:600,textTransform:'none',letterSpacing:0}}>⚠️ Markup % BẮT BUỘC cho tất cả hạng mục (điền 0 nếu không mark up)</div>
             </div>
 
+            <div style={{overflowX:'auto',borderRadius:8,border:'1px solid rgba(26,86,219,0.08)'}}>
+            <div style={{minWidth:1270}}>
             {/* Table header */}
-            <div style={{display:'grid',gridTemplateColumns:'110px 1fr 60px 80px 110px 90px 70px 80px 100px 110px 110px 36px',gap:4,marginBottom:4}}>
+            <div style={{display:'grid',gridTemplateColumns:'120px 180px 90px 70px 130px 120px 80px 110px 100px 120px 110px 40px',gap:6,borderBottom:'1px solid rgba(26,86,219,0.1)'}}>
               {['Loại','Mô tả / Nguồn','ĐV','SL','Giá gốc (locked)','Loại thuế','Thuế%','Giá sau thuế','Markup% *','Giá bán','VAT amount',''].map(h=>(
-                <div key={h} style={{fontSize:9,fontWeight:800,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.04em',padding:'4px 6px',background:'rgba(248,250,255,0.9)',borderRadius:5,textAlign:h.includes('Giá')||h.includes('VAT')||h.includes('SL')||h.includes('Thuế%')||h.includes('Markup')?'right':'left'}}>{h}</div>
+                <div key={h} style={{fontSize:9,fontWeight:800,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.04em',padding:'6px 8px',background:'rgba(248,250,255,0.95)',textAlign:h.includes('Giá')||h.includes('VAT')||h.includes('SL')||h.includes('Thuế%')||h.includes('Markup')?'right':'left'}}>{h}</div>
               ))}
             </div>
 
@@ -4921,11 +4923,11 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
               const missingMarkup = markupError && (item.markup === '' || item.markup === null || item.markup === undefined)
               const rowBg = i % 2 === 0 ? '#fff' : '#F8FAFF'
               return (
-                <div key={i} style={{display:'grid',gridTemplateColumns:'110px 1fr 60px 80px 110px 90px 70px 80px 100px 110px 110px 36px',gap:4,marginBottom:5,padding:'6px 0',background:rowBg,borderRadius:8,border:missingMarkup?'1.5px solid #DC2626':'1px solid rgba(26,86,219,0.06)'}}>
+                <div key={i} style={{display:'grid',gridTemplateColumns:'120px 180px 90px 70px 130px 120px 80px 110px 100px 120px 110px 40px',gap:6,minHeight:52,alignItems:'center',padding:'4px 8px',background:missingMarkup?'rgba(220,38,38,0.02)':rowBg,borderBottom:missingMarkup?'1.5px solid #DC2626':'1px solid rgba(26,86,219,0.05)'}}>
 
                   {/* Loại: KOL / Vendor / Service */}
                   <select value={item.item_type} onChange={e=>updItem(i,'item_type',e.target.value)}
-                    style={{...INP_S,fontSize:11,padding:'6px 7px',background:item.item_type==='KOL'?'rgba(26,86,219,0.06)':item.item_type==='Vendor'?'rgba(5,150,105,0.06)':'rgba(124,58,237,0.06)'}}>
+                    style={{...INP_S,fontSize:11,background:item.item_type==='KOL'?'rgba(26,86,219,0.06)':item.item_type==='Vendor'?'rgba(5,150,105,0.06)':'rgba(124,58,237,0.06)'}}>
                     <option>KOL</option><option>Vendor</option><option>Service</option>
                   </select>
 
@@ -4935,7 +4937,7 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                       <>
                         <div style={{display:'flex',gap:4}}>
                           <input value={item.source_name} onChange={e=>updItem(i,'source_name',e.target.value)}
-                            list={`kol-list-${i}`} style={{...INP_S,fontSize:11,padding:'4px 7px',flex:1}} placeholder="Tên KOL..."/>
+                            list={`kol-list-${i}`} style={{...INP_S,fontSize:11,flex:1}} placeholder="Tên KOL..."/>
                           <button type="button" onClick={()=>{setShowPicker({idx:i,type:'KOL'});setPickerSearch('')}}
                             style={{padding:'4px 8px',borderRadius:6,border:'1px solid rgba(26,86,219,0.25)',background:'rgba(26,86,219,0.08)',color:'#1A56DB',cursor:'pointer',fontSize:10,fontWeight:600,whiteSpace:'nowrap',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                             📋 DS
@@ -4944,13 +4946,13 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                         <datalist id={`kol-list-${i}`}>{data.kols.map(k=><option key={k.id} value={k.name}/>)}</datalist>
                         {(()=>{const kol=data.kols.find(x=>x.name===item.source_name||x.real_name===item.source_name);return kol?(<div style={{fontSize:9,color:'#059669',fontWeight:600,display:'flex',gap:6}}><span>{kol.tier||'—'}</span><span>·</span><span>{Number(kol.followers||0).toLocaleString('vi-VN')} followers</span><span>·</span><span>{kol.platform}</span></div>):null})()}
                         <input value={item.description} onChange={e=>updItem(i,'description',e.target.value)}
-                          style={{...INP_S,fontSize:10,padding:'3px 7px',color:'#94A3B8'}} placeholder="Nội dung công việc..."/>
+                          style={{...INP_S,fontSize:10,padding:'5px 8px',color:'#94A3B8'}} placeholder="Nội dung công việc..."/>
                       </>
                     ) : item.item_type==='Vendor' ? (
                       <>
                         <div style={{display:'flex',gap:4}}>
                           <input value={item.source_name} onChange={e=>updItem(i,'source_name',e.target.value)}
-                            list={`vd-list-${i}`} style={{...INP_S,fontSize:11,padding:'4px 7px',flex:1}} placeholder="Tên NCC..."/>
+                            list={`vd-list-${i}`} style={{...INP_S,fontSize:11,flex:1}} placeholder="Tên NCC..."/>
                           <button type="button" onClick={()=>{setShowPicker({idx:i,type:'Vendor'});setPickerSearch('')}}
                             style={{padding:'4px 8px',borderRadius:6,border:'1px solid rgba(5,150,105,0.25)',background:'rgba(5,150,105,0.08)',color:'#059669',cursor:'pointer',fontSize:10,fontWeight:600,whiteSpace:'nowrap',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                             📋 DS
@@ -4959,28 +4961,28 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                         <datalist id={`vd-list-${i}`}>{data.vendors.map(v=><option key={v.id} value={v.name}/>)}</datalist>
                         {(()=>{const vd=data.vendors.find(x=>x.name===item.source_name);return vd?(<div style={{fontSize:9,color:'#059669',fontWeight:600}}>{vd.type||''}{vd.price_range?` · ${vd.price_range}`:''}</div>):null})()}
                         <input value={item.description} onChange={e=>updItem(i,'description',e.target.value)}
-                          style={{...INP_S,fontSize:10,padding:'3px 7px',color:'#94A3B8'}} placeholder="Mô tả dịch vụ..."/>
+                          style={{...INP_S,fontSize:10,padding:'5px 8px',color:'#94A3B8'}} placeholder="Mô tả dịch vụ..."/>
                       </>
                     ) : (
                       <input value={item.description} onChange={e=>updItem(i,'description',e.target.value)}
-                        style={{...INP_S,fontSize:11,padding:'6px 7px'}} placeholder="Mô tả dịch vụ..."/>
+                        style={{...INP_S,fontSize:11}} placeholder="Mô tả dịch vụ..."/>
                     )}
                   </div>
 
                   {/* ĐV */}
-                  <select value={item.unit} onChange={e=>updItem(i,'unit',e.target.value)} style={{...INP_S,fontSize:10,padding:'6px 4px'}}>
+                  <select value={item.unit} onChange={e=>updItem(i,'unit',e.target.value)} style={{...INP_S,fontSize:10}}>
                     <option>Video</option><option>Post</option><option>Story</option><option>Live</option>
                     <option>Campaign</option><option>Gói</option><option>Tháng</option><option>Người</option>
                   </select>
 
                   {/* SL */}
                   <input type="number" min={1} value={item.qty} onChange={e=>updItem(i,'qty',Number(e.target.value))}
-                    style={{...INP_S,fontSize:11,padding:'6px 7px',textAlign:'right'}}/>
+                    style={{...INP_S,fontSize:11,textAlign:'right'}}/>
 
                   {/* Giá gốc - LOCKED */}
                   <div style={{position:'relative'}}>
                     <input type="text" value={fmtNum(item.base_price)} onChange={e=>updItem(i,'base_price',Number(parseNum(e.target.value)))}
-                      style={{...INP_S,fontSize:11,padding:'6px 7px',textAlign:'right',
+                      style={{...INP_S,fontSize:11,textAlign:'right',
                         background: (item.item_type==='KOL'||item.item_type==='Vendor')&&item.source_name?'rgba(5,150,105,0.06)':'#fff',
                         borderColor: (item.item_type==='KOL'||item.item_type==='Vendor')&&item.source_name?'rgba(5,150,105,0.3)':'rgba(26,86,219,0.12)',
                       }}/>
@@ -5003,7 +5005,7 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
 
                   {/* Loại thuế */}
                   <select value={item.tax_type} onChange={e=>updItem(i,'tax_type',e.target.value)}
-                    style={{...INP_S,fontSize:11,padding:'6px 4px',
+                    style={{...INP_S,fontSize:11,
                       background:item.tax_type==='PIT'?'rgba(217,119,6,0.07)':'rgba(26,86,219,0.06)',
                       color:item.tax_type==='PIT'?'#92400E':'#1A56DB',fontWeight:600}}>
                     <option value="PIT">PIT (CTV)</option>
@@ -5012,12 +5014,12 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
 
                   {/* Thuế suất */}
                   <select value={item.tax_rate} onChange={e=>updItem(i,'tax_rate',Number(e.target.value))}
-                    style={{...INP_S,fontSize:11,padding:'6px 4px',textAlign:'right'}}>
+                    style={{...INP_S,fontSize:11,textAlign:'right'}}>
                     {TAX_RATES.map(r=><option key={r} value={r}>{r}%</option>)}
                   </select>
 
                   {/* Giá sau thuế (computed, readonly) */}
-                  <div style={{padding:'6px 7px',fontSize:11,fontWeight:600,color:'#475569',textAlign:'right',
+                  <div style={{padding:'8px 10px',fontSize:11,fontWeight:600,color:'#475569',textAlign:'right',
                     background:'rgba(248,250,252,0.8)',borderRadius:7,border:'1px solid rgba(26,86,219,0.08)',
                     display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
                     {vnd(Math.round(calc.priceAfterTax))}
@@ -5029,7 +5031,7 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                       value={item.markup}
                       onChange={e=>updItem(i,'markup',e.target.value===''?'':Number(e.target.value))}
                       placeholder="0"
-                      style={{...INP_S,fontSize:12,padding:'6px 7px',textAlign:'right',fontWeight:700,
+                      style={{...INP_S,fontSize:12,textAlign:'right',fontWeight:700,
                         borderColor:missingMarkup?'#DC2626':item.markup!==''?'rgba(5,150,105,0.4)':'rgba(26,86,219,0.12)',
                         background:missingMarkup?'rgba(220,38,38,0.05)':item.markup!==''?'rgba(5,150,105,0.05)':'#fff',
                       }}/>
@@ -5037,14 +5039,14 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                   </div>
 
                   {/* Giá bán (computed) */}
-                  <div style={{padding:'6px 7px',fontSize:12,fontWeight:800,color:'#1A56DB',textAlign:'right',
+                  <div style={{padding:'8px 10px',fontSize:12,fontWeight:800,color:'#1A56DB',textAlign:'right',
                     background:'rgba(26,86,219,0.06)',borderRadius:7,border:'1px solid rgba(26,86,219,0.15)',
                     display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
                     {item.markup!==''?vnd(Math.round(calc.lineBeforeVAT)):'—'}
                   </div>
 
                   {/* VAT amount */}
-                  <div style={{padding:'6px 7px',fontSize:11,fontWeight:600,
+                  <div style={{padding:'8px 10px',fontSize:11,fontWeight:600,
                     color:item.tax_type==='VAT'&&item.tax_rate>0?'#7C3AED':'#94A3B8',textAlign:'right',
                     background:item.tax_type==='VAT'&&item.tax_rate>0?'rgba(124,58,237,0.06)':'rgba(248,250,252,0.5)',
                     borderRadius:7,border:'1px solid rgba(26,86,219,0.06)',
@@ -5058,6 +5060,8 @@ function QuotationForm({data, supabase, edit, prefill, onClose, onSaved}) {
                 </div>
               )
             })}
+            </div>
+            </div>
 
             <button type="button" onClick={addItem}
               style={{marginTop:6,padding:'7px 16px',borderRadius:8,border:'1.5px dashed rgba(26,86,219,0.3)',background:'transparent',color:'#1A56DB',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
