@@ -497,22 +497,22 @@ export default function App(){
   const log = async (msg) => { await supabase.from('audit_log').insert([{message:msg,role:'User'}]) }
 
   const NAV=[
-    {id:'dashboard',label:'Dashboard',grp:'BUSINESS DEV'},
-    {id:'pipeline',label:'Deal Pipeline',grp:'BUSINESS DEV'},
-    {id:'workflow',label:'Công việc',grp:'OPERATIONS'},
-    {id:'projects',label:'Dự án',grp:'OPERATIONS'},
-    {id:'pricing',label:'Dự toán chi phí',grp:'OPERATIONS'},
-    {id:'quotations',label:'Báo giá',grp:'OPERATIONS'},
-    {id:'contracts',label:'Hợp đồng',grp:'LEGAL & FINANCE'},
-    {id:'bbnt',label:'Biên bản NT',grp:'LEGAL & FINANCE'},
-    {id:'invoices',label:'Hóa đơn',grp:'LEGAL & FINANCE'},
-    {id:'payment',label:'Thanh toán',grp:'LEGAL & FINANCE'},
-    {id:'approval',label:'Approvals',grp:'LEGAL & FINANCE'},
+    {id:'dashboard',label:'Dashboard',grp:'TỔNG QUAN'},
+    {id:'pipeline',label:'Deal Pipeline',grp:'ACQUIRE'},
+    {id:'projects',label:'Dự án',grp:'EXECUTE'},
+    {id:'workflow',label:'Công việc',grp:'EXECUTE'},
+    {id:'kols',label:'KOL / KOC',grp:'EXECUTE'},
+    {id:'quotations',label:'Báo giá',grp:'FINANCE'},
+    {id:'contracts',label:'Hợp đồng',grp:'FINANCE'},
+    {id:'invoices',label:'Hóa đơn',grp:'FINANCE'},
+    {id:'payment',label:'Thanh toán',grp:'FINANCE'},
+    {id:'pricing',label:'Dự toán chi phí',grp:'FINANCE'},
+    {id:'bbnt',label:'Biên bản NT',grp:'REVIEW'},
+    {id:'approval',label:'Approvals',grp:'REVIEW'},
+    {id:'reports',label:'Analytics',grp:'REVIEW'},
     {id:'clients',label:'Clients',grp:'DATABASE'},
-    {id:'kols',label:'KOL / KOC',grp:'DATABASE'},
     {id:'vendors',label:'Vendors',grp:'DATABASE'},
-    {id:'team',label:'Team',grp:'TEAM & REPORTS'},
-    {id:'reports',label:'Analytics',grp:'TEAM & REPORTS'},
+    {id:'team',label:'Team',grp:'DATABASE'},
   ]
   const pending=data.approvals.filter(a=>a.status==='Pending').length
   const overdue=data.invoices.filter(i=>i.status==='Overdue').length
@@ -695,7 +695,7 @@ export default function App(){
             ::-webkit-scrollbar-track{background:transparent}
             ::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.3);border-radius:99px}
           `}</style>
-          {page==='dashboard'  && <Dashboard data={data} setPage={setPage} currentUser={currentUser}/>}
+          {page==='dashboard'  && <Dashboard data={data} setPage={setPage} currentUser={currentUser} supabase={supabase}/>}
           {page==='pipeline'   && <Pipeline {...P}/>}
           {page==='workflow'   && <WorkflowPage data={data} supabase={supabase} reload={loadAll} log={log} currentUser={currentUser}/>}
           {page==='projects'   && <Projects {...P}/>}
@@ -717,105 +717,233 @@ export default function App(){
   )
 }
 
-function Dashboard({ data, setPage, currentUser }) {
+function calculateWarnings(data) {
+  const warnings = []
+  const now = new Date()
+  data.projects.forEach(p => {
+    const rev = Number(p.revenue||0), cost = Number(p.actual_cost||0)
+    if(rev > 0 && cost > 0) {
+      const m = (rev - cost) / rev * 100
+      if(m < 15) warnings.push({level:'warn',text:`Dự án "${p.campaign||p.client}" margin thấp: ${Math.round(m)}%`,page:'projects'})
+    }
+  })
+  data.projects.filter(p=>p.status==='Active'&&p.end_date).forEach(p => {
+    if(new Date(p.end_date) < now) warnings.push({level:'error',text:`Dự án "${p.campaign||p.client}" quá hạn (${p.end_date})`,page:'projects'})
+  })
+  data.invoices.filter(i=>i.status==='Overdue'&&i.due_date).forEach(i => {
+    const days = Math.round((now - new Date(i.due_date)) / 86400000)
+    if(days > 30) warnings.push({level:'error',text:`Hóa đơn ${i.client} quá hạn ${days} ngày`,page:'invoices'})
+  })
+  const activeDeals = data.deals.filter(d=>!['Won','Lost'].includes(d.stage)).length
+  if(activeDeals < 3) warnings.push({level:'warn',text:`Pipeline mỏng: chỉ có ${activeDeals} deal đang active`,page:'pipeline'})
+  const totalRev = data.projects.reduce((a,p)=>a+Number(p.revenue||0),0)
+  const outstanding = data.invoices.filter(i=>i.status!=='Paid').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
+  if(totalRev > 0 && outstanding/totalRev > 0.3) warnings.push({level:'warn',text:`Công nợ tồn đọng chiếm ${Math.round(outstanding/totalRev*100)}% doanh thu`,page:'invoices'})
+  return warnings
+}
+
+function Dashboard({ data, setPage, currentUser, supabase }) {
   const isCEO = currentUser?.isMaster
-  const firstName = currentUser?.name?.split(' ').slice(-1)[0] || 'Khoa'
+  const firstName = currentUser?.name?.split(' ').slice(-1)[0] || 'Bạn'
   const now = new Date()
   const hour = now.getHours()
+  const todayStr = now.toISOString().slice(0,10)
+  const weekEnd = new Date(Date.now()+7*86400000).toISOString().slice(0,10)
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10)
+  const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10)
+
   const [meetings, setMeetings] = useState([])
   const [showMeetingForm, setShowMeetingForm] = useState(false)
   const [meetingForm, setMeetingForm] = useState({title:'',meeting_date:'',meeting_time:'',location:'',attendees:'',notes:''})
+  const [kpiTargets, setKpiTargets] = useState([])
+  const [myTasks, setMyTasks] = useState([])
+  const [editKpi, setEditKpi] = useState(false)
+  const [kpiDraft, setKpiDraft] = useState({})
+  const [warnOpen, setWarnOpen] = useState(false)
 
   useEffect(()=>{
-    async function loadMeetings(){
-      const today = new Date().toISOString().slice(0,10)
-      const next7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10)
-      const {data:mdata} = await supabase.from('meetings').select('*').gte('meeting_date',today).lte('meeting_date',next7).order('meeting_date',{ascending:true})
-      setMeetings(mdata||[])
+    if(!isCEO) return
+    async function loadCEO(){
+      const [mr, kr] = await Promise.allSettled([
+        supabase.from('meetings').select('*').gte('meeting_date',todayStr).lte('meeting_date',weekEnd).order('meeting_date',{ascending:true}),
+        supabase.from('kpi_targets').select('*')
+      ])
+      if(mr.status==='fulfilled') setMeetings(mr.value.data||[])
+      if(kr.status==='fulfilled') setKpiTargets(kr.value.data||[])
     }
-    if(currentUser?.isMaster) loadMeetings()
-  },[currentUser])
+    loadCEO()
+  },[isCEO])
+
+  useEffect(()=>{
+    if(isCEO||!currentUser?.name) return
+    async function loadMyTasks(){
+      const {data:rows} = await supabase.from('tasks').select('*').eq('assigned_to',currentUser.name).lte('due_date',monthEnd).order('due_date',{ascending:true})
+      setMyTasks(rows||[])
+    }
+    loadMyTasks()
+  },[currentUser?.name, isCEO])
 
   async function saveMeeting(e){
     e.preventDefault()
     await supabase.from('meetings').insert([{...meetingForm, created_by: currentUser?.name||'CEO'}])
     setShowMeetingForm(false)
     setMeetingForm({title:'',meeting_date:'',meeting_time:'',location:'',attendees:'',notes:''})
-    const today = new Date().toISOString().slice(0,10)
-    const next7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10)
-    const {data:mdata} = await supabase.from('meetings').select('*').gte('meeting_date',today).lte('meeting_date',next7).order('meeting_date',{ascending:true})
+    const {data:mdata} = await supabase.from('meetings').select('*').gte('meeting_date',todayStr).lte('meeting_date',weekEnd).order('meeting_date',{ascending:true})
     setMeetings(mdata||[])
   }
 
-  const rev  = data.projects.reduce((a,p) => a + Number(p.revenue||0), 0)
-  const cost = data.projects.reduce((a,p) => a + Number(p.actual_cost||0), 0)
-  const profit = rev - cost
-  const margin = rev ? Math.round(profit/rev*100) : 0
-  const active = data.projects.filter(p => p.status==='Active' || p.current_stage==='EXECUTION').length
-  const pendingAppr = data.approvals.filter(a => a.status==='Pending')
-  const won = data.deals.filter(d => d.stage==='Won').length
-  const wr = data.deals.length ? Math.round(won/data.deals.length*100) : 0
-  const outstanding = data.invoices.filter(i=>i.status!=='Paid').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
-
-  const myProjects = data.projects.filter(p=>p.pm===currentUser?.name&&p.status==='Active')
-
-  const glass = {
-    background: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: 14,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+  async function saveKpi(e){
+    e.preventDefault()
+    for(const [key,val] of Object.entries(kpiDraft)){
+      const existing = kpiTargets.find(k=>k.metric_key===key)
+      if(existing) await supabase.from('kpi_targets').update({target_value:Number(val)}).eq('id',existing.id)
+      else await supabase.from('kpi_targets').insert([{metric_key:key,target_value:Number(val),team_name:'agency',period:String(now.getFullYear())}])
+    }
+    const {data:rows} = await supabase.from('kpi_targets').select('*')
+    setKpiTargets(rows||[])
+    setEditKpi(false)
   }
 
-  const byM = Array(12).fill(0)
-  data.projects.forEach(p => { if(p.start_date) byM[new Date(p.start_date).getMonth()] += Number(p.revenue||0) })
-  const maxM = Math.max(...byM, 1)
-  const months = ['J','F','M','A','M','J','J','A','S','O','N','D']
-
-  const greeting = hour<12?'Chào buổi sáng':hour<17?'Chào buổi chiều':'Chào buổi tối'
-  const greetingEN = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening'
-
-  if (!isCEO) {
+  function getTarget(key){ return Number(kpiTargets.find(k=>k.metric_key===key)?.target_value||0) }
+  function calcKpi(key){
+    if(key==='revenue') return data.projects.reduce((a,p)=>a+Number(p.revenue||0),0)
+    if(key==='deals_won') return data.deals.filter(d=>d.stage==='Won').length
+    if(key==='projects_completed') return data.projects.filter(p=>p.status==='Completed').length
+    if(key==='clients') return data.clients.length
+    return 0
+  }
+  function KpiBar({label,metricKey,fmt}){
+    const actual=calcKpi(metricKey), target=getTarget(metricKey)
+    const pct=target>0?Math.min(100,Math.round(actual/target*100)):0
+    const color=pct>=100?'#10B981':pct>=60?'#F59E0B':'#EF4444'
     return (
-      <div style={{maxWidth:900,margin:'0 auto'}}>
-        <div style={{marginBottom:28}}>
-          <div style={{fontSize:28,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1.2}}>
-            {greeting}, {firstName}!
-          </div>
-          <div style={{fontSize:13,color:'#64748B',marginTop:6}}>
-            Hôm nay là {now.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+      <div style={{marginBottom:12}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+          <span style={{fontSize:11,color:'#64748B'}}>{label}</span>
+          <span style={{fontSize:11,fontWeight:700,color:color}}>{fmt?fmt(actual):actual}{target>0?` / ${fmt?fmt(target):target}`:''}</span>
+        </div>
+        <div style={{height:6,background:'#F1F5F9',borderRadius:99}}>
+          <div style={{height:'100%',width:pct+'%',background:color,borderRadius:99,transition:'width 0.4s'}}/>
+        </div>
+        <div style={{fontSize:9,color:color,textAlign:'right',marginTop:2}}>{pct}%{target===0?' (chưa đặt target)':''}</div>
+      </div>
+    )
+  }
+
+  const rev  = data.projects.reduce((a,p)=>a+Number(p.revenue||0),0)
+  const cost = data.projects.reduce((a,p)=>a+Number(p.actual_cost||0),0)
+  const profit = rev - cost
+  const margin = rev ? Math.round(profit/rev*100) : 0
+  const active = data.projects.filter(p=>p.status==='Active'||p.current_stage==='EXECUTION').length
+  const pendingAppr = data.approvals.filter(a=>a.status==='Pending')
+  const won = data.deals.filter(d=>d.stage==='Won').length
+  const wr = data.deals.length ? Math.round(won/data.deals.length*100) : 0
+  const outstanding = data.invoices.filter(i=>i.status!=='Paid').reduce((a,i)=>a+Number(i.amount||0)-Number(i.paid||0),0)
+  const myProjects = data.projects.filter(p=>p.pm===currentUser?.name&&p.status==='Active')
+  const warnings = calculateWarnings(data)
+
+  const glass = {background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}
+  const byM = Array(12).fill(0)
+  data.projects.forEach(p=>{ if(p.start_date) byM[new Date(p.start_date).getMonth()]+=Number(p.revenue||0) })
+  const maxM = Math.max(...byM, 1)
+  const months = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12']
+  const greeting = hour<12?'Chào buổi sáng':hour<17?'Chào buổi chiều':'Chào buổi tối'
+
+  const todayTasks = myTasks.filter(t=>t.due_date===todayStr&&t.status!=='done')
+  const weekTasks = myTasks.filter(t=>t.due_date>todayStr&&t.due_date<=weekEnd&&t.status!=='done')
+  const monthCompleted = myTasks.filter(t=>t.due_date>=monthStart&&t.due_date<=monthEnd&&t.status==='done').length
+  const monthTotal = myTasks.filter(t=>t.due_date>=monthStart&&t.due_date<=monthEnd).length
+  const completionPct = monthTotal>0?Math.round(monthCompleted/monthTotal*100):0
+
+  // STAFF VIEW
+  if(!isCEO) {
+    return (
+      <div style={{maxWidth:960,margin:'0 auto'}}>
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:26,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1.2}}>{greeting}, {firstName}!</div>
+          <div style={{fontSize:13,color:'#64748B',marginTop:6}}>{now.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+
+        <div style={{...glass,padding:'18px 22px',marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:12}}>Tiến độ tháng {now.getMonth()+1}</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontSize:11,color:'#64748B'}}>Hoàn thành công việc</span>
+                <span style={{fontSize:11,fontWeight:700,color:completionPct>=80?'#10B981':completionPct>=50?'#F59E0B':'#EF4444'}}>{monthCompleted}/{monthTotal}</span>
+              </div>
+              <div style={{height:7,background:'#F1F5F9',borderRadius:99}}>
+                <div style={{height:'100%',width:completionPct+'%',background:completionPct>=80?'#10B981':completionPct>=50?'#F59E0B':'#EF4444',borderRadius:99,transition:'width 0.4s'}}/>
+              </div>
+              <div style={{fontSize:9,color:'#94A3B8',marginTop:2}}>{completionPct}% tháng này</div>
+            </div>
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontSize:11,color:'#64748B'}}>Dự án đang phụ trách</span>
+                <span style={{fontSize:11,fontWeight:700,color:'#3B82F6'}}>{myProjects.length}</span>
+              </div>
+              <div style={{height:7,background:'#F1F5F9',borderRadius:99}}>
+                <div style={{height:'100%',width:Math.min(100,myProjects.length*20)+'%',background:'#3B82F6',borderRadius:99}}/>
+              </div>
+              <div style={{fontSize:9,color:'#94A3B8',marginTop:2}}>dự án active</div>
+            </div>
           </div>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
-          <div style={{...glass,padding:'20px 22px'}}>
-            <div style={{fontSize:12,fontWeight:700,color:'#0F172A',marginBottom:14}}>Dự án của tôi</div>
-            {myProjects.length ? myProjects.map(p=>(
-              <div key={p.id} style={{padding:'10px 0',borderBottom:'1px solid #F1F5F9'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+          <div style={{...glass,padding:'18px 22px'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:12}}>Công việc hôm nay</div>
+            {todayTasks.length===0&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',padding:'14px 0'}}>Không có việc hôm nay</div>}
+            {todayTasks.map(t=>(
+              <div key={t.id} style={{padding:'8px 10px',marginBottom:6,background:'#FFF5F5',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,borderLeft:'3px solid #EF4444'}}>
+                <div style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{t.title}</div>
+                {t.project_id&&<div style={{fontSize:10,color:'#EF4444',marginTop:2}}>{data.projects.find(p=>p.id===t.project_id)?.campaign||'Dự án'}</div>}
+              </div>
+            ))}
+          </div>
+          <div style={{...glass,padding:'18px 22px'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:12}}>Tuần này</div>
+            {weekTasks.length===0&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',padding:'14px 0'}}>Không có việc tuần này</div>}
+            {weekTasks.slice(0,5).map(t=>(
+              <div key={t.id} style={{padding:'7px 0',borderBottom:'1px solid #F1F5F9'}}>
+                <div style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{t.title}</div>
+                <div style={{fontSize:10,color:'#64748B',marginTop:2}}>Hạn: {t.due_date}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <div style={{...glass,padding:'18px 22px'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:12}}>Dự án của tôi</div>
+            {myProjects.length?myProjects.map(p=>(
+              <div key={p.id} style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
                 <div style={{fontWeight:700,fontSize:12,color:'#0F172A'}}>{p.campaign||p.client}</div>
-                <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginTop:3}}>
                   <span style={{fontSize:10,color:'#64748B'}}>{p.client}</span>
                   <Badge text={p.status}/>
                 </div>
               </div>
-            )) : <Empty>Chưa có dự án nào</Empty>}
+            )):<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',padding:'14px 0'}}>Chưa có dự án nào</div>}
           </div>
-          <div style={{...glass,padding:'20px 22px'}}>
-            <div style={{fontSize:12,fontWeight:700,color:'#0F172A',marginBottom:14}}>Phê duyệt đang chờ</div>
-            {pendingAppr.length ? pendingAppr.slice(0,5).map(a=>(
-              <div key={a.id} style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
-                <div style={{fontWeight:600,fontSize:12}}>{a.title||a.type}</div>
-                <div style={{fontSize:10,color:'#64748B',marginTop:2}}>{a.submitted_by} · {a.approval_date}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{...glass,padding:'18px 22px'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10}}>Phê duyệt đang chờ</div>
+              {pendingAppr.length?pendingAppr.slice(0,3).map(a=>(
+                <div key={a.id} style={{padding:'6px 0',borderBottom:'1px solid #F1F5F9'}}>
+                  <div style={{fontWeight:600,fontSize:12}}>{a.title||a.type}</div>
+                  <div style={{fontSize:10,color:'#64748B',marginTop:2}}>{a.submitted_by}</div>
+                </div>
+              )):<div style={{fontSize:11,color:'#10B981',textAlign:'center',padding:'8px 0',fontWeight:600}}>Không có gì cần phê duyệt</div>}
+            </div>
+            <div style={{...glass,padding:'18px 22px'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:10}}>Thao tác nhanh</div>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                {[['Báo giá','quotations','#3B82F6'],['KOL mới','kols','#8B5CF6'],['Hợp đồng','contracts','#059669'],['BBNT','bbnt','#F59E0B']].map(([l,pg,c])=>(
+                  <button key={pg} onClick={()=>setPage(pg)} style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${c}25`,background:c+'0D',color:c,cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>{l}</button>
+                ))}
               </div>
-            )) : <Empty>Không có gì cần phê duyệt</Empty>}
-          </div>
-        </div>
-
-        <div style={{...glass,padding:'20px 22px'}}>
-          <div style={{fontSize:12,fontWeight:700,color:'#0F172A',marginBottom:14}}>Thao tác nhanh</div>
-          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-            {[['+ Báo giá','quotations','#3B82F6'],['+ KOL mới','kols','#8B5CF6'],['Xem HĐ','contracts','#059669'],['Tạo BBNT','bbnt','#F59E0B']].map(([l,pg,c])=>(
-              <button key={pg} onClick={()=>setPage(pg)} style={{padding:'9px 16px',borderRadius:10,border:`1px solid ${c}25`,background:c+'0D',color:c,cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>{l}</button>
-            ))}
+            </div>
           </div>
         </div>
       </div>
@@ -824,86 +952,114 @@ function Dashboard({ data, setPage, currentUser }) {
 
   // CEO DASHBOARD
   return (
-    <div style={{ width: '100%', fontFamily: "'Inter', system-ui, sans-serif", color: '#0F172A' }}>
+    <div style={{width:'100%',fontFamily:"'Inter',system-ui,sans-serif",color:'#0F172A'}}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <div>
-          <div style={{ fontSize: 13, color: '#94A3B8', fontWeight: 500, marginBottom: 3 }}>
-            {greetingEN}, {firstName}
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            Agency Overview
-          </div>
-          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
-            {now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
-          </div>
+          <div style={{fontSize:13,color:'#94A3B8',fontWeight:500,marginBottom:3}}>{greeting}, {firstName}</div>
+          <div style={{fontSize:26,fontWeight:800,color:'#0F172A',letterSpacing:'-0.02em',lineHeight:1.1}}>Agency Overview</div>
+          <div style={{fontSize:12,color:'#94A3B8',marginTop:4}}>{now.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
         </div>
-        {pendingAppr.length > 0 && (
-          <button onClick={() => setPage('approval')} style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, cursor: 'pointer',
-            background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)',
-            fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#EF4444',
-          }}>
-            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444' }} />
-            {pendingAppr.length} phê duyệt đang chờ
-          </button>
-        )}
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {warnings.length>0&&(
+            <button onClick={()=>setWarnOpen(v=>!v)} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 14px',borderRadius:10,cursor:'pointer',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)',fontFamily:'Inter,sans-serif',fontWeight:600,fontSize:12,color:'#D97706'}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:'#F59E0B'}}/>{warnings.length} cảnh báo
+            </button>
+          )}
+          {pendingAppr.length>0&&(
+            <button onClick={()=>setPage('approval')} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 14px',borderRadius:10,cursor:'pointer',background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.18)',fontFamily:'Inter,sans-serif',fontWeight:600,fontSize:12,color:'#EF4444'}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:'#EF4444'}}/>{pendingAppr.length} phê duyệt
+            </button>
+          )}
+          <button onClick={()=>{setKpiDraft(Object.fromEntries(['revenue','deals_won','projects_completed','clients'].map(k=>[k,getTarget(k)])));setEditKpi(true)}} style={{padding:'9px 16px',borderRadius:10,border:'1px solid #E2E8F0',background:'#F8FAFF',color:'#475569',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Inter,sans-serif'}}>KPI Targets</button>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
+      {/* Warnings Panel */}
+      {warnOpen&&warnings.length>0&&(
+        <div style={{...glass,padding:'16px 20px',marginBottom:14,border:'1px solid rgba(245,158,11,0.3)',background:'#FFFBEB'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#92400E',marginBottom:10}}>Cảnh báo hệ thống</div>
+          {warnings.map((w,i)=>(
+            <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:i<warnings.length-1?'1px solid rgba(245,158,11,0.15)':'none'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{width:5,height:5,borderRadius:'50%',background:w.level==='error'?'#EF4444':'#F59E0B',flexShrink:0}}/>
+                <span style={{fontSize:12,color:'#78350F'}}>{w.text}</span>
+              </div>
+              <button onClick={()=>setPage(w.page)} style={{fontSize:10,color:'#D97706',background:'none',border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif',fontWeight:600,flexShrink:0}}>Xem →</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* KPI Edit Modal */}
+      {editKpi&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}>
+          <div style={{background:'#fff',borderRadius:16,padding:'28px 32px',width:420,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>
+            <div style={{fontSize:15,fontWeight:800,color:'#0F172A',marginBottom:20}}>Chỉnh KPI Target {now.getFullYear()}</div>
+            <form onSubmit={saveKpi}>
+              {[['revenue','Doanh thu (VND)'],['deals_won','Deals thắng'],['projects_completed','Dự án hoàn thành'],['clients','Số khách hàng']].map(([key,label])=>(
+                <div key={key} style={{marginBottom:14}}>
+                  <div style={{fontSize:11,color:'#64748B',marginBottom:5,fontWeight:600}}>{label}</div>
+                  <input type="number" value={kpiDraft[key]||''} onChange={e=>setKpiDraft(p=>({...p,[key]:e.target.value}))} style={{width:'100%',padding:'9px 12px',border:'1.5px solid #E2E8F0',borderRadius:8,fontSize:13,fontFamily:'Inter,sans-serif',outline:'none',boxSizing:'border-box'}} placeholder="0"/>
+                </div>
+              ))}
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:18}}>
+                <button type="button" onClick={()=>setEditKpi(false)} style={{padding:'9px 18px',borderRadius:9,border:'1px solid #E2E8F0',background:'#fff',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:'Inter,sans-serif'}}>Hủy</button>
+                <button type="submit" style={{padding:'9px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'Inter,sans-serif'}}>Lưu</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* KPI Summary Cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:10,marginBottom:14}}>
         {[
-          ['Revenue', fmtS(rev), 'VND', '#06B6D4'],
-          ['Profit', fmtS(profit), margin+'% margin', '#10B981'],
-          ['Active', active, data.projects.length+' tổng', '#6366F1'],
-          ['Win Rate', wr+'%', won+'/'+data.deals.length+' deals', wr>=50?'#10B981':'#F59E0B'],
-          ['Clients', data.clients.length, 'in database', '#8B5CF6'],
-          ['Tồn đọng', fmtS(outstanding), 'VND', '#EF4444'],
-        ].map(([label, value, sub, accent]) => (
-          <div key={label} style={{ background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:12, padding: '18px 20px', position: 'relative', overflow: 'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, borderRadius: '12px 12px 0 0' }} />
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>{label}</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-            <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6 }}>{sub}</div>
+          ['Revenue',fmtS(rev),'VND','#06B6D4'],
+          ['Profit',fmtS(profit),margin+'% margin','#10B981'],
+          ['Active',active,data.projects.length+' tổng','#6366F1'],
+          ['Win Rate',wr+'%',won+'/'+data.deals.length+' deals',wr>=50?'#10B981':'#F59E0B'],
+          ['Clients',data.clients.length,'in database','#8B5CF6'],
+          ['Tồn đọng',fmtS(outstanding),'VND','#EF4444'],
+        ].map(([label,value,sub,accent])=>(
+          <div key={label} style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:12,padding:'18px 20px',position:'relative',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
+            <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:accent,borderRadius:'12px 12px 0 0'}}/>
+            <div style={{fontSize:10,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10}}>{label}</div>
+            <div style={{fontSize:24,fontWeight:800,color:'#0F172A',letterSpacing:'-0.03em',lineHeight:1}}>{value}</div>
+            <div style={{fontSize:10,color:'#94A3B8',marginTop:6}}>{sub}</div>
           </div>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 250px', gap: 12, marginBottom: 12 }}>
-        <div style={{ ...glass, padding: '20px 22px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Revenue · 2026</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100 }}>
-            {months.map((m, i) => {
-              const h = byM[i] ? Math.max(6, Math.round(byM[i]/maxM*88)) : 4
-              const isNow = i === now.getMonth()
-              const isPast = i < now.getMonth()
+      <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 250px',gap:12,marginBottom:12}}>
+        <div style={{...glass,padding:'20px 22px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:16}}>Doanh thu · {now.getFullYear()}</div>
+          <div style={{display:'flex',alignItems:'flex-end',gap:4,height:100}}>
+            {months.map((m,i)=>{
+              const h=byM[i]?Math.max(6,Math.round(byM[i]/maxM*88)):4
+              const isNow=i===now.getMonth(), isPast=i<now.getMonth()
               return (
-                <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                  <div style={{
-                    width: '100%', borderRadius: '2px 2px 1px 1px', minHeight: 4, height: h + '%',
-                    background: isNow ? 'linear-gradient(180deg,#0EA5E9,#3B82F6)' : isPast && byM[i] > 0 ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.08)',
-                    boxShadow: isNow ? '0 0 14px rgba(14,165,233,0.4)' : 'none',
-                  }} />
-                  <div style={{ fontSize: 8, color: isNow ? '#0EA5E9' : '#94A3B8', fontWeight: isNow ? 700 : 400 }}>{m}</div>
+                <div key={m} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5}}>
+                  <div style={{width:'100%',borderRadius:'2px 2px 1px 1px',minHeight:4,height:h+'%',background:isNow?'linear-gradient(180deg,#0EA5E9,#3B82F6)':isPast&&byM[i]>0?'rgba(59,130,246,0.3)':'rgba(59,130,246,0.08)',boxShadow:isNow?'0 0 14px rgba(14,165,233,0.4)':'none'}}/>
+                  <div style={{fontSize:8,color:isNow?'#0EA5E9':'#94A3B8',fontWeight:isNow?700:400}}>{m}</div>
                 </div>
               )
             })}
           </div>
         </div>
-
-        <div style={{ ...glass, padding: '20px 18px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', marginBottom: 14 }}>Pipeline</div>
-          {['Lead','Pitching','Negotiation','Won','Lost'].map(s => {
-            const cnt = data.deals.filter(d=>d.stage===s).length
-            const colors = {Lead:'#94A3B8',Pitching:'#3B82F6',Negotiation:'#F59E0B',Won:'#10B981',Lost:'#EF4444'}
+        <div style={{...glass,padding:'20px 18px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:14}}>Pipeline</div>
+          {['Lead','Pitching','Negotiation','Won','Lost'].map(s=>{
+            const cnt=data.deals.filter(d=>d.stage===s).length
+            const colors={Lead:'#94A3B8',Pitching:'#3B82F6',Negotiation:'#F59E0B',Won:'#10B981',Lost:'#EF4444'}
             return (
-              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid #F8FAFF' }}>
-                <span style={{ fontSize: 11, color: '#64748B' }}>{s}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: Math.max(4,cnt*8), height: 6, background: colors[s], borderRadius: 3 }}/>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: colors[s] }}>{cnt}</span>
+              <div key={s} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'5px 0',borderBottom:'1px solid #F8FAFF'}}>
+                <span style={{fontSize:11,color:'#64748B'}}>{s}</span>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{width:Math.max(4,cnt*8),height:6,background:colors[s],borderRadius:3}}/>
+                  <span style={{fontSize:11,fontWeight:700,color:colors[s]}}>{cnt}</span>
                 </div>
               </div>
             )
@@ -911,87 +1067,93 @@ function Dashboard({ data, setPage, currentUser }) {
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        <div style={{ ...glass, padding: '18px 22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Dự án đang hoạt động</div>
-            <button onClick={() => setPage('workflow')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Workflow →</button>
+      {/* KPI Progress + Active Projects */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+        <div style={{...glass,padding:'18px 22px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#0F172A',marginBottom:14}}>KPI Progress · {now.getFullYear()}</div>
+          <KpiBar label="Doanh thu" metricKey="revenue" fmt={fmtS}/>
+          <KpiBar label="Deals thắng" metricKey="deals_won"/>
+          <KpiBar label="Dự án hoàn thành" metricKey="projects_completed"/>
+          <KpiBar label="Khách hàng" metricKey="clients"/>
+        </div>
+        <div style={{...glass,padding:'18px 22px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#0F172A'}}>Dự án đang hoạt động</div>
+            <button onClick={()=>setPage('workflow')} style={{fontSize:10,color:'#3B82F6',background:'none',border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>Workflow →</button>
           </div>
-          {data.projects.filter(p => p.status==='Active').slice(0, 5).map(p => (
-            <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{p.campaign || p.client}</span>
+          {data.projects.filter(p=>p.status==='Active').slice(0,5).map(p=>(
+            <div key={p.id} style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <span style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{p.campaign||p.client}</span>
                 <Badge text={p.status}/>
               </div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{p.client} · PM: {p.pm||'—'}</div>
+              <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{p.client} · PM: {p.pm||'—'}</div>
             </div>
           ))}
-          {!data.projects.filter(p => p.status==='Active').length && <Empty>Chưa có dự án</Empty>}
+          {!data.projects.filter(p=>p.status==='Active').length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có dự án</div>}
+        </div>
+      </div>
+
+      {/* Overdue Invoices + Meetings */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+        <div style={{...glass,padding:'18px 22px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#0F172A'}}>Hóa đơn quá hạn</div>
+            <button onClick={()=>setPage('invoices')} style={{fontSize:10,color:'#3B82F6',background:'none',border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>View →</button>
+          </div>
+          {data.invoices.filter(i=>i.status==='Overdue').slice(0,5).map(i=>(
+            <div key={i.id} style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <span style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{i.client}</span>
+                <span style={{fontSize:12,fontWeight:700,color:'#EF4444'}}>{vnd(Number(i.amount)-Number(i.paid||0))}</span>
+              </div>
+              <div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>Hạn: {i.due_date||'—'}</div>
+            </div>
+          ))}
+          {!data.invoices.filter(i=>i.status==='Overdue').length&&(
+            <div style={{textAlign:'center',padding:'20px 0',color:'#10B981',fontSize:12,fontWeight:600}}>Không có hóa đơn quá hạn</div>
+          )}
         </div>
 
-        <div style={{ ...glass, padding: '18px 22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Hóa đơn quá hạn</div>
-            <button onClick={() => setPage('invoices')} style={{ fontSize: 10, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View →</button>
+        <div style={{...glass,padding:'18px 22px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#0F172A'}}>Cuộc họp tuần này</div>
+            <button onClick={()=>setShowMeetingForm(true)} style={{padding:'5px 12px',borderRadius:7,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:10,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>+ Thêm</button>
           </div>
-          {data.invoices.filter(i=>i.status==='Overdue').slice(0, 5).map(i => (
-            <div key={i.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{i.client}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#EF4444' }}>{vnd(Number(i.amount)-Number(i.paid||0))}</span>
+          {meetings.length===0&&<div style={{textAlign:'center',padding:'16px 0',color:'#94A3B8',fontSize:11}}>Không có cuộc họp nào trong 7 ngày tới</div>}
+          {meetings.slice(0,4).map((m,i)=>(
+            <div key={i} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9',alignItems:'flex-start'}}>
+              <div style={{background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',borderRadius:8,padding:'6px 8px',textAlign:'center',flexShrink:0,minWidth:40}}>
+                <div style={{fontSize:9,fontWeight:600,opacity:0.85}}>{new Date(m.meeting_date).toLocaleDateString('vi-VN',{month:'short'})}</div>
+                <div style={{fontSize:17,fontWeight:900,lineHeight:1}}>{new Date(m.meeting_date).getDate()}</div>
               </div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>Hạn: {i.due_date||'—'}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:11,color:'#0F172A',marginBottom:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.title}</div>
+                <div style={{fontSize:10,color:'#64748B'}}>{m.meeting_time&&`${m.meeting_time} · `}{m.location||''}</div>
+              </div>
             </div>
           ))}
-          {!data.invoices.filter(i=>i.status==='Overdue').length && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: '#10B981', fontSize: 12, fontWeight: 600 }}>
-              Không có hóa đơn quá hạn ✓
+          {showMeetingForm&&(
+            <div style={{marginTop:12,padding:12,background:'#F8FAFF',borderRadius:10,border:'1px solid #E2E8F0'}}>
+              <form onSubmit={saveMeeting}>
+                <div style={{marginBottom:8,fontWeight:700,fontSize:11,color:'#0F172A'}}>Thêm cuộc họp</div>
+                <input value={meetingForm.title} onChange={e=>setMeetingForm(p=>({...p,title:e.target.value}))} placeholder="Tiêu đề *" required style={{width:'100%',padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:11,marginBottom:7,fontFamily:"'Inter',sans-serif",outline:'none',boxSizing:'border-box'}}/>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:7}}>
+                  <input type="date" value={meetingForm.meeting_date} onChange={e=>setMeetingForm(p=>({...p,meeting_date:e.target.value}))} required style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:11,fontFamily:"'Inter',sans-serif",outline:'none'}}/>
+                  <input type="time" value={meetingForm.meeting_time} onChange={e=>setMeetingForm(p=>({...p,meeting_time:e.target.value}))} style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:11,fontFamily:"'Inter',sans-serif",outline:'none'}}/>
+                </div>
+                <input value={meetingForm.location} onChange={e=>setMeetingForm(p=>({...p,location:e.target.value}))} placeholder="Địa điểm" style={{width:'100%',padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:11,marginBottom:7,fontFamily:"'Inter',sans-serif",outline:'none',boxSizing:'border-box'}}/>
+                <input value={meetingForm.attendees} onChange={e=>setMeetingForm(p=>({...p,attendees:e.target.value}))} placeholder="Người tham dự" style={{width:'100%',padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:11,marginBottom:7,fontFamily:"'Inter',sans-serif",outline:'none',boxSizing:'border-box'}}/>
+                <div style={{display:'flex',gap:7,justifyContent:'flex-end'}}>
+                  <button type="button" onClick={()=>setShowMeetingForm(false)} style={{padding:'6px 12px',borderRadius:7,border:'1px solid #D1D5DB',background:'#fff',color:'#64748B',cursor:'pointer',fontSize:10,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>Hủy</button>
+                  <button type="submit" style={{padding:'6px 14px',borderRadius:7,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:10,fontWeight:700,fontFamily:"'Inter',sans-serif"}}>Lưu</button>
+                </div>
+              </form>
             </div>
           )}
         </div>
       </div>
 
-      {/* Meetings Widget */}
-      <div style={{background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:14,padding:'18px 22px',marginBottom:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-          <div style={{fontSize:14,fontWeight:800,color:'#0F172A'}}>Cuộc họp tuần này</div>
-          <button onClick={()=>setShowMeetingForm(true)} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>+ Thêm</button>
-        </div>
-        {meetings.length===0&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Không có cuộc họp nào trong 7 ngày tới</div>}
-        {meetings.map((m,i)=>(
-          <div key={i} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #F1F5F9',alignItems:'flex-start'}}>
-            <div style={{background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',borderRadius:10,padding:'8px 10px',textAlign:'center',flexShrink:0,minWidth:48}}>
-              <div style={{fontSize:11,fontWeight:600,opacity:0.85}}>{new Date(m.meeting_date).toLocaleDateString('vi-VN',{month:'short'})}</div>
-              <div style={{fontSize:20,fontWeight:900,lineHeight:1}}>{new Date(m.meeting_date).getDate()}</div>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:12,color:'#0F172A',marginBottom:2}}>{m.title}</div>
-              <div style={{fontSize:11,color:'#64748B'}}>{m.meeting_time&&`${m.meeting_time} · `}{m.location&&m.location}</div>
-              {m.attendees&&<div style={{fontSize:10,color:'#94A3B8',marginTop:2}}>{m.attendees}</div>}
-            </div>
-          </div>
-        ))}
-        {showMeetingForm&&(
-          <div style={{marginTop:14,padding:14,background:'#F8FAFF',borderRadius:10,border:'1px solid #E2E8F0'}}>
-            <form onSubmit={saveMeeting}>
-              <div style={{marginBottom:10,fontWeight:700,fontSize:12,color:'#0F172A'}}>Thêm cuộc họp mới</div>
-              <input value={meetingForm.title} onChange={e=>setMeetingForm(p=>({...p,title:e.target.value}))} placeholder="Tiêu đề cuộc họp *" required style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:8,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
-                <input type="date" value={meetingForm.meeting_date} onChange={e=>setMeetingForm(p=>({...p,meeting_date:e.target.value}))} required style={{padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",outline:'none'}}/>
-                <input type="time" value={meetingForm.meeting_time} onChange={e=>setMeetingForm(p=>({...p,meeting_time:e.target.value}))} style={{padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",outline:'none'}}/>
-              </div>
-              <input value={meetingForm.location} onChange={e=>setMeetingForm(p=>({...p,location:e.target.value}))} placeholder="Địa điểm" style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:8,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
-              <input value={meetingForm.attendees} onChange={e=>setMeetingForm(p=>({...p,attendees:e.target.value}))} placeholder="Người tham dự" style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:8,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
-              <textarea value={meetingForm.notes} onChange={e=>setMeetingForm(p=>({...p,notes:e.target.value}))} placeholder="Ghi chú" style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:7,fontSize:12,marginBottom:10,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box',minHeight:60,resize:'vertical'}}/>
-              <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-                <button type="button" onClick={()=>setShowMeetingForm(false)} style={{padding:'7px 14px',borderRadius:7,border:'1px solid #D1D5DB',background:'#fff',color:'#64748B',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Inter',system-ui,sans-serif"}}>Hủy</button>
-                <button type="submit" style={{padding:'7px 16px',borderRadius:7,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Inter',system-ui,sans-serif"}}>Lưu</button>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
