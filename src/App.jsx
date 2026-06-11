@@ -398,7 +398,7 @@ export default function App(){
     if(stored){try{parsedUser=JSON.parse(stored);setCurrentUser(parsedUser)}catch(e){}}
     setAuthReady(true)
     initStorage()
-    loadAll()
+    if(parsedUser) loadAll()
     if(parsedUser) loadNotifs(parsedUser)
     function handleNavigate(e){
       if(e.detail?.page){setPage(e.detail.page);setPrefill(e.detail.prefill||null)}
@@ -420,20 +420,81 @@ export default function App(){
 
   async function loadAll(){
     setLoading(true)
-    const tables=['projects','clients','kols','team','invoices','deals','deal_history','vendors','approvals']
-    const res=await Promise.all(tables.map(t=>
-      supabase.from(t).select('*').order('created_at',{ascending:false})
-        .then(r=>{ if(r.error){console.error('[loadAll] Failed table:',t,r.error.message)} return r })
-        .catch(e=>{ console.error('[loadAll] Network error on table:',t,e.message); return {data:null} })
-    ))
-    setData({projects:res[0].data||[],clients:res[1].data||[],kols:res[2].data||[],team:res[3].data||[],invoices:res[4].data||[],deals:res[5].data||[],dealHistory:res[6].data||[],vendors:res[7].data||[],approvals:res[8].data||[]})
+    try {
+      const tables=['projects','clients','kols','team','invoices','deals','deal_history','vendors','approvals']
+      const results=await Promise.allSettled(tables.map(t=>
+        supabase.from(t).select('*').order('created_at',{ascending:false})
+      ))
+      results.forEach((r,i)=>{
+        if(r.status==='rejected') console.error('[loadAll] Network error:',tables[i],r.reason)
+        else if(r.value?.error) console.error('[loadAll] Table error:',tables[i],r.value.error.message)
+      })
+      const get=i=>results[i].status==='fulfilled'?(results[i].value.data||[]):[]
+      setData({
+        projects:get(0),clients:get(1),kols:get(2),team:get(3),
+        invoices:get(4),deals:get(5),dealHistory:get(6),vendors:get(7),approvals:get(8)
+      })
+    } catch(e){ console.error('[loadAll] Fatal:',e.message) }
     setLoading(false)
   }
-  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
-  async function upd(t,id,r){const{error}=await supabase.from(t).update(r).eq('id',id);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
-  async function del(t,id){if(!confirm('Xác nhận xóa?'))return;await supabase.from(t).delete().eq('id',id);await loadAll()}
+
+  async function fetchProjects(){
+    const{data:rows,error}=await supabase.from('projects').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] projects:',error.message)
+    else setData(p=>({...p,projects:rows||[]}))
+  }
+  async function fetchClients(){
+    const{data:rows,error}=await supabase.from('clients').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] clients:',error.message)
+    else setData(p=>({...p,clients:rows||[]}))
+  }
+  async function fetchKols(){
+    const{data:rows,error}=await supabase.from('kols').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] kols:',error.message)
+    else setData(p=>({...p,kols:rows||[]}))
+  }
+  async function fetchTeam(){
+    const{data:rows,error}=await supabase.from('team').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] team:',error.message)
+    else setData(p=>({...p,team:rows||[]}))
+  }
+  async function fetchInvoices(){
+    const{data:rows,error}=await supabase.from('invoices').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] invoices:',error.message)
+    else setData(p=>({...p,invoices:rows||[]}))
+  }
+  async function fetchDeals(){
+    const[dr,hr]=await Promise.allSettled([
+      supabase.from('deals').select('*').order('created_at',{ascending:false}),
+      supabase.from('deal_history').select('*').order('created_at',{ascending:false})
+    ])
+    setData(p=>({
+      ...p,
+      deals:dr.status==='fulfilled'?(dr.value.data||p.deals):p.deals,
+      dealHistory:hr.status==='fulfilled'?(hr.value.data||p.dealHistory):p.dealHistory
+    }))
+  }
+  async function fetchVendors(){
+    const{data:rows,error}=await supabase.from('vendors').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] vendors:',error.message)
+    else setData(p=>({...p,vendors:rows||[]}))
+  }
+  async function fetchApprovals(){
+    const{data:rows,error}=await supabase.from('approvals').select('*').order('created_at',{ascending:false})
+    if(error) console.error('[fetch] approvals:',error.message)
+    else setData(p=>({...p,approvals:rows||[]}))
+  }
+
+  const TABLE_FETCHERS={
+    projects:fetchProjects, clients:fetchClients, kols:fetchKols,
+    team:fetchTeam, invoices:fetchInvoices, deals:fetchDeals,
+    deal_history:fetchDeals, vendors:fetchVendors, approvals:fetchApprovals
+  }
+
+  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await(TABLE_FETCHERS[t]||loadAll)();return true}
+  async function upd(t,id,r){const{error}=await supabase.from(t).update(r).eq('id',id);if(error){alert('Lỗi: '+error.message);return false}await(TABLE_FETCHERS[t]||loadAll)();return true}
+  async function del(t,id){if(!confirm('Xác nhận xóa?'))return;await supabase.from(t).delete().eq('id',id);await(TABLE_FETCHERS[t]||loadAll)()}
   const log = async (msg) => { await supabase.from('audit_log').insert([{message:msg,role:'User'}]) }
-  async function add(t,r){const{error}=await supabase.from(t).insert([r]);if(error){alert('Lỗi: '+error.message);return false}await loadAll();return true}
 
   const NAV=[
     {id:'dashboard',label:'Dashboard',grp:'BUSINESS DEV'},
@@ -459,7 +520,7 @@ export default function App(){
   if(!authReady) return null
   if(!currentUser) return <LoginScreen supabase={supabase} onLogin={handleLogin}/>
 
-  const P={data,add,upd,del,log,reload:loadAll,supabase,currentUser}
+  const P={data,add,upd,del,log,reload:loadAll,supabase,currentUser,fetchClients}
   const visibleNAV = currentUser?.isMaster ? NAV : NAV.filter(n=>canAccess(n.id))
   const groups=[...new Set(visibleNAV.map(n=>n.grp))]
 
@@ -1066,7 +1127,7 @@ function filterByAccess(items, currentUser, type, projects) {
   return {list:filtered, hidden:items.length - filtered.length}
 }
 
-function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
+function Projects({data,add,upd,del,log,reload,supabase,currentUser,fetchClients}){
   const [search,setSearch]=useState('')
   const [stF,setStF]=useState('')
   const [svF,setSvF]=useState('')
@@ -1123,7 +1184,7 @@ function Projects({data,add,upd,del,log,reload,supabase,currentUser}){
         }]).select().single()
         clientId = newClient?.id || null
       }
-      await reload()
+      await fetchClients()
     }
     // Sync client stats on every save
     if(clientId) {
