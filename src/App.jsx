@@ -834,7 +834,7 @@ function Dashboard({ data, setPage, currentUser, supabase }) {
   const cost = data.projects.reduce((a,p)=>a+Number(p.actual_cost||0),0)
   const profit = rev - cost
   const margin = rev ? Math.round(profit/rev*100) : 0
-  const active = data.projects.filter(p=>p.status==='Active'||p.current_stage==='EXECUTION').length
+  const active = data.projects.filter(p=>p.status==='Active'||p.current_stage==='PRODUCTION').length
   const pendingAppr = data.approvals.filter(a=>a.status==='Pending')
   const won = data.deals.filter(d=>d.stage==='Won').length
   const wr = data.deals.length ? Math.round(won/data.deals.length*100) : 0
@@ -5687,49 +5687,27 @@ function QuotationPreview({quote:q, onClose, onStatusChange}) {
 
 // ════════════════════════════════════════════════════════════
 // PROJECT WORKFLOW MODULE — K&K Agency OS
-// 10-Stage flexible workflow with approvals, tasks, KPI tracking
+// 5-Stage project workflow (bidding agency model)
 // ════════════════════════════════════════════════════════════
 
 const STAGES = [
-  { id:'LEAD',           label:'Lead',           icon:'01', color:'#94A3B8', desc:'Khách hàng tiềm năng' },
-  { id:'BRIEF',          label:'Brief',          icon:'02', color:'#3B82F6', desc:'Tiếp nhận brief từ client' },
-  { id:'PROPOSAL',       label:'Proposal',       icon:'03', color:'#8B5CF6', desc:'Lên ý tưởng, đề xuất' },
-  { id:'PRICING',        label:'Pricing',        icon:'04', color:'#F59E0B', desc:'Định giá, P&L' },
-  { id:'CONTRACT',       label:'Contract',       icon:'05', color:'#06B6D4', desc:'Ký hợp đồng' },
-  { id:'PRE_PRODUCTION', label:'Pre-Production', icon:'06', color:'#6366F1', desc:'Chuẩn bị sản xuất' },
-  { id:'EXECUTION',      label:'Execution',      icon:'07', color:'#10B981', desc:'Triển khai' },
-  { id:'REPORTING',      label:'Reporting',      icon:'08', color:'#0891B2', desc:'Báo cáo kết quả' },
-  { id:'PAYMENT',        label:'Payment',        icon:'09', color:'#059669', desc:'Thanh toán' },
-  { id:'CLOSED',         label:'Closed',         icon:'10', color:'#1A56DB', desc:'Hoàn tất' },
+  { id:'BRIEF_PRICING',    label:'Brief & Báo giá',      icon:'01', color:'#3B82F6', desc:'Tiếp nhận brief, định giá, đấu thầu' },
+  { id:'CONTRACT',         label:'Hợp đồng',             icon:'02', color:'#06B6D4', desc:'Ký kết hợp đồng' },
+  { id:'PRODUCTION',       label:'Sản xuất',             icon:'03', color:'#10B981', desc:'Sản xuất nội dung' },
+  { id:'REPORTING_PAYMENT',label:'Báo cáo & Thanh toán', icon:'04', color:'#F59E0B', desc:'Báo cáo kết quả, thu tiền' },
+  { id:'CLOSED',           label:'Hoàn tất',             icon:'05', color:'#1A56DB', desc:'Đã hoàn tất' },
 ]
 
-// Tasks mặc định theo từng stage
+// Tasks mặc định theo từng stage (5 stages)
 const STAGE_TASKS = {
-  LEAD: [
-    { title:'Qualify lead', role:'AM', priority:'High', kpi_weight:3 },
-    { title:'Ghi nhận thông tin client', role:'AM', priority:'Normal', kpi_weight:1 },
-    { title:'Đưa vào Deal Pipeline', role:'AM', priority:'Normal', kpi_weight:1 },
-  ],
-  BRIEF: [
+  BRIEF_PRICING: [
     { title:'Nhận brief từ client', role:'AM', priority:'High', kpi_weight:3 },
     { title:'Phân tích brief & objectives', role:'AM', priority:'High', kpi_weight:2 },
-    { title:'Họp nội bộ kick-off', role:'PM', priority:'High', kpi_weight:2 },
-    { title:'Clarify brief với client', role:'AM', priority:'Normal', kpi_weight:2 },
-  ],
-  PROPOSAL: [
-    { title:'Nghiên cứu thị trường & đối thủ', role:'Creative', priority:'Normal', kpi_weight:2 },
-    { title:'Lên concept & ý tưởng', role:'Creative', priority:'High', kpi_weight:3 },
-    { title:'Build proposal deck', role:'PM', priority:'High', kpi_weight:3 },
-    { title:'Internal review proposal', role:'Director', priority:'High', kpi_weight:2, requires_approval:true },
-    { title:'Present proposal cho client', role:'AM', priority:'High', kpi_weight:3 },
-  ],
-  PRICING: [
-    { title:'Lập danh sách KOL/resources', role:'KOL Executive', priority:'High', kpi_weight:3 },
+    { title:'Lập danh sách KOL phù hợp', role:'KOL Executive', priority:'High', kpi_weight:3 },
     { title:'Tính chi phí & P&L', role:'Finance', priority:'High', kpi_weight:3 },
     { title:'Finance duyệt P&L', role:'Finance', priority:'High', kpi_weight:3, requires_approval:true },
-    { title:'Director duyệt pricing', role:'Director', priority:'High', kpi_weight:3, requires_approval:true },
-    { title:'Tạo báo giá', role:'AM', priority:'High', kpi_weight:2 },
-    { title:'Gửi báo giá cho client', role:'AM', priority:'High', kpi_weight:2 },
+    { title:'Director duyệt báo giá', role:'Director', priority:'High', kpi_weight:3, requires_approval:true },
+    { title:'Upload file báo giá vào hệ thống', role:'AM', priority:'High', kpi_weight:2 },
   ],
   CONTRACT: [
     { title:'AM order hợp đồng', role:'AM', priority:'High', kpi_weight:2 },
@@ -5739,37 +5717,21 @@ const STAGE_TASKS = {
     { title:'Nhận lại hợp đồng đã ký', role:'Admin', priority:'High', kpi_weight:2 },
     { title:'Lưu trữ hợp đồng', role:'Admin', priority:'Normal', kpi_weight:1 },
   ],
-  PRE_PRODUCTION: [
+  PRODUCTION: [
     { title:'Assign KOL/team cho dự án', role:'KOL Executive', priority:'High', kpi_weight:3 },
     { title:'Ký HĐ CTV với KOL', role:'Admin', priority:'High', kpi_weight:2 },
     { title:'Briefing KOL & team', role:'PM', priority:'High', kpi_weight:2 },
     { title:'Duyệt kịch bản/concept', role:'PM', priority:'High', kpi_weight:3, requires_approval:true },
-    { title:'Finance duyệt chi phí phát sinh', role:'Finance', priority:'High', kpi_weight:2, requires_approval:true },
-    { title:'Chuẩn bị tài liệu & assets', role:'Creative', priority:'Normal', kpi_weight:2 },
-    { title:'Setup tracking links', role:'Performance', priority:'Normal', kpi_weight:2 },
-  ],
-  EXECUTION: [
     { title:'KOL đăng content đúng lịch', role:'KOL Executive', priority:'High', kpi_weight:3 },
-    { title:'Monitor & seeding', role:'Performance', priority:'High', kpi_weight:3 },
-    { title:'Daily check-in với KOL', role:'KOL Executive', priority:'Normal', kpi_weight:2 },
-    { title:'Report tiến độ hàng ngày', role:'PM', priority:'Normal', kpi_weight:2 },
-    { title:'Xử lý phát sinh', role:'PM', priority:'High', kpi_weight:3 },
     { title:'Thu thập air links', role:'KOL Executive', priority:'High', kpi_weight:3 },
   ],
-  REPORTING: [
+  REPORTING_PAYMENT: [
     { title:'Thu thập số liệu & kết quả', role:'Performance', priority:'High', kpi_weight:3 },
-    { title:'Phân tích KPIs campaign', role:'PM', priority:'High', kpi_weight:3 },
     { title:'Tạo Biên bản nghiệm thu (BBNT)', role:'Admin', priority:'High', kpi_weight:3 },
     { title:'Client duyệt BBNT', role:'AM', priority:'High', kpi_weight:3, requires_approval:true },
-    { title:'Build báo cáo tổng kết', role:'PM', priority:'High', kpi_weight:2 },
-    { title:'Present kết quả cho client', role:'AM', priority:'Normal', kpi_weight:2 },
-  ],
-  PAYMENT: [
     { title:'Gửi hóa đơn VAT cho client', role:'Finance', priority:'High', kpi_weight:3 },
-    { title:'Follow up công nợ', role:'Finance', priority:'High', kpi_weight:3 },
     { title:'Xác nhận thanh toán', role:'Finance', priority:'High', kpi_weight:2 },
     { title:'Thanh toán cho KOL/NCC', role:'Finance', priority:'High', kpi_weight:3 },
-    { title:'Đối soát P&L thực tế', role:'Finance', priority:'High', kpi_weight:3 },
   ],
   CLOSED: [
     { title:'Lưu trữ hồ sơ dự án', role:'Admin', priority:'Normal', kpi_weight:1 },
@@ -5808,15 +5770,21 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
   const [selectedProject, setSelectedProject] = useState(null)
   const [search, setSearch] = useState('')
 
-  const projects = data.projects.filter(p => {
+  const activeProjects = data.projects.filter(p => p.bid_status !== 'lost')
+  const lostProjects = data.projects.filter(p => p.bid_status === 'lost')
+  const wonCount = data.projects.filter(p => p.bid_status === 'won').length
+  const decidedCount = wonCount + lostProjects.length
+  const winRate = decidedCount > 0 ? Math.round(wonCount / decidedCount * 100) : null
+
+  const projects = activeProjects.filter(p => {
     if(search && !p.campaign?.toLowerCase().includes(search.toLowerCase()) && !p.client?.toLowerCase().includes(search.toLowerCase())) return false
-    if(filterStage && (p.current_stage||'LEAD') !== filterStage) return false
+    if(filterStage && (p.current_stage||'BRIEF_PRICING') !== filterStage) return false
     if(filterMember && p.pm !== filterMember) return false
     return true
   })
 
   const stageCount = {}
-  STAGES.forEach(s => { stageCount[s.id] = data.projects.filter(p=>(p.current_stage||'LEAD')===s.id).length })
+  STAGES.forEach(s => { stageCount[s.id] = activeProjects.filter(p=>(p.current_stage||'BRIEF_PRICING')===s.id).length })
 
   return (
     <div>
@@ -5824,7 +5792,10 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <div>
           <h2 style={{margin:0,fontSize:18,fontWeight:900,color:'#0F172A',letterSpacing:'-0.03em'}}>Project Workflow</h2>
-          <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{data.projects.length} dự án · {data.projects.filter(p=>p.current_stage==='EXECUTION').length} đang thực hiện</div>
+          <div style={{fontSize:12,color:'#94A3B8',marginTop:2,display:'flex',alignItems:'center',gap:10}}>
+            <span>{activeProjects.length} dự án đang theo dõi · {activeProjects.filter(p=>p.current_stage==='PRODUCTION').length} đang sản xuất</span>
+            {winRate !== null && <span style={{background:'rgba(16,185,129,0.1)',color:'#059669',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(16,185,129,0.2)'}}>Tỷ lệ thắng thầu: {winRate}%</span>}
+          </div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm dự án..."
@@ -5888,7 +5859,7 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
             </thead>
             <tbody>
               {projects.map(p=>{
-                const stage = STAGES.find(s=>s.id===(p.current_stage||'LEAD'))
+                const stage = STAGES.find(s=>s.id===(p.current_stage||'BRIEF_PRICING'))
                 const urgentStyle = p.is_urgent?{background:'rgba(239,68,68,0.04)'}:{}
                 return <tr key={p.id} style={{borderBottom:'1px solid #F1F5F9',...urgentStyle}}>
                   <td style={{padding:'11px 14px'}}>
@@ -5907,7 +5878,7 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
                     {!p.is_urgent&&<span style={{background:'rgba(99,102,241,0.1)',color:'#6366F1',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{p.priority||'Normal'}</span>}
                   </td>
                   <td style={{padding:'11px 14px'}}>
-                    <StageProgress current={p.current_stage||'LEAD'}/>
+                    <StageProgress current={p.current_stage||'BRIEF_PRICING'}/>
                   </td>
                   <td style={{padding:'11px 14px',fontSize:11,color:'#94A3B8'}}>{p.end_date||'—'}</td>
                   <td style={{padding:'11px 14px'}}>
@@ -5920,6 +5891,28 @@ function WorkflowPage({data, supabase, reload, log, currentUser}) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Đã trượt thầu */}
+      {lostProjects.length > 0 && (
+        <details style={{marginTop:20,background:'#FFFFFF',borderRadius:14,border:'1px solid #E2E8F0',overflow:'hidden'}}>
+          <summary style={{padding:'12px 20px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#94A3B8',listStyle:'none',display:'flex',alignItems:'center',gap:8,userSelect:'none'}}>
+            <span style={{fontSize:14}}>▸</span> Đã trượt thầu ({lostProjects.length})
+          </summary>
+          <div style={{padding:'0 20px 16px',display:'flex',flexDirection:'column',gap:6}}>
+            {lostProjects.map(p=>(
+              <div key={p.id} onClick={()=>setSelectedProject(p)} style={{display:'flex',alignItems:'center',gap:12,padding:'8px 12px',borderRadius:8,background:'rgba(148,163,184,0.06)',border:'1px solid #F1F5F9',cursor:'pointer',opacity:0.6,transition:'opacity 0.15s'}}
+                onMouseEnter={e=>e.currentTarget.style.opacity='0.9'} onMouseLeave={e=>e.currentTarget.style.opacity='0.6'}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#64748B',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.campaign||'Untitled'}</div>
+                  <div style={{fontSize:11,color:'#94A3B8'}}>{p.client||'—'}</div>
+                </div>
+                <span style={{background:'rgba(220,38,38,0.08)',color:'#DC2626',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700,flexShrink:0}}>Trượt thầu</span>
+                {p.bid_lost_at && <span style={{fontSize:10,color:'#94A3B8',flexShrink:0}}>{new Date(p.bid_lost_at).toLocaleDateString('vi-VN')}</span>}
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* Project detail modal */}
@@ -5956,8 +5949,8 @@ function StageProgress({current}) {
 
 // ── PROJECT CARD ─────────────────────────────────────────
 function ProjectCard({project:p, data, onClick}) {
-  const stage = STAGES.find(s=>s.id===(p.current_stage||'LEAD'))||STAGES[0]
-  const idx = STAGES.findIndex(s=>s.id===(p.current_stage||'LEAD'))
+  const stage = STAGES.find(s=>s.id===(p.current_stage||'BRIEF_PRICING'))||STAGES[0]
+  const idx = STAGES.findIndex(s=>s.id===(p.current_stage||'BRIEF_PRICING'))
   const pct = Math.round((idx+1)/STAGES.length*100)
 
   return (
@@ -5985,6 +5978,7 @@ function ProjectCard({project:p, data, onClick}) {
 
       <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
         {p.is_urgent&&<span style={{background:'rgba(220,38,38,0.1)',color:'#DC2626',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🔥 URGENT</span>}
+        {p.bid_status==='won'&&<span style={{background:'rgba(16,185,129,0.1)',color:'#059669',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700,border:'1px solid rgba(16,185,129,0.25)'}}>Thắng thầu</span>}
         {p.pm&&<span style={{background:'rgba(26,86,219,0.08)',color:'#1A56DB',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>👤 {p.pm}</span>}
         {p.service&&<span style={{background:'rgba(124,58,237,0.08)',color:'#7C3AED',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{p.service}</span>}
       </div>
@@ -6007,6 +6001,332 @@ function ProjectCard({project:p, data, onClick}) {
 }
 
 // ══════════════════════════════════════════════════════════
+// ── BRIEF & PRICING PANEL (Phase 2) ────────────────────────
+function BriefPricingPanel({project, data, supabase, currentUser, onProjectUpdated}) {
+  const [uploadingBrief, setUploadingBrief] = useState(false)
+  const [pricingStep, setPricingStep] = useState('idle')
+  const [excelHeaders, setExcelHeaders] = useState([])
+  const [rawRows, setRawRows] = useState([])
+  const [colMap, setColMap] = useState({name:null,platform:null,price:null,phone:null})
+  const [previewRows, setPreviewRows] = useState([])
+  const [updateRateCard, setUpdateRateCard] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [settingBid, setSettingBid] = useState(false)
+
+  function showToast(msg, ok=true) {
+    setToast({msg,ok})
+    setTimeout(()=>setToast(null), 3500)
+  }
+
+  async function uploadBrief(file) {
+    setUploadingBrief(true)
+    const ext = file.name.split('.').pop()
+    const path = `briefs/${project.id}/${Date.now()}.${ext}`
+    const {error} = await supabase.storage.from('kol-documents').upload(path, file, {upsert:true})
+    if(error){alert('Lỗi upload: '+error.message);setUploadingBrief(false);return}
+    const {data:ud} = supabase.storage.from('kol-documents').getPublicUrl(path)
+    await supabase.from('projects').update({brief_file_url:ud.publicUrl}).eq('id',project.id)
+    onProjectUpdated({brief_file_url:ud.publicUrl})
+    setUploadingBrief(false)
+    showToast('Upload brief thành công')
+  }
+
+  function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,'').trim() }
+  function detectCol(hdrs, kws){ return hdrs.find(h=>kws.some(k=>norm(h).includes(norm(k))))||null }
+
+  function buildPreview(rows, cm) {
+    return rows.map(row=>{
+      const name  = cm.name    ? String(row[cm.name]||'').trim()    : ''
+      const plat  = cm.platform? String(row[cm.platform]||'').trim(): ''
+      const price = Number(String(cm.price?row[cm.price]:'').replace(/[^0-9.]/g,''))||0
+      const phone = cm.phone   ? String(row[cm.phone]||'').trim()   : ''
+      const missing = !name || price<=0
+      let kolMatch = null
+      if(phone) kolMatch = data.kols.find(k=>(k.contact||'').replace(/\D/g,'')===phone.replace(/\D/g,''))
+      if(!kolMatch&&name){ const nn=norm(name); kolMatch=data.kols.find(k=>norm(k.name||'').includes(nn)||nn.includes(norm(k.name||''))) }
+      const currentRate = kolMatch
+        ? (kolMatch.pricing?.length?Math.min(...kolMatch.pricing.map(p=>Number(p.amount||0))):Number(kolMatch.rate||0))
+        : null
+      const status = missing?'missing':kolMatch?'existing':'new'
+      return {name,plat,price,phone,kolMatch,status,currentRate,checked:!missing}
+    })
+  }
+
+  function parseExcel(file) {
+    if(!window.XLSX){alert('Vui lòng F5 trang để load thư viện Excel');return}
+    const reader = new FileReader()
+    reader.onload = e => {
+      try {
+        const wb = window.XLSX.read(e.target.result,{type:'array'})
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const json = window.XLSX.utils.sheet_to_json(ws,{header:1,defval:''})
+        let hdrIdx=0,best=0
+        json.slice(0,10).forEach((r,i)=>{const c=r.filter(x=>x!=='').length;if(c>best){best=c;hdrIdx=i}})
+        const hdrs = json[hdrIdx].map(h=>String(h||'').trim())
+        const rows = json.slice(hdrIdx+1).filter(r=>r.some(c=>c!=='')).map(r=>{const o={};hdrs.forEach((h,i)=>{o[h]=String(r[i]||'').trim()});return o})
+        setExcelHeaders(hdrs); setRawRows(rows)
+        const cm = {
+          name:     detectCol(hdrs,['ten','name','kol','kenh','channel','influencer']),
+          platform: detectCol(hdrs,['platform','kenh','nen tang','tiktok','ig','fb','youtube']),
+          price:    detectCol(hdrs,['gia','price','cost','fee','budget','tien']),
+          phone:    detectCol(hdrs,['sdt','phone','lien he','contact','dien thoai']),
+        }
+        setColMap(cm); setPreviewRows(buildPreview(rows,cm)); setPricingStep('preview')
+      } catch(err){alert('Lỗi đọc file: '+err.message)}
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
+  function onColChange(field,val) {
+    const nm = {...colMap,[field]:val||null}
+    setColMap(nm); setPreviewRows(buildPreview(rawRows,nm))
+  }
+
+  function toggleRow(i) {
+    const next=[...previewRows]; next[i]={...next[i],checked:!next[i].checked}; setPreviewRows(next)
+  }
+
+  async function saveRows() {
+    setSaving(true)
+    const toSave = previewRows.filter(r=>r.checked)
+    let done=0; const errs=[]
+    for(const r of toSave){
+      try{
+        let kolId = r.kolMatch?.id||null
+        if(!kolId&&r.name){
+          const {data:nk,error:ke}=await supabase.from('kols').insert([{name:r.name,platform:r.plat||'TikTok',rate:r.price,contact:r.phone||''}]).select('id').single()
+          if(ke){errs.push(r.name+': '+ke.message);continue}
+          kolId=nk.id
+        }
+        if(updateRateCard&&kolId) await supabase.from('kols').update({rate:r.price}).eq('id',kolId)
+        await supabase.from('project_kols').insert([{project_id:project.id,kol_id:kolId,kol_name:r.name,platform:r.plat||'',price:r.price,price_type:'Video Post'}])
+        done++
+      }catch(e){errs.push(r.name)}
+    }
+    setSaving(false); setPricingStep('idle'); setPreviewRows([]); setRawRows([])
+    showToast(`Đã lưu ${done} KOL${errs.length?' ('+errs.length+' lỗi)':''}`, errs.length===0)
+    onProjectUpdated({})
+  }
+
+  async function setBidStatus(status) {
+    if(status==='lost'&&!confirm('Xác nhận đánh dấu dự án này đã trượt thầu?')) return
+    setSettingBid(true)
+    const updates = {bid_status:status}
+    if(status==='lost') updates.bid_lost_at = new Date().toISOString()
+    if(status==='won')  updates.current_stage = 'CONTRACT'
+    await supabase.from('projects').update(updates).eq('id',project.id)
+    onProjectUpdated(updates)
+    setSettingBid(false)
+  }
+
+  const statusBadge = project.bid_status==='won'
+    ? {bg:'rgba(16,185,129,0.1)',color:'#059669',border:'rgba(16,185,129,0.3)',label:'Thắng thầu'}
+    : project.bid_status==='lost'
+      ? {bg:'rgba(220,38,38,0.1)',color:'#DC2626',border:'rgba(220,38,38,0.3)',label:'Trượt thầu'}
+      : null
+
+  return (
+    <div style={{marginBottom:16}}>
+      {toast&&<div style={{position:'fixed',bottom:24,right:24,zIndex:9999,padding:'12px 20px',borderRadius:12,background:toast.ok?'#059669':'#DC2626',color:'#fff',fontSize:13,fontWeight:700,boxShadow:'0 4px 20px rgba(0,0,0,0.3)'}}>{toast.msg}</div>}
+
+      {/* Ô 1 — Brief (RFQ) */}
+      <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:12,border:'1px solid #E2E8F0'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Brief (RFQ) từ khách hàng</div>
+          {project.brief_file_url
+            ?<span style={{background:'rgba(16,185,129,0.1)',color:'#059669',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(16,185,129,0.25)'}}>Đã nhận</span>
+            :<span style={{background:'rgba(148,163,184,0.1)',color:'#94A3B8',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700,border:'1px solid rgba(148,163,184,0.25)'}}>Chờ khách gửi</span>
+          }
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>File Brief</div>
+            {project.brief_file_url
+              ?<div style={{display:'flex',alignItems:'center',gap:8}}>
+                <a href={project.brief_file_url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#3B82F6',fontWeight:600,textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>📎 Xem file Brief</a>
+                <label style={{padding:'4px 10px',borderRadius:7,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:11,fontWeight:600}}>
+                  Đổi file<input type="file" accept=".xlsx,.xls,.pdf" style={{display:'none'}} onChange={e=>e.target.files[0]&&uploadBrief(e.target.files[0])} disabled={uploadingBrief}/>
+                </label>
+              </div>
+              :<label style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',borderRadius:9,border:'2px dashed rgba(59,130,246,0.3)',background:'rgba(59,130,246,0.04)',cursor:'pointer',fontSize:12,color:'#3B82F6',fontWeight:600}}>
+                {uploadingBrief?'Đang upload...':'📤 Upload Brief (.xlsx / .pdf)'}
+                <input type="file" accept=".xlsx,.xls,.pdf" style={{display:'none'}} onChange={e=>e.target.files[0]&&uploadBrief(e.target.files[0])} disabled={uploadingBrief}/>
+              </label>
+            }
+          </div>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>Người phụ trách brief này</div>
+            <select value={project.assigned_to||''} onChange={async e=>{
+              const val=e.target.value||null
+              await supabase.from('projects').update({assigned_to:val}).eq('id',project.id)
+              onProjectUpdated({assigned_to:val})
+            }} style={{width:'100%',padding:'8px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",background:'#FFFFFF',color:'#1F2937',outline:'none'}}>
+              <option value="">— Chưa giao</option>
+              {data.team.map(t=><option key={t.id} value={t.name}>{t.name} ({t.role})</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Ô 2 — Báo giá KOL */}
+      <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:12,border:'1px solid #E2E8F0'}}>
+        <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>Báo giá KOL — Import từ Excel</div>
+
+        {pricingStep==='idle'&&(
+          <label style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,padding:'28px 20px',borderRadius:10,border:'2px dashed rgba(99,102,241,0.3)',background:'rgba(99,102,241,0.04)',cursor:'pointer'}}>
+            <span style={{fontSize:28}}>📊</span>
+            <span style={{fontSize:13,fontWeight:700,color:'#4F46E5'}}>Upload file báo giá KOL (.xlsx)</span>
+            <span style={{fontSize:11,color:'#94A3B8'}}>Hệ thống tự nhận diện cột và so khớp KOL trong database</span>
+            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e=>e.target.files[0]&&parseExcel(e.target.files[0])}/>
+          </label>
+        )}
+
+        {pricingStep==='preview'&&(
+          <div>
+            {/* Column mapping */}
+            <div style={{background:'rgba(99,102,241,0.05)',borderRadius:10,padding:'12px 14px',marginBottom:14,border:'1px solid rgba(99,102,241,0.15)'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#4F46E5',marginBottom:8}}>Kiểm tra / điều chỉnh nhận diện cột:</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8}}>
+                {[['name','Tên KOL'],['platform','Platform'],['price','Giá'],['phone','SĐT / Liên hệ']].map(([f,lbl])=>(
+                  <div key={f}>
+                    <div style={{fontSize:10,color:'#64748B',fontWeight:700,marginBottom:3,textTransform:'uppercase'}}>{lbl}</div>
+                    <select value={colMap[f]||''} onChange={e=>onColChange(f,e.target.value)}
+                      style={{width:'100%',padding:'5px 8px',borderRadius:6,border:'1px solid #D1D5DB',fontSize:11,fontFamily:"'Inter',sans-serif",background:colMap[f]?'#fff':'rgba(245,158,11,0.06)',color:colMap[f]?'#1F2937':'#D97706'}}>
+                      <option value="">— Chưa xác định</option>
+                      {excelHeaders.map(h=><option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview table */}
+            <div style={{overflowX:'auto',maxHeight:300,border:'1px solid #E2E8F0',borderRadius:10,marginBottom:14}}>
+              <table style={{width:'100%',borderCollapse:'collapse',minWidth:580}}>
+                <thead>
+                  <tr style={{background:'#F8FAFF'}}>
+                    {['✓','Tên KOL','Platform','Giá deal','Giá niêm yết','Trạng thái'].map((h,i)=>(
+                      <th key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'#94A3B8',textAlign:i===0?'center':i>=3?'right':'left',borderBottom:'1px solid #F1F5F9'}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((r,i)=>{
+                    const ss = r.status==='existing'?{bg:'rgba(16,185,129,0.08)',color:'#059669',label:'Đã có'}
+                      :r.status==='new'?{bg:'rgba(245,158,11,0.08)',color:'#D97706',label:'KOL mới'}
+                      :{bg:'rgba(220,38,38,0.08)',color:'#DC2626',label:'Thiếu dữ liệu'}
+                    return(
+                      <tr key={i} style={{borderBottom:'1px solid #F8FAFF',opacity:r.status==='missing'?0.65:1}}>
+                        <td style={{padding:'7px 10px',textAlign:'center'}}>
+                          <input type="checkbox" checked={r.checked} onChange={()=>toggleRow(i)} style={{cursor:'pointer',width:14,height:14}}/>
+                        </td>
+                        <td style={{padding:'7px 10px',fontSize:12,fontWeight:600,color:'#0F172A'}}>{r.name||'—'}</td>
+                        <td style={{padding:'7px 10px',fontSize:11,color:'#64748B'}}>{r.plat||'—'}</td>
+                        <td style={{padding:'7px 10px',fontSize:12,fontWeight:700,color:'#1A56DB',textAlign:'right'}}>{r.price>0?Number(r.price).toLocaleString('vi-VN'):'-'}</td>
+                        <td style={{padding:'7px 10px',fontSize:11,textAlign:'right',color:r.currentRate!=null&&r.price>0&&r.price!==r.currentRate?'#D97706':'#94A3B8'}}>
+                          {r.currentRate!=null?Number(r.currentRate).toLocaleString('vi-VN'):'—'}
+                          {r.currentRate!=null&&r.price>0&&r.price!==r.currentRate&&<span style={{fontSize:9,display:'block'}}>⚠ khác giá deal</span>}
+                        </td>
+                        <td style={{padding:'7px 10px',textAlign:'center'}}>
+                          <span style={{background:ss.bg,color:ss.color,padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>{ss.label}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Rate card checkbox — tách biệt rõ khỏi nút Lưu */}
+            <div style={{padding:'10px 14px',background:'rgba(245,158,11,0.06)',borderRadius:9,border:'1px solid rgba(245,158,11,0.25)',marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+              <input type="checkbox" id="updateRC" checked={updateRateCard} onChange={e=>setUpdateRateCard(e.target.checked)} style={{width:15,height:15,cursor:'pointer'}}/>
+              <label htmlFor="updateRC" style={{fontSize:12,fontWeight:600,color:'#92400E',cursor:'pointer'}}>
+                Đây là giá niêm yết mới — cập nhật vào rate card KOL (ghi đè giá cũ trong database)
+              </label>
+            </div>
+
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <button onClick={()=>{setPricingStep('idle');setPreviewRows([]);setRawRows([])}}
+                style={{padding:'7px 14px',borderRadius:8,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Inter',sans-serif"}}>
+                ← Upload lại
+              </button>
+              <button onClick={saveRows} disabled={saving||previewRows.filter(r=>r.checked).length===0}
+                style={{padding:'8px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#4F46E5,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif",opacity:saving||previewRows.filter(r=>r.checked).length===0?0.5:1}}>
+                {saving?'Đang lưu...':'Lưu '+previewRows.filter(r=>r.checked).length+' dòng đã chọn vào hệ thống'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Kết quả đấu thầu */}
+      <div style={{background:'#FFFFFF',borderRadius:14,padding:'16px 20px',border:'1px solid #E2E8F0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>Kết quả đấu thầu</div>
+          {statusBadge
+            ?<span style={{background:statusBadge.bg,color:statusBadge.color,padding:'3px 10px',borderRadius:99,fontSize:12,fontWeight:700,border:`1px solid ${statusBadge.border}`}}>{statusBadge.label}</span>
+            :<span style={{fontSize:12,color:'#94A3B8',fontWeight:500}}>Đang chờ kết quả</span>
+          }
+        </div>
+        <div style={{display:'flex',gap:16,alignItems:'center'}}>
+          <button onClick={()=>setBidStatus('won')} disabled={settingBid||project.bid_status==='won'}
+            style={{padding:'8px 20px',borderRadius:9,border:'none',background:project.bid_status==='won'?'rgba(16,185,129,0.15)':'linear-gradient(135deg,#059669,#10B981)',color:project.bid_status==='won'?'#059669':'#fff',cursor:project.bid_status==='won'?'default':'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif",opacity:settingBid?0.6:1}}>
+            Thắng thầu
+          </button>
+          <button onClick={()=>setBidStatus('lost')} disabled={settingBid||project.bid_status==='lost'}
+            style={{padding:'8px 20px',borderRadius:9,border:'1.5px solid rgba(220,38,38,0.4)',background:'rgba(220,38,38,0.07)',color:'#DC2626',cursor:project.bid_status==='lost'?'default':'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif",opacity:settingBid||project.bid_status==='lost'?0.5:1}}>
+            Trượt thầu
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── PRODUCTION PANEL (Phase 3) ──────────────────────────────
+function ProductionPanel({project, supabase, onProjectUpdated, onNextStage}) {
+  const [link, setLink] = useState(project.working_sheet_url||'')
+  const [saving, setSaving] = useState(false)
+
+  async function saveLink() {
+    setSaving(true)
+    const val = link.trim()||null
+    await supabase.from('projects').update({working_sheet_url:val}).eq('id',project.id)
+    onProjectUpdated({working_sheet_url:val})
+    setSaving(false)
+  }
+
+  return (
+    <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:12,border:'1px solid #E2E8F0'}}>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>Working Sheet</div>
+      <div style={{display:'flex',gap:10,marginBottom:12,alignItems:'flex-end'}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,fontWeight:700,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>Link Google Sheet làm việc chung</div>
+          <input value={link} onChange={e=>setLink(e.target.value)}
+            placeholder="https://docs.google.com/spreadsheets/..."
+            style={{width:'100%',padding:'9px 12px',border:'1px solid #D1D5DB',borderRadius:8,fontSize:12,fontFamily:"'Inter',system-ui,sans-serif",outline:'none',boxSizing:'border-box'}}/>
+        </div>
+        <button onClick={saveLink} disabled={saving} style={{padding:'9px 16px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#3B82F6,#0EA5E9)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif",flexShrink:0,opacity:saving?0.7:1}}>
+          {saving?'Lưu...':'Lưu link'}
+        </button>
+      </div>
+      {project.working_sheet_url&&(
+        <a href={project.working_sheet_url} target="_blank" rel="noopener noreferrer"
+          style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#3B82F6',fontWeight:600,textDecoration:'none',padding:'6px 12px',borderRadius:8,background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)'}}>
+          🔗 Mở Google Sheet
+        </a>
+      )}
+      <div style={{marginTop:16,paddingTop:14,borderTop:'1px solid #F1F5F9',display:'flex',justifyContent:'flex-end'}}>
+        <button onClick={()=>{if(confirm('Xác nhận sản xuất đã hoàn tất — chuyển sang "Báo cáo & Thanh toán"?'))onNextStage()}}
+          style={{padding:'9px 20px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#059669,#10B981)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Inter',sans-serif"}}>
+          Chuyển bước tiếp →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // PROJECT WORKFLOW DETAIL — Full management view
 // ══════════════════════════════════════════════════════════
 function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUser, onClose, onUpdate}) {
@@ -6018,7 +6338,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   const [editTask, setEditTask] = useState(null)
   const [showStageChange, setShowStageChange] = useState(false)
   const [pendingStageChange, setPendingStageChange] = useState(null)
-  const [viewingStage, setViewingStage] = useState(project.current_stage||'LEAD')
+  const [viewingStage, setViewingStage] = useState(project.current_stage||'BRIEF_PRICING')
   const [notifications, setNotifications] = useState([])
   const [taskDetail, setTaskDetail] = useState(null)
   const [taskComments, setTaskComments] = useState([])
@@ -6075,7 +6395,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
   async function changeStage(newStage, force=false) {
     // Check if required approvals are done
-    const currentStage = project.current_stage||'LEAD'
+    const currentStage = project.current_stage||'BRIEF_PRICING'
     const pendingApprovalsList = approvals.filter(a=>a.stage===currentStage&&a.status==='Pending')
     if(pendingApprovalsList.length > 0) {
       alert(`⚠️ Còn ${pendingApprovalsList.length} approval chưa được xử lý ở stage hiện tại!`)
@@ -6088,17 +6408,6 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       const undoneTasks = tasks.filter(t=>t.stage===currentStage&&t.status!=='Done')
       if(undoneTasks.length > 0) {
         setIncompleteTasks({tasks: undoneTasks, targetStage: newStage})
-        return
-      }
-    }
-
-    // Special checks
-    if(newStage==='EXECUTION') {
-      const plApproved = approvals.some(a=>a.stage==='PRICING'&&a.approval_type==='PL_FINANCE'&&a.status==='Approved')
-      const dirApproved = approvals.some(a=>a.stage==='PRICING'&&a.approval_type==='DIRECTOR'&&a.status==='Approved')
-      if(!plApproved||!dirApproved) {
-        alert('⚠️ Cần Finance duyệt P&L và Director duyệt trước khi vào EXECUTION!')
-        setPendingStageChange(null)
         return
       }
     }
@@ -6205,8 +6514,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     log(`${approved?'Approved':'Rejected'} approval: ${project.campaign}`)
   }
 
-  const currentStageData = STAGES.find(s=>s.id===(project.current_stage||'LEAD'))||STAGES[0]
-  const currentStageIdx = STAGES.findIndex(s=>s.id===(project.current_stage||'LEAD'))
+  const currentStageData = STAGES.find(s=>s.id===(project.current_stage||'BRIEF_PRICING'))||STAGES[0]
+  const currentStageIdx = STAGES.findIndex(s=>s.id===(project.current_stage||'BRIEF_PRICING'))
   const viewingStageData = STAGES.find(s=>s.id===viewingStage)||STAGES[0]
   const viewingStageIdx = STAGES.findIndex(s=>s.id===viewingStage)
   const isViewingPastStage = viewingStageIdx < currentStageIdx
@@ -6220,10 +6529,10 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       <div style={{width:'85vw',maxWidth:1100,background:'#F0F4FF',overflowY:'auto',display:'flex',flexDirection:'column',boxShadow:'-20px 0 60px rgba(0,0,0,0.2)'}}>
 
         {/* Viewing past stage banner */}
-        {viewingStage !== (project.current_stage||'LEAD') && (
+        {viewingStage !== (project.current_stage||'BRIEF_PRICING') && (
           <div style={{background:'rgba(245,158,11,0.15)',borderBottom:'1px solid rgba(245,158,11,0.3)',padding:'8px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
             <span style={{fontSize:12,fontWeight:600,color:'#92400E'}}>👁 Đang xem: <strong>{viewingStageData.label}</strong> (stage cũ)</span>
-            <button onClick={()=>setViewingStage(project.current_stage||'LEAD')} style={{padding:'4px 12px',borderRadius:6,border:'1px solid rgba(245,158,11,0.4)',background:'rgba(245,158,11,0.1)',color:'#92400E',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Về stage hiện tại ({currentStageData.label})</button>
+            <button onClick={()=>setViewingStage(project.current_stage||'BRIEF_PRICING')} style={{padding:'4px 12px',borderRadius:6,border:'1px solid rgba(245,158,11,0.4)',background:'rgba(245,158,11,0.1)',color:'#92400E',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Về stage hiện tại ({currentStageData.label})</button>
           </div>
         )}
 
@@ -6338,6 +6647,21 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   </div>
                 ))}
               </div>
+
+              {/* Stage-specific panels */}
+              {!isViewingPastStage && viewingStage==='BRIEF_PRICING' && (
+                <BriefPricingPanel
+                  project={project} data={data} supabase={supabase} currentUser={currentUser}
+                  onProjectUpdated={(updates)=>{ onUpdate({...project,...updates}); loadData(); reload() }}
+                />
+              )}
+              {!isViewingPastStage && viewingStage==='PRODUCTION' && (
+                <ProductionPanel
+                  project={project} supabase={supabase}
+                  onProjectUpdated={(updates)=>{ onUpdate({...project,...updates}); loadData(); reload() }}
+                  onNextStage={()=>changeStage('REPORTING_PAYMENT')}
+                />
+              )}
 
               {/* Stage tasks summary */}
               <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid #E2E8F0'}}>
@@ -6462,8 +6786,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
               <>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
                   {STAGES.map((s,i)=>{
-                    const isCurrent = s.id===(project.current_stage||'LEAD')
-                    const isPrev = i < STAGES.findIndex(st=>st.id===(project.current_stage||'LEAD'))
+                    const isCurrent = s.id===(project.current_stage||'BRIEF_PRICING')
+                    const isPrev = i < STAGES.findIndex(st=>st.id===(project.current_stage||'BRIEF_PRICING'))
                     return <button key={s.id} onClick={()=>!isCurrent&&setPendingStageChange(s)}
                       disabled={isCurrent}
                       style={{
@@ -6481,7 +6805,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   })}
                 </div>
                 <div style={{padding:'10px 14px',background:'rgba(245,158,11,0.08)',borderRadius:8,border:'1px solid rgba(245,158,11,0.25)',fontSize:11,color:'#F59E0B',marginBottom:14}}>
-                  ⚠️ Vào EXECUTION cần Finance & Director đã approve P&L. Vào PAYMENT cần có BBNT.
+                  ⚠️ Vào CONTRACT cần đã thắng thầu. Vào REPORTING_PAYMENT nên hoàn tất sản xuất trước.
                 </div>
                 <button onClick={()=>setShowStageChange(false)} style={{width:'100%',padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Huỷ</button>
               </>
