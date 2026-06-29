@@ -6376,23 +6376,26 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     setLoading(false)
   }
 
-  async function initStageTasks(stage) {
-    const defaultTasks = STAGE_TASKS[stage]||[]
-    const existing = tasks.filter(t=>t.stage===stage)
-    if(existing.length > 0) return // already initialized
-
-    const newTasks = defaultTasks.map(t=>({
+  async function markTaskComplete(stage, title, done) {
+    const taskDef = (STAGE_TASKS[stage]||[]).find(d=>d.title===title)
+    await supabase.from('tasks').upsert({
       project_id: project.id,
       stage,
-      title: t.title,
-      task_type: t.requires_approval?'approval':'task',
-      assigned_to: '', // will be assigned manually
-      priority: t.priority||'Normal',
-      status: 'Todo',
-      requires_approval: t.requires_approval||false,
-      kpi_weight: t.kpi_weight||1,
-    }))
-    if(newTasks.length) await supabase.from('tasks').insert(newTasks)
+      title,
+      status: done ? 'Done' : 'Todo',
+      completed_at: done ? new Date().toISOString() : null,
+      task_type: taskDef?.requires_approval ? 'approval' : 'task',
+      priority: taskDef?.priority || 'Normal',
+      kpi_weight: taskDef?.kpi_weight || 1,
+      requires_approval: taskDef?.requires_approval || false,
+      assigned_to: '',
+    }, { onConflict: 'project_id,stage,title' })
+    await supabase.from('audit_log').insert([{
+      message: `[${project.id}] Task "${title}" (${stage}): ${done?'Hoàn thành':'Bỏ tick'} | project: ${project.campaign}`,
+      role: currentUser?.name||'User',
+      entity_type:'task', entity_name:title,
+      action:'task_completed', changes_json:{stage,title,done}
+    }])
     await loadData()
   }
 
@@ -6411,7 +6414,6 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       action:'stage_changed', changes_json:{from:currentStage,to:newStage}
     }])
 
-    await initStageTasks(newStage)
     const updated = {...project, current_stage:newStage}
     onUpdate(updated)
     setViewingStage(newStage)
@@ -6451,26 +6453,6 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     log(`Task: ${taskData.title}`)
   }
 
-  async function updateTaskStatus(taskId, newStatus) {
-    const task = tasks.find(t=>t.id===taskId)
-    const oldStatus = task?.status||'Todo'
-    const updates = {status:newStatus}
-    if(newStatus==='Done') updates.completed_at = new Date().toISOString()
-    if(newStatus==='Done' && task?.due_date) {
-      const due = new Date(task.due_date)
-      const now = new Date()
-      if(now > due) updates.late_minutes = Math.round((now-due)/60000)
-    }
-    await supabase.from('tasks').update(updates).eq('id', taskId)
-    // Audit
-    await supabase.from('audit_log').insert([{
-      message: `[${project.id}] Task "${task?.title}" status: ${oldStatus} → ${newStatus} | project: ${project.campaign}`,
-      role: currentUser?.name||'User',
-      entity_type:'task', entity_id:taskId, entity_name:task?.title||'',
-      action:'task_status_changed', changes_json:{from:oldStatus,to:newStatus}
-    }])
-    await loadData()
-  }
 
   async function requestApproval(type, stage, data_payload={}) {
     const existing = approvals.find(a=>a.stage===stage&&a.approval_type===type&&a.status==='Pending')
@@ -6512,20 +6494,24 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   const viewingStageData = STAGES.find(s=>s.id===viewingStage)||STAGES[0]
   const viewingStageIdx = STAGES.findIndex(s=>s.id===viewingStage)
   const isViewingPastStage = viewingStageIdx < currentStageIdx
-  const stageTasks = tasks.filter(t=>t.stage===viewingStage)
-  const doneTasks = stageTasks.filter(t=>t.status==='Done').length
-  const stageCompletion = stageTasks.length ? Math.round(doneTasks/stageTasks.length*100) : 0
+  const isViewingFutureStage = viewingStageIdx > currentStageIdx
+  const stageDefs = STAGE_TASKS[viewingStage]||[]
+  const stageRecords = tasks.filter(t=>t.stage===viewingStage)
+  const doneTasks = stageDefs.filter(def=>stageRecords.some(r=>r.title===def.title&&r.status==='Done')||getAutoCompleted(def)).length
+  const stageCompletion = stageDefs.length ? Math.round(doneTasks/stageDefs.length*100) : 0
   const pendingApprovals = approvals.filter(a=>a.status==='Pending')
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.7)',display:'flex',alignItems:'stretch',justifyContent:'flex-end',zIndex:2000,backdropFilter:'blur(4px)'}}>
       <div style={{width:'85vw',maxWidth:1100,background:'#F0F4FF',overflowY:'auto',display:'flex',flexDirection:'column',boxShadow:'-20px 0 60px rgba(0,0,0,0.2)'}}>
 
-        {/* Viewing past stage banner */}
+        {/* Viewing other stage banner */}
         {viewingStage !== (project.current_stage||'BRIEF_PRICING') && (
-          <div style={{background:'rgba(245,158,11,0.15)',borderBottom:'1px solid rgba(245,158,11,0.3)',padding:'8px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-            <span style={{fontSize:12,fontWeight:600,color:'#92400E'}}>👁 Đang xem: <strong>{viewingStageData.label}</strong> (stage cũ)</span>
-            <button onClick={()=>setViewingStage(project.current_stage||'BRIEF_PRICING')} style={{padding:'4px 12px',borderRadius:6,border:'1px solid rgba(245,158,11,0.4)',background:'rgba(245,158,11,0.1)',color:'#92400E',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Về stage hiện tại ({currentStageData.label})</button>
+          <div style={{background:isViewingFutureStage?'rgba(99,102,241,0.1)':'rgba(245,158,11,0.15)',borderBottom:`1px solid ${isViewingFutureStage?'rgba(99,102,241,0.25)':'rgba(245,158,11,0.3)'}`,padding:'8px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+            <span style={{fontSize:12,fontWeight:600,color:isViewingFutureStage?'#4338CA':'#92400E'}}>
+              👁 Đang xem: <strong>{viewingStageData.label}</strong> {isViewingFutureStage?'(chưa đến)':'(đã qua)'}
+            </span>
+            <button onClick={()=>setViewingStage(project.current_stage||'BRIEF_PRICING')} style={{padding:'4px 12px',borderRadius:6,border:`1px solid ${isViewingFutureStage?'rgba(99,102,241,0.4)':'rgba(245,158,11,0.4)'}`,background:isViewingFutureStage?'rgba(99,102,241,0.1)':'rgba(245,158,11,0.1)',color:isViewingFutureStage?'#4338CA':'#92400E',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Về stage hiện tại ({currentStageData.label})</button>
           </div>
         )}
 
@@ -6568,17 +6554,13 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                   transition:'all 0.15s',
                 }} title={s.id===(project.current_stage||'BRIEF_PRICING')?`${s.label} (stage hiện tại)`:s.id===viewingStage?`${s.label} (đang xem)`:`Xem stage: ${s.label}`}>
                   {(()=>{
-                    const stageTasks = tasks.filter(t=>t.stage===s.id)
-                    if(i>currentStageIdx) return <span style={{fontSize:10,opacity:0.5}}>{s.icon}</span>
-                    if(stageTasks.length===0) return i===currentStageIdx?s.icon:'✓'
-                    const allDone = stageTasks.every(t=>t.status==='Done')
-                    const today = new Date().toISOString().slice(0,10)
-                    const hasOverdue = stageTasks.some(t=>t.status!=='Done'&&t.due_date&&t.due_date<today)
-                    const anyInProgress = stageTasks.some(t=>t.status==='In Progress'||t.status==='Review')
-                    if(allDone) return <span style={{color:'#10B981',fontSize:14}}>✓</span>
-                    if(hasOverdue) return <span style={{fontSize:14}}>🔴</span>
-                    if(anyInProgress) return <span style={{fontSize:12}}>🟡</span>
-                    return <span style={{fontSize:12}}>⚪</span>
+                    const defs2 = STAGE_TASKS[s.id]||[]
+                    const doneCount2 = tasks.filter(t=>t.stage===s.id&&t.status==='Done').length
+                    if(i>currentStageIdx) return <span style={{fontSize:10,opacity:0.4}}>{s.icon}</span>
+                    if(defs2.length===0) return i===currentStageIdx?s.icon:'✓'
+                    if(doneCount2>=defs2.length) return <span style={{color:'#10B981',fontSize:14}}>✓</span>
+                    if(doneCount2>0) return <span style={{fontSize:10,fontWeight:700}}>{doneCount2}/{defs2.length}</span>
+                    return <span style={{fontSize:10,opacity:0.7}}>{s.icon}</span>
                   })()}
                 </div>
                 {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<currentStageIdx?'#059669':'rgba(255,255,255,0.1)',margin:'0 2px'}}/>}
@@ -6628,8 +6610,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
               {/* KPI cards */}
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
                 {[
-                  ['Đang xem stage',viewingStageData.label+' ('+Math.round((viewingStageIdx+1)/STAGES.length*100)+'%)',isViewingPastStage?'Stage đã hoàn thành':'Stage hiện tại',viewingStageData.color],
-                  ['Tasks stage này',`${doneTasks}/${stageTasks.length} done (${stageCompletion}%)`,stageTasks.filter(t=>t.status==='In Progress').length+' đang làm','#1A56DB'],
+                  ['Đang xem stage',viewingStageData.label+' ('+Math.round((viewingStageIdx+1)/STAGES.length*100)+'%)',isViewingPastStage?'Đã qua':isViewingFutureStage?'Chưa đến':'Stage hiện tại',viewingStageData.color],
+                  ['Tasks stage này',`${doneTasks}/${stageDefs.length} hoàn thành (${stageCompletion}%)`,'checklist','#1A56DB'],
                   ['Pending approvals',pendingApprovals.length,pendingApprovals.length?'Cần xử lý':'OK ✓',pendingApprovals.length?'#DC2626':'#059669'],
                   ['Revenue',project.revenue?Number(project.revenue).toLocaleString('vi-VN'):'—','VND','#059669'],
                 ].map(([l,v,s,c])=>(
@@ -6656,24 +6638,31 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                 />
               )}
 
-              {/* Stage tasks summary */}
+              {/* Stage checklist — render từ STAGE_TASKS constant, trạng thái từ DB */}
               <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',marginBottom:16,border:'1px solid #E2E8F0'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>Tasks — {viewingStageData.label}{isViewingPastStage&&<span style={{fontSize:10,color:'#10B981',marginLeft:8,fontWeight:600}}>✓ Đã hoàn thành</span>}</div>
-                  <div style={{display:'flex',gap:8}}>
-                    {!isViewingPastStage && stageTasks.length===0&&(
-                      <button onClick={()=>initStageTasks(viewingStage)} style={{padding:'6px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-                        ⚡ Khởi tạo tasks cho stage này
-                      </button>
-                    )}
-                    {!isViewingPastStage&&<button onClick={()=>{setEditTask(null);setShowTaskForm(true)}} style={{padding:'6px 14px',borderRadius:8,border:'1px solid rgba(99,102,241,0.25)',background:'rgba(99,102,241,0.08)',color:'#6366F1',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-                      + Task
-                    </button>}
+                  <div style={{fontSize:13,fontWeight:800,color:'#0F172A'}}>
+                    Checklist — {viewingStageData.label}
+                    {stageCompletion===100&&<span style={{fontSize:10,color:'#10B981',marginLeft:8,fontWeight:600}}>✓ Hoàn tất</span>}
                   </div>
+                  <span style={{fontSize:11,color:'#94A3B8'}}>{doneTasks}/{stageDefs.length}</span>
                 </div>
-                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={isViewingPastStage?()=>{}:updateTaskStatus} onEdit={()=>openTaskDetail(t)} readOnly={isViewingPastStage} isAutoCompleted={!isViewingPastStage&&getAutoCompleted(t)}/>)}
-                {stageTasks.length>5&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',marginTop:8,cursor:'pointer'}} onClick={()=>setActiveTab('tasks')}>+ {stageTasks.length-5} tasks khác → Xem tất cả</div>}
-                {!stageTasks.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>{isViewingPastStage?'Không có tasks nào ở stage này.':'Chưa có tasks. Click "Khởi tạo tasks" để tạo tự động.'}</div>}
+                {stageDefs.length===0&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>Chưa có checklist cho stage này.</div>}
+                {stageDefs.map(def=>{
+                  const record = stageRecords.find(r=>r.title===def.title)
+                  const isCompleted = record?.status==='Done'
+                  const isAuto = !isViewingPastStage && getAutoCompleted(def)
+                  return (
+                    <TaskRow
+                      key={def.title}
+                      task={{...def, id:record?.id||null, stage:viewingStage, project_id:project.id, status:isCompleted?'Done':'Todo', due_date:record?.due_date||null, assigned_to:record?.assigned_to||''}}
+                      onStatusChange={isViewingPastStage||isAuto?null:()=>markTaskComplete(viewingStage, def.title, !isCompleted)}
+                      onEdit={()=>record&&openTaskDetail(record)}
+                      readOnly={isViewingPastStage}
+                      isAutoCompleted={isAuto}
+                    />
+                  )
+                })}
               </div>
 
               {/* Required approvals for current stage */}
@@ -6704,10 +6693,9 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
           {!loading&&activeTab==='tasks'&&(
             <TasksTab
               tasks={tasks} project={project} data={data}
-              onStatusChange={updateTaskStatus}
+              onMarkComplete={markTaskComplete}
               onEdit={(t)=>{setEditTask(t);setShowTaskForm(true)}}
               onAdd={()=>{setEditTask(null);setShowTaskForm(true)}}
-              onInit={()=>initStageTasks(viewingStage)}
               currentStage={viewingStage}
             />
           )}
@@ -6855,7 +6843,7 @@ function TaskRow({task:t, onStatusChange, onEdit, readOnly, isAutoCompleted}) {
           ? <input type="checkbox" checked readOnly disabled style={{width:16,height:16,accentColor:'#10B981',cursor:'default',flexShrink:0,opacity:0.8}} title="Tự động cập nhật bởi hệ thống"/>
           : <input type="checkbox"
               checked={t.status==='Done'}
-              onChange={()=>onStatusChange(t.id, t.status==='Done'?'Todo':'Done')}
+              onChange={()=>onStatusChange&&onStatusChange()}
               style={{width:16,height:16,cursor:'pointer',accentColor:'#10B981',flexShrink:0}}
             />
       }
@@ -6954,66 +6942,70 @@ function TaskDetailPanel({task, comments, supabase, currentUser, onClose, onUpda
 }
 
 // ── TASKS TAB ────────────────────────────────────────────
-function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, currentStage}) {
+function TasksTab({tasks, project, data, onMarkComplete, onEdit, onAdd, currentStage}) {
   const [filterStage, setFilterStage] = useState(currentStage)
-  const [filterAssignee, setFilterAssignee] = useState('')
 
-  const filtered = tasks.filter(t=>
-    (!filterStage||t.stage===filterStage)&&
-    (!filterAssignee||t.assigned_to===filterAssignee)
-  )
+  const visibleStages = (filterStage?[STAGES.find(s=>s.id===filterStage)]:STAGES).filter(Boolean)
 
-  const assignees = [...new Set(tasks.map(t=>t.assigned_to).filter(Boolean))]
+  // Tổng số task từ STAGE_TASKS (nguồn dữ liệu chính xác)
+  const totalDefs = visibleStages.reduce((sum,s)=>sum+(STAGE_TASKS[s.id]||[]).length,0)
+  const totalDone = visibleStages.reduce((sum,s)=>{
+    const recs = tasks.filter(t=>t.stage===s.id&&t.status==='Done')
+    return sum+(STAGE_TASKS[s.id]||[]).filter(d=>recs.some(r=>r.title===d.title)).length
+  },0)
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{display:'flex',gap:8}}>
-          <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
-            style={{padding:'6px 10px',border:'1px solid #E2E8F0',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#FFFFFF',color:'#0F172A'}}>
-            <option value="">Tất cả stages</option>
-            {STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
-          <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)}
-            style={{padding:'6px 10px',border:'1px solid #E2E8F0',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#FFFFFF',color:'#0F172A'}}>
-            <option value="">Tất cả assignees</option>
-            {data.team.map(m=><option key={m.id} value={m.name}>{m.name}</option>)}
-          </select>
+        <select value={filterStage} onChange={e=>setFilterStage(e.target.value)}
+          style={{padding:'6px 10px',border:'1px solid #E2E8F0',borderRadius:8,fontSize:11,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:'none',background:'#FFFFFF',color:'#0F172A'}}>
+          <option value="">Tất cả stages</option>
+          {STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+        <button onClick={onAdd} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>+ Task tùy chỉnh</button>
+      </div>
+
+      {/* Stats — Done / Total */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10,marginBottom:16}}>
+        <div style={{background:'#FFFFFF',borderRadius:10,padding:'12px 16px',border:'1px solid #E2E8F0',borderTop:'2px solid #10B981',textAlign:'center'}}>
+          <div style={{fontSize:22,fontWeight:900,color:'#10B981'}}>{totalDone}</div>
+          <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,marginTop:2}}>Đã hoàn thành</div>
         </div>
-        <div style={{display:'flex',gap:8}}>
-          <button onClick={onInit} style={{padding:'7px 14px',borderRadius:8,border:'1px solid rgba(99,102,241,0.25)',background:'rgba(99,102,241,0.08)',color:'#6366F1',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Auto-tạo tasks</button>
-          <button onClick={onAdd} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'linear-gradient(135deg,#6366F1,#06B6D4)',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>+ Task mới</button>
+        <div style={{background:'#FFFFFF',borderRadius:10,padding:'12px 16px',border:'1px solid #E2E8F0',borderTop:'2px solid #94A3B8',textAlign:'center'}}>
+          <div style={{fontSize:22,fontWeight:900,color:'#0F172A'}}>{totalDefs-totalDone}</div>
+          <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,marginTop:2}}>Chưa làm</div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:16}}>
-        {['Todo','In Progress','Review','Done','Blocked'].map(s=>{
-          const cnt = filtered.filter(t=>t.status===s).length
-          return <div key={s} style={{background:'#FFFFFF',borderRadius:10,padding:'10px 12px',border:'1px solid #E2E8F0',borderTop:`2px solid ${TASK_STATUS_COLOR[s]||'#94A3B8'}`,textAlign:'center'}}>
-            <div style={{fontSize:18,fontWeight:900,color:TASK_STATUS_COLOR[s]||'#94A3B8'}}>{cnt}</div>
-            <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,marginTop:2}}>{s}</div>
-          </div>
-        })}
-      </div>
-
-      {/* Tasks by stage */}
-      {(filterStage?[STAGES.find(s=>s.id===filterStage)]:STAGES).filter(Boolean).map(stage=>{
-        const stageTasks = filtered.filter(t=>t.stage===stage.id)
-        if(!stageTasks.length) return null
+      {/* Checklist theo stage — từ STAGE_TASKS constant */}
+      {visibleStages.map(stage=>{
+        const defs = STAGE_TASKS[stage.id]||[]
+        if(!defs.length) return null
+        const recs = tasks.filter(t=>t.stage===stage.id)
+        const doneCount = defs.filter(d=>recs.some(r=>r.title===d.title&&r.status==='Done')).length
         return (
           <div key={stage.id} style={{marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:800,color:stage.color,marginBottom:8,display:'flex',alignItems:'center',gap:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>
               {stage.icon} {stage.label}
-              <span style={{background:stage.color+'18',color:stage.color,padding:'1px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{stageTasks.length}</span>
+              <span style={{background:stage.color+'18',color:stage.color,padding:'1px 8px',borderRadius:99,fontSize:10,fontWeight:600}}>{doneCount}/{defs.length}</span>
             </div>
             <div style={{background:'#FFFFFF',borderRadius:12,padding:'12px 16px',border:'1px solid #E2E8F0'}}>
-              {stageTasks.map(t=><TaskRow key={t.id} task={t} onStatusChange={onStatusChange} onEdit={()=>onEdit(t)}/>)}
+              {defs.map(def=>{
+                const record = recs.find(r=>r.title===def.title)
+                const isCompleted = record?.status==='Done'
+                return (
+                  <TaskRow
+                    key={def.title}
+                    task={{...def, id:record?.id||null, stage:stage.id, project_id:project.id, status:isCompleted?'Done':'Todo', due_date:record?.due_date||null, assigned_to:record?.assigned_to||''}}
+                    onStatusChange={()=>onMarkComplete(stage.id, def.title, !isCompleted)}
+                    onEdit={()=>record&&onEdit(record)}
+                  />
+                )
+              })}
             </div>
           </div>
         )
       })}
-      {!filtered.length&&<div style={{textAlign:'center',padding:40,color:'#94A3B8',fontSize:12}}>Chưa có tasks</div>}
     </div>
   )
 }
