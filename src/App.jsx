@@ -5721,6 +5721,7 @@ const STAGE_TASKS = {
     { title:'Assign KOL/team cho dự án', role:'KOL Executive', priority:'High', kpi_weight:3 },
     { title:'Ký HĐ CTV với KOL', role:'Admin', priority:'High', kpi_weight:2 },
     { title:'Briefing KOL & team', role:'PM', priority:'High', kpi_weight:2 },
+    { title:'Dán link Google Sheet vào hệ thống', role:'PM', priority:'High', kpi_weight:2 },
     { title:'Duyệt kịch bản/concept', role:'PM', priority:'High', kpi_weight:3, requires_approval:true },
     { title:'KOL đăng content đúng lịch', role:'KOL Executive', priority:'High', kpi_weight:3 },
     { title:'Thu thập air links', role:'KOL Executive', priority:'High', kpi_weight:3 },
@@ -6332,7 +6333,7 @@ function ProductionPanel({project, supabase, onProjectUpdated, onNextStage}) {
 function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUser, onClose, onUpdate}) {
   const [tasks, setTasks] = useState([])
   const [approvals, setApprovals] = useState([])
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [editTask, setEditTask] = useState(null)
@@ -6346,7 +6347,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
   const [auditLog, setAuditLog] = useState([])
   const [showQuoteForm, setShowQuoteForm] = useState(false)
   const [viewQuote, setViewQuote] = useState(null)
-  const [incompleteTasks, setIncompleteTasks] = useState(null)
+  const [hasProjectKols, setHasProjectKols] = useState(false)
 
   async function openTaskDetail(task) {
     setTaskDetail(task)
@@ -6358,18 +6359,20 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
   async function loadData() {
     setLoading(true)
-    const [t, a, n, q, al] = await Promise.all([
+    const [t, a, n, q, al, pk] = await Promise.all([
       supabase.from('tasks').select('*').eq('project_id', project.id).order('created_at'),
       supabase.from('stage_approvals').select('*').eq('project_id', project.id).order('created_at',{ascending:false}),
       supabase.from('notifications').select('*').eq('data->>project_id', project.id).order('created_at',{ascending:false}).limit(20),
       supabase.from('quotations').select('*').eq('project_id', project.id).order('created_at',{ascending:false}),
       supabase.from('audit_log').select('*').ilike('message','%'+project.id+'%').order('created_at',{ascending:false}).limit(50),
+      supabase.from('project_kols').select('id', {count:'exact',head:true}).eq('project_id', project.id),
     ])
     setTasks(t.data||[])
     setApprovals(a.data||[])
     setNotifications(n.data||[])
     setQuotations(q.data||[])
     setAuditLog(al.data||[])
+    setHasProjectKols((pk.count||0) > 0)
     setLoading(false)
   }
 
@@ -6393,25 +6396,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     await loadData()
   }
 
-  async function changeStage(newStage, force=false) {
-    // Check if required approvals are done
+  async function changeStage(newStage) {
     const currentStage = project.current_stage||'BRIEF_PRICING'
-    const pendingApprovalsList = approvals.filter(a=>a.stage===currentStage&&a.status==='Pending')
-    if(pendingApprovalsList.length > 0) {
-      alert(`⚠️ Còn ${pendingApprovalsList.length} approval chưa được xử lý ở stage hiện tại!`)
-      setPendingStageChange(null)
-      return
-    }
-
-    // Check incomplete tasks (unless force=true)
-    if(!force) {
-      const undoneTasks = tasks.filter(t=>t.stage===currentStage&&t.status!=='Done')
-      if(undoneTasks.length > 0) {
-        setIncompleteTasks({tasks: undoneTasks, targetStage: newStage})
-        return
-      }
-    }
-
     await supabase.from('projects').update({
       current_stage: newStage,
       stage_history: [...(project.stage_history||[]), {stage:currentStage, completed_at:new Date().toISOString(), moved_by:currentUser?.name}]
@@ -6422,7 +6408,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
       message: `[${project.id}] Stage changed: ${currentStage} → ${newStage} | project: ${project.campaign}`,
       role: currentUser?.name||'User',
       entity_type:'project', entity_id:project.id, entity_name:project.campaign,
-      action:'stage_changed', changes_json:{from:currentStage,to:newStage,forced:force}
+      action:'stage_changed', changes_json:{from:currentStage,to:newStage}
     }])
 
     await initStageTasks(newStage)
@@ -6432,7 +6418,6 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     log(`Stage: ${project.campaign} → ${newStage}`)
     setShowStageChange(false)
     setPendingStageChange(null)
-    setIncompleteTasks(null)
     await loadData()
   }
 
@@ -6514,6 +6499,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
     log(`${approved?'Approved':'Rejected'} approval: ${project.campaign}`)
   }
 
+  function getAutoCompleted(task) {
+    const title = task.title||''
+    if(title==='Nhận brief từ client' && project.brief_file_url) return true
+    if(title==='Upload file báo giá vào hệ thống' && hasProjectKols) return true
+    if(title==='Dán link Google Sheet vào hệ thống' && project.working_sheet_url) return true
+    return false
+  }
+
   const currentStageData = STAGES.find(s=>s.id===(project.current_stage||'BRIEF_PRICING'))||STAGES[0]
   const currentStageIdx = STAGES.findIndex(s=>s.id===(project.current_stage||'BRIEF_PRICING'))
   const viewingStageData = STAGES.find(s=>s.id===viewingStage)||STAGES[0]
@@ -6563,17 +6556,17 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
           <div style={{display:'flex',alignItems:'center',marginTop:18,gap:0}}>
             {STAGES.map((s,i)=>(
               <div key={s.id} style={{display:'flex',alignItems:'center',flex:i<STAGES.length-1?1:'auto'}}>
-                <div onClick={()=>{ if(i<=currentStageIdx) setViewingStage(s.id) }} style={{
+                <div onClick={()=>setViewingStage(s.id)} style={{
                   width:28,height:28,borderRadius:'50%',flexShrink:0,
                   display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,
                   background:s.id===viewingStage?'rgba(255,255,255,0.9)':(i<currentStageIdx?'#059669':i===currentStageIdx?currentStageData.color:'rgba(255,255,255,0.15)'),
                   border:s.id===viewingStage?`2px solid #fff`:(i===currentStageIdx?`2px solid ${currentStageData.color}`:'2px solid transparent'),
                   boxShadow:s.id===viewingStage?'0 0 12px rgba(255,255,255,0.6)':(i===currentStageIdx?`0 0 10px ${currentStageData.color}80`:'none'),
-                  cursor:i<=currentStageIdx?'pointer':'default',
+                  cursor:'pointer',
                   color:s.id===viewingStage?currentStageData.color:'inherit',
                   fontWeight:s.id===viewingStage?900:400,
                   transition:'all 0.15s',
-                }} title={i<=currentStageIdx?`Xem stage: ${s.label}`:(s.label+' — chưa đến')}>
+                }} title={s.id===(project.current_stage||'BRIEF_PRICING')?`${s.label} (stage hiện tại)`:s.id===viewingStage?`${s.label} (đang xem)`:`Xem stage: ${s.label}`}>
                   {(()=>{
                     const stageTasks = tasks.filter(t=>t.stage===s.id)
                     if(i>currentStageIdx) return <span style={{fontSize:10,opacity:0.5}}>{s.icon}</span>
@@ -6596,8 +6589,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
         {/* Tabs */}
         <div style={{background:'rgba(255,255,255,0.7)',borderBottom:'1px solid rgba(26,86,219,0.1)',padding:'0 28px',display:'flex',gap:0,flexShrink:0}}>
-          {[['overview','Tổng quan'],['tasks','Tasks'],['approvals','Approvals'],['quotations','Báo giá'],['kpi','KPIs'],['history','Lịch sử']].map(([id,label])=>(
-            <button key={id} onClick={()=>setActiveTab(id)} style={{
+          {[['tasks','Tasks'],['approvals','Approvals'],['quotations','Báo giá'],['kpi','KPIs'],['history','Lịch sử']].map(([id,label])=>(
+            <button key={id} onClick={()=>setActiveTab(activeTab===id?null:id)} style={{
               padding:'12px 18px',border:'none',background:'transparent',cursor:'pointer',
               fontSize:12,fontWeight:activeTab===id?700:500,
               color:activeTab===id?'#1A56DB':'#94A3B8',
@@ -6617,8 +6610,8 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
         <div style={{flex:1,padding:'24px 28px',overflowY:'auto'}}>
           {loading&&<div style={{textAlign:'center',padding:60,color:'#94A3B8'}}>Đang tải...</div>}
 
-          {/* OVERVIEW TAB */}
-          {!loading&&activeTab==='overview'&&(
+          {/* STAGE VIEW — default khi không có tab nào được chọn */}
+          {!loading&&!activeTab&&(
             <div>
               {/* Quick action buttons */}
               <div style={{display:'flex',gap:8,marginBottom:16}}>
@@ -6648,14 +6641,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                 ))}
               </div>
 
-              {/* Stage-specific panels — based on project's current stage, not the stage being browsed */}
-              {(project.current_stage||'BRIEF_PRICING')==='BRIEF_PRICING' && (
+              {/* Stage-specific panels — theo stage đang xem */}
+              {viewingStage==='BRIEF_PRICING' && (
                 <BriefPricingPanel
                   project={project} data={data} supabase={supabase} currentUser={currentUser}
                   onProjectUpdated={(updates)=>{ onUpdate({...project,...updates}); loadData(); reload() }}
                 />
               )}
-              {project.current_stage==='PRODUCTION' && (
+              {viewingStage==='PRODUCTION' && (
                 <ProductionPanel
                   project={project} supabase={supabase}
                   onProjectUpdated={(updates)=>{ onUpdate({...project,...updates}); loadData(); reload() }}
@@ -6678,7 +6671,7 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                     </button>}
                   </div>
                 </div>
-                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={isViewingPastStage?()=>{}:updateTaskStatus} onEdit={()=>openTaskDetail(t)} readOnly={isViewingPastStage}/>)}
+                {stageTasks.slice(0,5).map(t=><TaskRow key={t.id} task={t} onStatusChange={isViewingPastStage?()=>{}:updateTaskStatus} onEdit={()=>openTaskDetail(t)} readOnly={isViewingPastStage} isAutoCompleted={!isViewingPastStage&&getAutoCompleted(t)}/>)}
                 {stageTasks.length>5&&<div style={{fontSize:11,color:'#94A3B8',textAlign:'center',marginTop:8,cursor:'pointer'}} onClick={()=>setActiveTab('tasks')}>+ {stageTasks.length-5} tasks khác → Xem tất cả</div>}
                 {!stageTasks.length&&<div style={{textAlign:'center',padding:'20px 0',color:'#94A3B8',fontSize:12}}>{isViewingPastStage?'Không có tasks nào ở stage này.':'Chưa có tasks. Click "Khởi tạo tasks" để tạo tự động.'}</div>}
               </div>
@@ -6812,9 +6805,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
             ) : (
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:'#0F172A',marginBottom:8}}>Xác nhận chuyển stage</div>
-                <div style={{background:'rgba(99,102,241,0.06)',borderRadius:10,padding:'14px 16px',marginBottom:16,fontSize:13,color:'#1F2937'}}>
-                  Bạn có chắc muốn chuyển dự án <strong>"{project.campaign}"</strong> sang stage <strong>{pendingStageChange.icon} {pendingStageChange.label}</strong>?
+                <div style={{background:'rgba(99,102,241,0.06)',borderRadius:10,padding:'14px 16px',marginBottom:12,fontSize:13,color:'#1F2937'}}>
+                  Chuyển dự án <strong>"{project.campaign}"</strong> sang <strong>{pendingStageChange.icon} {pendingStageChange.label}</strong>?
                 </div>
+                {(()=>{const undone=tasks.filter(t=>t.stage===(project.current_stage||'BRIEF_PRICING')&&t.status!=='Done');return undone.length>0&&(
+                  <div style={{padding:'8px 12px',background:'rgba(245,158,11,0.08)',borderRadius:8,border:'1px solid rgba(245,158,11,0.25)',fontSize:11,color:'#92400E',marginBottom:12}}>
+                    ⚠️ Còn {undone.length} task chưa hoàn thành ở stage hiện tại. Bạn vẫn có thể chuyển stage.
+                  </div>
+                )})()}
                 <div style={{display:'flex',gap:8}}>
                   <button onClick={()=>setPendingStageChange(null)} style={{flex:1,padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>← Quay lại</button>
                   <button onClick={()=>changeStage(pendingStageChange.id)} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:`linear-gradient(135deg,${pendingStageChange.color},${pendingStageChange.color}cc)`,color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Xác nhận chuyển</button>
@@ -6837,31 +6835,6 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 
       {taskDetail&&<TaskDetailPanel task={taskDetail} comments={taskComments} supabase={supabase} currentUser={currentUser} onClose={()=>setTaskDetail(null)} onUpdate={()=>{}}/>}
 
-      {/* Incomplete tasks blocking modal */}
-      {incompleteTasks&&(
-        <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,background:'rgba(0,0,0,0.4)'}}>
-          <div style={{background:'#FFFFFF',borderRadius:18,padding:'24px 28px',width:480,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)',border:'1px solid #E2E8F0'}}>
-            <div style={{fontSize:15,fontWeight:800,color:'#DC2626',marginBottom:8}}>⚠️ Tasks chưa hoàn thành</div>
-            <div style={{fontSize:12,color:'#475569',marginBottom:12}}>Còn <strong>{incompleteTasks.tasks.length}</strong> task chưa Done trong stage hiện tại:</div>
-            <div style={{maxHeight:180,overflowY:'auto',marginBottom:14}}>
-              {incompleteTasks.tasks.map(t=>(
-                <div key={t.id} style={{display:'flex',justifyContent:'space-between',padding:'6px 10px',borderRadius:7,marginBottom:4,background:'rgba(239,68,68,0.05)',border:'1px solid rgba(239,68,68,0.12)'}}>
-                  <span style={{fontSize:12,fontWeight:600,color:'#0F172A'}}>{t.title}</span>
-                  <span style={{fontSize:10,color:'#94A3B8'}}>{t.assigned_to||'Unassigned'} · {t.status}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{fontSize:11,color:'#64748B',marginBottom:14}}>Bạn có muốn tiếp tục chuyển sang <strong>{STAGES.find(s=>s.id===incompleteTasks.targetStage)?.label}</strong>?</div>
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>setIncompleteTasks(null)} style={{flex:1,padding:'9px',borderRadius:9,border:'1.5px solid #E2E8F0',background:'#F8FAFC',color:'#64748B',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Quay lại hoàn thành task</button>
-              {(currentUser?.isMaster||(currentUser?.role||'').toLowerCase().includes('director'))&&(
-                <button onClick={()=>{setShowStageChange(false);setPendingStageChange(null);changeStage(incompleteTasks.targetStage,true)}} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:'linear-gradient(135deg,#DC2626,#EF4444)',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Bắt buộc chuyển</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Quotation form from project */}
       {showQuoteForm&&<QuotationForm data={data} supabase={supabase} edit={null} prefill={{project_id:project.id,client_name:project.client,campaign_name:project.campaign}} onClose={()=>setShowQuoteForm(false)} onSaved={()=>{loadData();setShowQuoteForm(false)}}/>}
       {viewQuote&&<QuotationPreview quote={viewQuote} onClose={()=>setViewQuote(null)} onStatusChange={async(status)=>{await supabase.from('quotations').update({status}).eq('id',viewQuote.id);loadData();setViewQuote({...viewQuote,status})}}/>}
@@ -6870,20 +6843,24 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
 }
 
 // ── TASK ROW ─────────────────────────────────────────────
-function TaskRow({task:t, onStatusChange, onEdit, readOnly}) {
+function TaskRow({task:t, onStatusChange, onEdit, readOnly, isAutoCompleted}) {
   const isLate = t.due_date && new Date(t.due_date)<new Date() && t.status!=='Done'
   const memberColor = getMemberColor(t.assigned_to)
+  const isDone = isAutoCompleted || t.status==='Done'
   return (
     <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F1F5F9',opacity:readOnly?0.75:1,borderLeft:`3px solid ${memberColor}40`,paddingLeft:8}}>
       {readOnly
         ? <span style={{padding:'3px 10px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,minWidth:60,textAlign:'center',display:'inline-block'}}>{t.status}</span>
-        : <select value={t.status} onChange={e=>onStatusChange(t.id,e.target.value)}
-            style={{padding:'3px 6px',borderRadius:6,border:`1px solid ${TASK_STATUS_COLOR[t.status]||'#94A3B8'}30`,background:(TASK_STATUS_COLOR[t.status]||'#94A3B8')+'15',color:TASK_STATUS_COLOR[t.status]||'#94A3B8',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-            {['Todo','In Progress','Review','Done','Blocked'].map(s=><option key={s}>{s}</option>)}
-          </select>
+        : isAutoCompleted
+          ? <input type="checkbox" checked readOnly disabled style={{width:16,height:16,accentColor:'#10B981',cursor:'default',flexShrink:0,opacity:0.8}} title="Tự động cập nhật bởi hệ thống"/>
+          : <input type="checkbox"
+              checked={t.status==='Done'}
+              onChange={()=>onStatusChange(t.id, t.status==='Done'?'Todo':'Done')}
+              style={{width:16,height:16,cursor:'pointer',accentColor:'#10B981',flexShrink:0}}
+            />
       }
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:12,fontWeight:600,color:t.status==='Done'?'#475569':'#CBD5E1',textDecoration:t.status==='Done'?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+        <div style={{fontSize:12,fontWeight:600,color:isDone?'#475569':'#0F172A',textDecoration:isDone?'line-through':'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
           {t.requires_approval&&<span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:4,background:'rgba(99,102,241,0.15)',color:'#6366F1',flexShrink:0}}>APR</span>}
           {t.priority==='Urgent'&&<span style={{width:5,height:5,borderRadius:'50%',background:'#EF4444',flexShrink:0,display:'inline-block'}}/>}
           {t.title}
@@ -7045,18 +7022,8 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
 function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onResolve}) {
   const stageApprovals = {
     BRIEF_PRICING: [
-      {type:'PL_FINANCE', label:'Finance duyệt P&L', role:'Finance', icon:'💰', desc:'Kiểm tra margin và P&L trước khi gửi báo giá'},
-      {type:'DIRECTOR', label:'Director duyệt báo giá', role:'Director', icon:'👔', desc:'Duyệt cuối trước khi gửi cho client'},
-    ],
-    CONTRACT: [
-      {type:'CONTRACT_LEGAL', label:'Director review hợp đồng', role:'Director', icon:'📝', desc:'Review điều khoản trước khi gửi client ký'},
-    ],
-    PRODUCTION: [
-      {type:'CONCEPT_PM', label:'PM duyệt concept/kịch bản', role:'PM', icon:'💡', desc:'Duyệt nội dung trước khi brief KOL'},
-    ],
-    REPORTING_PAYMENT: [
-      {type:'BBNT_CLIENT', label:'Client duyệt BBNT', role:'AM', icon:'✅', desc:'Gửi BBNT cho client ký'},
-      {type:'PAYMENT_FINANCE', label:'Finance xác nhận đã thanh toán', role:'Finance', icon:'💳', desc:'Xác nhận đã thu đủ tiền trước khi close'},
+      {type:'PL_FINANCE', label:'Duyệt P&L', role:'Finance', icon:'💰', desc:'Finance kiểm tra margin và P&L trước khi gửi báo giá'},
+      {type:'DIRECTOR', label:'Duyệt báo giá', role:'Director', icon:'👔', desc:'Director duyệt cuối trước khi gửi cho client'},
     ],
   }
 
