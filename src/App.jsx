@@ -6648,14 +6648,14 @@ function ProjectWorkflowDetail({project, data, supabase, reload, log, currentUse
                 ))}
               </div>
 
-              {/* Stage-specific panels */}
-              {!isViewingPastStage && viewingStage==='BRIEF_PRICING' && (
+              {/* Stage-specific panels — based on project's current stage, not the stage being browsed */}
+              {(project.current_stage||'BRIEF_PRICING')==='BRIEF_PRICING' && (
                 <BriefPricingPanel
                   project={project} data={data} supabase={supabase} currentUser={currentUser}
                   onProjectUpdated={(updates)=>{ onUpdate({...project,...updates}); loadData(); reload() }}
                 />
               )}
-              {!isViewingPastStage && viewingStage==='PRODUCTION' && (
+              {project.current_stage==='PRODUCTION' && (
                 <ProductionPanel
                   project={project} supabase={supabase}
                   onProjectUpdated={(updates)=>{ onUpdate({...project,...updates}); loadData(); reload() }}
@@ -7044,19 +7044,19 @@ function TasksTab({tasks, project, data, onStatusChange, onEdit, onAdd, onInit, 
 // ── APPROVAL PANEL ───────────────────────────────────────
 function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onResolve}) {
   const stageApprovals = {
-    PRICING: [
+    BRIEF_PRICING: [
       {type:'PL_FINANCE', label:'Finance duyệt P&L', role:'Finance', icon:'💰', desc:'Kiểm tra margin và P&L trước khi gửi báo giá'},
-      {type:'DIRECTOR', label:'Director duyệt Pricing', role:'Director', icon:'👔', desc:'Duyệt cuối trước khi gửi cho client'},
+      {type:'DIRECTOR', label:'Director duyệt báo giá', role:'Director', icon:'👔', desc:'Duyệt cuối trước khi gửi cho client'},
     ],
     CONTRACT: [
-      {type:'CONTRACT_LEGAL', label:'Director review HĐ', role:'Director', icon:'📝', desc:'Review điều khoản trước khi gửi client ký'},
+      {type:'CONTRACT_LEGAL', label:'Director review hợp đồng', role:'Director', icon:'📝', desc:'Review điều khoản trước khi gửi client ký'},
     ],
-    PRE_PRODUCTION: [
+    PRODUCTION: [
       {type:'CONCEPT_PM', label:'PM duyệt concept/kịch bản', role:'PM', icon:'💡', desc:'Duyệt nội dung trước khi brief KOL'},
-      {type:'BUDGET_FINANCE', label:'Finance duyệt chi phí', role:'Finance', icon:'💰', desc:'Duyệt budget phát sinh'},
     ],
-    REPORTING: [
+    REPORTING_PAYMENT: [
       {type:'BBNT_CLIENT', label:'Client duyệt BBNT', role:'AM', icon:'✅', desc:'Gửi BBNT cho client ký'},
+      {type:'PAYMENT_FINANCE', label:'Finance xác nhận đã thanh toán', role:'Finance', icon:'💳', desc:'Xác nhận đã thu đủ tiền trước khi close'},
     ],
   }
 
@@ -7065,7 +7065,7 @@ function ApprovalPanel({project, stage, approvals, currentUser, onRequest, onRes
 
   return (
     <div style={{background:'#FFFFFF',borderRadius:14,padding:'18px 20px',border:'1px solid #E2E8F0'}}>
-      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>Approvals — Stage {stage}</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#0F172A',marginBottom:14}}>Approvals — {STAGES.find(s=>s.id===stage)?.label||stage}</div>
       {needed.map(item=>{
         const existing = approvals.find(a=>a.stage===stage&&a.approval_type===item.type)
         const isPending = existing?.status==='Pending'
